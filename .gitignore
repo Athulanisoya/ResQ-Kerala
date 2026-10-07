@@ -1,0 +1,13 @@
+.env
+.venv/
+.runtime/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+node_modules/
+frontend/dist/
+*.log
+*.db
+test-results/
+playwright-report/
