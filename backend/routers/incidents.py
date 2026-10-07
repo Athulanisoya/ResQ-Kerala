@@ -1,5 +1,5 @@
 from fastapi import (APIRouter,Depends,Header,HTTPException,status)
-from pytest import Session
+from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.schemas.incident_schema import (IncidentCreate,IncidentResponse,IncidentHistoryResponse)
 from backend.services.incident_service import (create_incident,get_my_incidents,get_incident_by_id,get_incident_history)
@@ -33,4 +33,4 @@ def incident_history(incident_id:int,db:Session=Depends(get_db),user_id:int=Depe
         raise HTTPException(status_code=404,detail="Incident not found")
     if not validate_incident_owner(incident.user_id,user_id):
         raise HTTPException(status_code=403,detail="You are not allowed to access this incident")
-    return get_incident_history(db=db,incident_id=incident_id)   
+    return get_incident_history(db=db,incident_id=incident_id)

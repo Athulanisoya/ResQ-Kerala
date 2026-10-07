@@ -1,0 +1,6 @@
+/.env
+/.venv/
+/.runtime/
+/.local-db-check.py
+__pycache__/
+.pytest_cache/

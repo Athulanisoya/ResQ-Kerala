@@ -4,7 +4,7 @@ from backend.database.connection import Base
 class Incident(Base):
     __tablename__="incident_reports"
     id=Column(Integer,primary_key=True,index=True)
-    report_refernce=Column(String(50),unique=True,nullable=False,index=True)
+    report_reference=Column("report_refernce",String(50),unique=True,nullable=False,index=True)
     user_id=Column(Integer,nullable=False,index=True)
     message=Column(Text,nullable=False)
     location=Column(String(255),nullable=False)
@@ -20,4 +20,4 @@ class IncidentStatusHistory(Base):
     status=Column(String(50),nullable=False)
     note=Column(Text,nullable=True)
     created_at=Column(DateTime,default=datetime.utcnow,nullable=False)
-    
+

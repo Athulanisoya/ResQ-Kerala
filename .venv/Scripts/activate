@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\user\internship\ResQ_kerala\.venv"
+VIRTUAL_ENV="C:\Users\athul\Downloads\res\ResQ-Kerala\.venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
