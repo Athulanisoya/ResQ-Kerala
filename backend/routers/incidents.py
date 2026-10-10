@@ -2,8 +2,9 @@ from fastapi import (APIRouter,Depends,Header,HTTPException,status)
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.schemas.incident_schema import (IncidentCreate,IncidentResponse,IncidentHistoryResponse)
-from backend.services.incident_service import (create_incident,get_my_incidents,get_incident_by_id,get_incident_history)
+from backend.services.incident_service import (create_incident,get_my_incidents,get_incident_by_id,get_incident_history,get_incident_history,assign_incident_team)
 from backend.utils.validators import (validate_user_id,validate_incident_owner)
+from backend.schemas.team_schema import AssignTeamRequest
 router=APIRouter(prefix="/api/incidents",tags=["Incidents"])
 def get_current_user_id(x_user_id:int=Header(...)):
     try:
@@ -34,3 +35,22 @@ def incident_history(incident_id:int,db:Session=Depends(get_db),user_id:int=Depe
     if not validate_incident_owner(incident.user_id,user_id):
         raise HTTPException(status_code=403,detail="You are not allowed to access this incident")
     return get_incident_history(db=db,incident_id=incident_id)
+@router.post("/admin/assign-team")
+def assign_team_to_incident(
+    data: AssignTeamRequest,
+    db: Session = Depends(get_db)
+):
+    incident = assign_incident_team(
+        db=db,
+        incident_id=data.incident_id,
+        team_id=data.team_id,
+        assignment_note=data.assignment_note
+    )
+
+    if incident is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Incident or available team not found"
+        )
+
+    return incident

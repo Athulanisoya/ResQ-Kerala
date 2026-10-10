@@ -4,3 +4,8 @@
 /.local-db-check.py
 __pycache__/
 .pytest_cache/
+
+.env
+.venv/
+__pycache__/
+*.py[cod]

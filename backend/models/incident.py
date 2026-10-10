@@ -6,6 +6,7 @@ class Incident(Base):
     id=Column(Integer,primary_key=True,index=True)
     report_reference=Column("report_refernce",String(50),unique=True,nullable=False,index=True)
     user_id=Column(Integer,nullable=False,index=True)
+    team_id = Column(Integer, ForeignKey("response_teams.id"), nullable=True)
     message=Column(Text,nullable=False)
     location=Column(String(255),nullable=False)
     people_affected=Column(Integer,nullable=True)

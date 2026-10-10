@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
 from backend.models.incident import (Incident,IncidentStatusHistory)
+from backend.models.team import Team
 def generate_report_reference(db:Session):
     count=db.query(Incident).count()+1
     date_part=datetime.now().strftime("%Y%m%d")
@@ -21,3 +22,38 @@ def get_incident_by_id(db:Session,incident_id:int):
     return (db.query(Incident).filter(Incident.id==incident_id).first())
 def get_incident_history(db:Session,incident_id:int):
     return (db.query(IncidentStatusHistory).filter(IncidentStatusHistory.incident_id==incident_id).order_by(IncidentStatusHistory.created_at.asc()).all())
+def assign_incident_team(
+    db: Session,
+    incident_id: int,
+    team_id: int,
+    assignment_note: str | None = None
+):
+    incident = get_incident_by_id(db, incident_id)
+
+    if incident is None:
+        return None
+
+    team = db.query(Team).filter(Team.id == team_id).first()
+
+    if team is None:
+        return None
+
+    if team.status != "AVAILABLE":
+        return None
+
+    team.status = "BUSY"
+
+    incident.status = "ASSIGNED"
+
+    history = IncidentStatusHistory(
+        incident_id=incident.id,
+        status="ASSIGNED",
+        note=assignment_note or f"Team {team.name} assigned"
+    )
+    incident.team_id = team.id
+
+    db.add(history)
+    db.commit()
+    db.refresh(incident)
+
+    return incident

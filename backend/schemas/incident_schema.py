@@ -45,6 +45,8 @@ class IncidentResponse(BaseModel):
     report_reference: str
 
     user_id: int
+    
+    team_id: int | None = None
 
     message: str
 
