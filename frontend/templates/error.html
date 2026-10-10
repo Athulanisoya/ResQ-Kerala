@@ -1,0 +1,2 @@
+{% from 'icons.html' import icon %}
+<div class="error-page"><span class="empty-icon">{{ icon('info') }}</span><span class="section-kicker">{{ error_code|default('WORKSPACE') }}</span><h1>{{ error_title|default('This page is unavailable.') }}</h1><p>{{ error|default('Please return to your workspace and try again.') }}</p><a class="button button-primary" href="{{ '/dashboard' if user else '/login' }}">{{ 'Back to overview' if user else 'Sign in' }}{{ icon('arrow') }}</a></div>

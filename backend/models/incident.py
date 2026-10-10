@@ -10,6 +10,9 @@ class Incident(Base):
     location=Column(String(255),nullable=False)
     people_affected=Column(Integer,nullable=True)
     help_required=Column(String(255),nullable=True)
+    # Vidya's incident classification, retained in the combined Week 1 model.
+    disaster_type=Column(String(50),nullable=False,default="Flood")
+    assigned_team_id=Column(Integer,ForeignKey("teams.id"),nullable=True,index=True)
     status=Column(String(50),nullable=False,default="SUBMITTED")
     created_at=Column(DateTime,default=datetime.utcnow,nullable=False)
     updated_at=Column(DateTime,default=datetime.utcnow,onupdate=datetime.utcnow,nullable=False)

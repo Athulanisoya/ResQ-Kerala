@@ -1,0 +1,40 @@
+{% from 'icons.html' import icon, brand %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123d35">
+  <meta name="description" content="Report a flood incident, follow its review, and coordinate a response with ResQ Kerala.">
+  <title>{{ page_title|default('Workspace') }} · ResQ Kerala</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body class="{{ 'workspace' if user else 'auth-page' }}" hx-history="false">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div id="request-progress" class="request-progress htmx-indicator" role="status" aria-label="Loading"></div>
+  {% if user %}
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="/dashboard">{{ brand() }}</a>
+    <div class="sidebar-section">YOUR WORKSPACE</div>
+    <nav class="main-nav">
+      <a href="/dashboard" data-nav="dashboard" class="nav-item {{ 'active' if active_nav|default('') == 'dashboard' }}" hx-get="/dashboard" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('grid') }}<span>Overview</span></a>
+      <a href="/reports" data-nav="reports" class="nav-item {{ 'active' if active_nav|default('') == 'reports' }}" hx-get="/reports" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('reports') }}<span>{{ 'Report queue' if user.role == 'admin' else 'Assignments' if user.role == 'response_team' else 'My reports' }}</span></a>
+      {% if user.role == 'citizen' %}<a href="/reports/new" data-nav="new" class="nav-item {{ 'active' if active_nav|default('') == 'new' }}" hx-get="/reports/new" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('plus') }}<span>New report</span></a>{% endif %}
+    </nav>
+    <div class="sidebar-note">{{ icon('shield') }}<p>A clearer path<br>from report to response.</p><span>KERALA, TOGETHER.</span></div>
+    <div class="account-block">
+      <span class="avatar">{{ user.full_name[:1]|upper }}</span>
+      <div class="account-copy"><strong>{{ user.full_name }}</strong><span>{{ user.role|replace('_', ' ')|title }}</span></div>
+      <form action="/ui/logout" method="post" hx-post="/ui/logout"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="logout-button" type="submit" aria-label="Sign out" title="Sign out">{{ icon('logout') }}</button></form>
+    </div>
+  </aside>
+  <div class="workspace-body">
+    <header class="topbar"><div><span class="topbar-brand">ResQ Kerala</span><span class="topbar-label">DISASTER RESPONSE WORKSPACE</span></div><span class="week-badge"><span></span>Week 1</span></header>
+  {% endif %}
+    <main id="main-content" class="{{ 'main-content' if user else 'auth-content' }}" tabindex="-1">{% block content %}{% endblock %}</main>
+  {% if user %}<footer class="workspace-footer"><span>ResQ Kerala</span><span>Connected communities. Coordinated care.</span></footer></div>{% endif %}
+</body>
+</html>

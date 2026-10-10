@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from .config import WORKSPACE_ROOT
 from .database.connection import SessionLocal, initialize_database
-from .models import Role, User
+from .models import Role, Team, User
 from .utils.security import hash_password
 
 
@@ -22,11 +22,19 @@ def seed():
     ]
     created = []
     with SessionLocal() as db:
+        team = db.scalar(select(Team).where(Team.name == "Kerala Demo Rescue Team"))
+        if team is None:
+            team = Team(name="Kerala Demo Rescue Team", team_type="Rescue")
+            db.add(team)
+            db.flush()
         for data in accounts:
             user = db.scalar(select(User).where(User.email == data["email"]))
             if user is None:
-                db.add(User(**data, password_hash=hash_password(password)))
+                user = User(**data, password_hash=hash_password(password))
+                db.add(user)
                 created.append(data["email"])
+            if user.role == Role.RESPONSE_TEAM and user.team_id is None:
+                user.team_id = team.id
         db.commit()
     if created or not previous:
         destination.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,30 @@
+{% from 'icons.html' import icon, brand %}
+{% set form_values = values|default({}) %}
+{% set registering = mode|default('login') == 'register' %}
+<section class="auth-layout">
+  <div class="auth-story">
+    <a class="brand" href="/login">{{ brand() }}</a>
+    <div class="auth-story-copy"><div class="eyebrow light">COMMUNITY. CARE. COORDINATION.</div><h1>When every<br>moment matters,<br><em>we come together.</em></h1><p>A shared space to report flood incidents and connect communities with a coordinated response.</p></div>
+    <div class="contour-art" aria-hidden="true"><svg viewBox="0 0 600 260" fill="none"><path d="M-30 190C75 75 125 295 235 155S400 52 460 105s100 8 185-75M-30 210C75 95 125 315 235 175S400 72 460 125s100 8 185-75M-30 230C75 115 125 335 235 195S400 92 460 145s100 8 185-75M-30 250C75 135 125 355 235 215S400 112 460 165s100 8 185-75M-30 170C75 55 125 275 235 135S400 32 460 85s100 8 185-75M-30 150C75 35 125 255 235 115S400 12 460 65s100 8 185-75" stroke="currentColor"/><circle cx="355" cy="95" r="25" fill="#d5e9ad" stroke="none"/><path d="M355 83v24m-12-12h24" stroke="#123d35" stroke-width="3" stroke-linecap="round"/></svg></div>
+    <div class="auth-story-footer"><span class="small-square"></span>Built for Kerala. Built for each other.</div>
+  </div>
+  <div class="auth-form-area">
+    <a class="brand mobile-auth-brand" href="/login">{{ brand() }}</a>
+    <div class="auth-form-wrap">
+      <span class="section-kicker">{{ 'JOIN YOUR COMMUNITY' if registering else 'YOUR RESPONSE WORKSPACE' }}</span>
+      <h2>{{ 'A little information. A stronger community.' if registering else 'Welcome back.' }}</h2>
+      <p class="auth-intro">{{ 'Create a citizen account to report an incident and follow its progress.' if registering else 'Sign in to continue to your ResQ Kerala workspace.' }}</p>
+      {% include 'partials/alerts.html' %}
+      <form class="auth-form" action="{{ '/ui/register' if registering else '/ui/login' }}" method="post" hx-post="{{ '/ui/register' if registering else '/ui/login' }}" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        {% if registering %}<div class="field"><label for="full_name">Full name</label><input id="full_name" name="full_name" type="text" minlength="3" maxlength="100" autocomplete="name" placeholder="Your full name" value="{{ form_values.get('full_name', '') }}" required></div>{% endif %}
+        <div class="field"><label for="email">Email address</label><div class="input-icon">{{ icon('mail') }}<input id="email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" value="{{ form_values.get('email', '') }}" required></div></div>
+        <div class="field"><label for="password">Password</label><div class="input-icon">{{ icon('lock') }}<input id="password" name="password" type="password" minlength="10" maxlength="128" autocomplete="{{ 'new-password' if registering else 'current-password' }}" placeholder="{{ 'Choose a password' if registering else 'Enter your password' }}" aria-describedby="{{ 'password-hint' if registering else '' }}" required></div>{% if registering %}<p class="field-hint" id="password-hint">Use 10–128 characters.</p>{% endif %}</div>
+        <button class="button button-primary button-full" type="submit"><span class="button-label">{{ 'Create my account' if registering else 'Sign in' }}</span><span class="button-loading">Please wait…</span>{{ icon('arrow') }}</button>
+      </form>
+      <p class="auth-switch">{{ 'Already have an account?' if registering else 'New to ResQ Kerala?' }} <a href="{{ '/login' if registering else '/register' }}" hx-get="{{ '/login' if registering else '/register' }}" hx-target="#main-content" hx-push-url="true">{{ 'Sign in' if registering else 'Create an account' }}</a></p>
+      <div class="auth-footnote">{{ icon('shield') }}<span>One workspace for citizens, administrators<br>and response teams.</span></div>
+    </div>
+    <span class="auth-edition">ResQ Kerala · Week 1</span>
+  </div>
+</section>

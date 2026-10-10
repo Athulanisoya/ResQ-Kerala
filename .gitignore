@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 .venv/
 .runtime/
 __pycache__/
@@ -11,3 +13,5 @@ frontend/dist/
 *.db
 test-results/
 playwright-report/
+*.pem
+*.key

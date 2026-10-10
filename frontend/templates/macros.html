@@ -1,0 +1,12 @@
+{% from 'icons.html' import icon %}
+{% macro status_badge(status) -%}<span class="status status-{{ status|lower }}"><span></span>{{ status|replace('_', ' ')|title }}</span>{%- endmacro %}
+{% macro date(value) -%}{% if value %}<time datetime="{{ value }}">{{ value|local_time }}</time>{% else %}<span>—</span>{% endif %}{%- endmacro %}
+{% macro report_table(reports, user, compact=false) -%}
+{% if reports %}
+<div class="table-scroll"><table class="reports-table"><thead><tr><th scope="col">Report &amp; location</th><th scope="col">Status</th><th scope="col">{{ 'Response team' if user.role == 'admin' else 'People affected' }}</th><th scope="col">Submitted</th><th scope="col"><span class="sr-only">View report</span></th></tr></thead><tbody>
+{% for item in reports %}<tr><td><a class="report-link" href="/reports/{{ item.id }}" hx-get="/reports/{{ item.id }}" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress"><span class="report-reference">{{ item.reference or 'Report #' ~ item.id }}</span><strong>{{ item.location }}</strong><span class="report-excerpt">{{ item.message|truncate(70, true, '…') }}</span></a></td><td>{{ status_badge(item.status) }}</td><td>{% if user.role == 'admin' %}<span class="team-name {{ 'muted' if not item.assigned_team }}">{{ item.assigned_team or 'Unassigned' }}</span>{% else %}<span class="people-count">{{ item.people_affected if item.people_affected is not none else '—' }}</span>{% endif %}</td><td class="date-cell">{{ date(item.created_at) }}</td><td><a class="row-arrow" href="/reports/{{ item.id }}" hx-get="/reports/{{ item.id }}" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress" aria-label="View {{ item.reference or 'report ' ~ item.id }}">{{ icon('arrow') }}</a></td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}
+<div class="empty-state"><span class="empty-icon">{{ icon('reports') }}</span><h3>{{ 'No assignments yet' if user.role == 'response_team' else 'No reports here yet' }}</h3><p>{{ 'Your assigned incidents will appear here when an administrator assigns your team.' if user.role == 'response_team' else 'Submitted incidents will appear here for review.' if user.role == 'admin' else 'Start with a report. You can follow its progress from this workspace.' }}</p>{% if user.role == 'citizen' %}<a class="button button-primary" href="/reports/new" hx-get="/reports/new" hx-target="#main-content" hx-push-url="true">{{ icon('plus') }}Create a report</a>{% endif %}</div>
+{% endif %}
+{%- endmacro %}

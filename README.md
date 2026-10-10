@@ -1,69 +1,55 @@
-# Athul — Week 1
+# ResQ Kerala — complete Week 1
 
-This folder contains **only Athul's first-week work** from slide 5 of `ResQ_Kerala_Member_Weekly_Guide.pptx`: registration, login, logout, password hashing, JWT authentication, and role permissions. It is a small runnable authentication module, extracted from the shared Week 1 project.
+This version combines the four member branches into one flood reporting application with an HTMX frontend. Citizens register, sign in, submit reports and view their status. Administrators review and verify reports, then assign an available response team. Response teams can view their assigned reports. The timeline ends at **Team assigned** for Week 1.
 
-## Included files
+## Run on this computer
 
-| Athul's responsibility | Implementation |
-| --- | --- |
-| Register, login and logout endpoints | `backend/routers/auth.py` |
-| Account responses and sessions | `backend/services/auth_service.py` |
-| Register/login validation | `backend/schemas/auth.py`, `auth_schema.py` |
-| Password hashing | `backend/utils/security.py` |
-| JWT creation and validation | `backend/utils/jwt.py` |
-| Authenticated-user and role checks | `backend/utils/permissions.py` |
-| Registration/login screens | `frontend/src/components/shared/Login.jsx` |
-| Session and role navigation | `frontend/src/App.jsx` |
-
-The minimal account model, persisted session table, database connection, API client, app entry points, seed data, scripts, focused tests, and role workspace endpoints support these tasks. There are no incident, reporting, assignment, rescue, relief, shelter, chatbot, or AI modules in this folder.
-
-## Run
-
-Use PowerShell 7 from the **Athul** directory. Requirements: Python 3.11+, Node.js 22.12+ or supported newer Node, and a running PostgreSQL instance.
+From this project directory in PowerShell:
 
 ```powershell
-.\scripts\setup.ps1
+.\scripts\setup.ps1 -PythonCommand 'C:\Users\athul\anaconda3\python.exe'
 .\scripts\start.ps1
 ```
 
-If the parent project is configured, setup reuses its PostgreSQL connection and generates a **new** signing secret. Authentication data is isolated in the **`athul_week1` schema**, with only `users` and `token_sessions` tables. It does not copy the parent's accounts, passwords, reports, or operational data. The PostgreSQL server must be running; this module does not own or stop the shared database service.
+Open [the application](http://127.0.0.1:8013) or [API documentation](http://127.0.0.1:8013/docs). Setup creates a fresh `.venv` if needed, installs `requirements.txt`, initializes this workspace's PostgreSQL cluster and provisions the demo accounts. HTMX and CSS are served by the same Python application; Node.js and a separate frontend server are unnecessary.
 
-If this folder is used elsewhere, copy `.env.example` to `.env`, configure your existing PostgreSQL database and a random signing secret, then run setup. The database account needs permission to create the `athul_week1` schema.
+Requirements: Windows, Python 3.11+, and PostgreSQL 18 binaries at `C:\Program Files\PostgreSQL\18\bin`. Use `-PythonCommand python` on another computer with Python available on PATH. If dependencies are already installed, rerun `.\scripts\setup.ps1 -SkipInstall`.
 
-For development in this workspace, `setup.ps1 -SkipInstall` can reuse the parent's installed Python environment; frontend dependencies must already be installed in this folder. A normal setup creates its own `.venv` and runs `npm ci`.
+The database listens only on `127.0.0.1:5443`, uses database/schema `resq_week1`, and stores its files in `.runtime/postgres`. This isolates it from the other ResQ checkouts. Both ports, **5443** and **8013**, must be available. Setup preserves generated credentials and existing records on subsequent runs.
 
-- UI: <http://127.0.0.1:5175>
-- API docs: <http://127.0.0.1:8012/docs>
-- Local demo accounts: **`.runtime/demo-accounts.json`**, generated privately by setup.
-- Stop only this module: `.\scripts\stop.ps1`.
+## Demo accounts
 
-The parent full application remains available on its own ports, 5174 and 8011.
+Setup writes the generated password and three account details to the ignored, local **`.runtime/demo-accounts.json`** file. Open that file locally to sign in as `citizen@athul.example.com`, `admin@athul.example.com`, or `team@athul.example.com`. Public registration creates citizens only. Admin and team roles are provisioned by setup.
 
-## Athul's demonstration
+Keep `.env`, `.runtime`, and `.venv` private and outside commits. `.runtime/pgpass.conf` contains the database password; `.env` contains the signing secret and the connection configuration.
 
-1. Register a citizen, sign in, and open **Citizen workspace** and **My account**.
-2. Sign out and sign in as the locally provisioned admin, then open **Admin workspace**.
-3. Sign in as the response-team account and open **Response team workspace**.
-4. Show the access-check table: the role's own endpoint succeeds and the other role endpoints return `403`. Anonymous access returns `401`.
-5. Sign out. The saved session is revoked immediately, so its former token can no longer access protected endpoints.
+## Week 1 demonstration
 
-Public registration always creates a citizen. Admin and response-team accounts are provisioned locally; there is no privileged role selector during registration. Workspace pages demonstrate real authentication and role checks and contain no other member's operational features.
+1. Register a citizen, sign in and submit a flood report with its location, people affected and help required.
+2. Open **My Reports** and the report detail/status timeline.
+3. Sign out, sign in as the admin, open the report queue and move the report through review and verification.
+4. Assign an available response team. Check that the report shows **Team assigned**.
+5. Sign in as the team to view its assignment, then as the citizen to view the updated timeline.
 
-## Test and build
+AI analysis, alerts, rescue progress, relief, shelters, chatbot, notifications, Malayalam translation and case closure remain later-week work.
+
+## Stop and verify
+
+```powershell
+.\scripts\stop.ps1
+```
+
+Stop checks the recorded application's PID, creation time and command line before terminating it, and shuts down only `.runtime/postgres` belonging to this workspace. Start reuses this workspace's existing application when it is already running.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
-Push-Location frontend
-npm.cmd run build
-Pop-Location
+.\.venv\Scripts\python.exe -m scripts.verify_local
 ```
 
-When reusing the parent environment, run `..\.venv\Scripts\python.exe -m pytest` from here instead. Tests use an isolated in-memory SQLite database; the runnable module uses PostgreSQL.
+The readiness command requires the application to be running and checks PostgreSQL, the home page, API docs and the authentication gate without creating a report. Tests use an isolated test database. Browser demonstration is a separate check from automated tests.
 
-See `docs/week1-tasks.md` for task ownership and integration notes. This extraction preserves the shared auth API contract. When integrating into the full application, use the full project's account/team models and routers rather than replacing them with this demonstration's minimal model.
+API paths include `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/users/me`, `/api/incidents/`, report detail/history/status, the admin report queue/assignment actions, and `/api/teams/assignments`. Consult the running API docs for exact methods and request bodies. Protected JSON APIs require the bearer token returned by login.
 
-For the complete working, feature overview, request flows, and line-by-line explanations of all source/configuration files, see [the code explanation guide](docs/CODE_EXPLANATION.md).
+If setup fails, confirm the PostgreSQL binary path and port availability. If startup fails, check `.runtime/postgres.log`, `.runtime/web.log` and `.runtime/web-error.log`. Do not replace the generated database password while retaining an existing cluster. If PowerShell's script policy blocks a command, run it explicitly with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1` and then the corresponding `start.ps1` command.
 
-Secrets, local credentials, dependencies, logs, and generated build output are ignored by Git. Keep `.env` and `.runtime` private. This is a local Week 1 demonstration; it does not contact disaster or emergency services.
-
-Verified on 6 October 2026: **27 auth tests passed**, the production frontend build passed, and Chrome checks passed for registration, login/logout, all three role permissions, account details, reload/session restoration, token revocation, and mobile rendering. The local PostgreSQL setup created only `athul_week1.users` and `athul_week1.token_sessions`. The module's start/reuse/stop/restart scripts also passed. Private browser evidence is in `.runtime/verification.json` and the mobile screenshots in `.runtime`.
+See [integration notes](docs/INTEGRATION.md) for branch provenance, Week 1 boundaries and the necessary backend compatibility changes, and [validation results](docs/VALIDATION.md) for the completed checks. Original React files are preserved in the source branch history; the active frontend uses HTMX templates and static assets. Older member-specific documents describe their original branches and should be read in that context.

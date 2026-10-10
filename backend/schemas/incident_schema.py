@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ---------------------------------------------------------
@@ -9,6 +9,9 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------
 
 class IncidentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    disaster_type: str = Field(default="Flood", min_length=2, max_length=50)
 
     message: str = Field(
         ...,
@@ -33,6 +36,11 @@ class IncidentCreate(BaseModel):
         max_length=255
     )
 
+    @field_validator("help_required")
+    @classmethod
+    def empty_help_is_none(cls, value):
+        return value or None
+
 
 # ---------------------------------------------------------
 # Schema returned when viewing an incident
@@ -54,6 +62,10 @@ class IncidentResponse(BaseModel):
 
     help_required: Optional[str] = None
 
+    disaster_type: str
+
+    assigned_team_id: Optional[int] = None
+
     status: str
 
     created_at: datetime
@@ -62,6 +74,27 @@ class IncidentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class IncidentStatusUpdate(BaseModel):
+    """Vidya's status endpoint, limited to the Week 1 admin review states."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    status: Literal["UNDER_REVIEW", "VERIFIED"]
+    note: Optional[str] = Field(default=None, max_length=1000)
+
+
+class TeamAssignment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    incident_id: int = Field(gt=0)
+    team_id: int = Field(gt=0)
+
+
+class TeamResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    team_type: str
+    available: bool
 
 
 # ---------------------------------------------------------
