@@ -1,6 +1,8 @@
-# Complete code explanation — Athul's Week 1 authentication app
+# Historical code explanation — ResQ Week 1 authentication contribution
 
-This guide explains the source currently in `C:\Users\athul\DL_Dec\Week1-K\Athul`, inspected on **6 October 2026**. The application is Athul's independent authentication contribution to ResQ Kerala: users register, sign in, view their account, verify their role permissions, and sign out.
+This guide records the independent ResQ authentication contribution inspected on **6 October 2026**. Its standalone source root is referred to as `<authentication-source-root>`. Users register, sign in, view their account, verify their role permissions, and sign out.
+
+**Historical snapshot:** the file paths, line numbers, React frontend, standalone ports and limited feature scope below describe that earlier contribution, not the integrated HTMX application. Personal labels and example identifiers have been renamed to ResQ for consistency, so quoted examples are adapted rather than exact copies of the old source. Use the [current README](../README.md) and [integration record](INTEGRATION.md) for the delivered application and its setup.
 
 The backend is **FastAPI + SQLAlchemy + PostgreSQL**. The browser interface is **React**, built and served locally with **Vite**. Passwords use **Argon2 hashing** through pwdlib. A signed **JWT** identifies a **persisted database session**, so authentication checks are performed on the server on every protected request.
 
@@ -8,7 +10,7 @@ The backend is **FastAPI + SQLAlchemy + PostgreSQL**. The browser interface is *
 
 Start with the feature and request-flow explanations. Then read the numbered tables in this order: settings/database/models → schemas → password/JWT/permission helpers → services → routes/application startup → frontend → setup scripts → tests.
 
-Each table contains the **physical source line number**, the **actual code**, and an explanation of its effect. Every nonblank source line in the 41 included source/configuration files has a row, including imports, comments, JSX, CSS, closing delimiters, tests, and small package initializers. Blank lines are visual separators; they execute nothing and are accounted for globally rather than repeated in the tables. A single physical line can contain several statements or JSX elements; its explanation covers them together.
+Each table contains the **physical source line number**, the **source code with adapted ResQ labels**, and an explanation of its effect. Every nonblank source line in the 41 included source/configuration files has a row, including imports, comments, JSX, CSS, closing delimiters, tests, and small package initializers. Blank lines are visual separators; they execute nothing and are accounted for globally rather than repeated in the tables. A single physical line can contain several statements or JSX elements; its explanation covers them together.
 
 The guide describes `.env.example`, never the private `.env` or generated credentials. Compiled files in `frontend/dist`, dependency directories, caches, logs, generated runtime files, and the generated npm lockfile are not handwritten application logic. README and task notes are summarized as documentation.
 
@@ -47,7 +49,7 @@ Line numbers belong to this inspected source version. Later code edits can chang
 | Expiration handling | An authenticated protected request returning 401 clears saved session state and announces an expiration event to App. | `api.js`, `App.jsx` |
 | Role-specific navigation | Shows the user's own workspace and account view; the workspace makes three real API requests to display allowed/denied results. | `App.jsx` |
 | Responsive and accessible UI elements | Provides labeled forms, focus outlines, loading/error states, semantic tables, a skip link, responsive layouts, and reduced-motion CSS. | `Login.jsx`, `App.jsx`, `styles.css` |
-| Database isolation | Stores accounts and sessions in a separate PostgreSQL schema named athul_week1 by default. | `config.py`, `database/connection.py` |
+| Database isolation | Stores accounts and sessions in a separate PostgreSQL schema named resq_week1 by default. | `config.py`, `database/connection.py` |
 | Database health | Executes SELECT 1 and reports connected/unavailable status. | `main.py` |
 | Local lifecycle scripts | Install dependencies, configure/seeding, start or reuse module services, record process ownership, and stop tracked module services. | `scripts/` |
 | Focused automated tests | Contains 27 collected test cases for authentication, input validation, session lifecycle, and role access using isolated SQLite. | `backend/tests/test_auth.py` |
@@ -65,7 +67,7 @@ flowchart TD
     API --> Permissions[Dependencies: authentication and role checks]
     API --> Service[Auth service: register, login, logout]
     Service --> Security[Argon2 and signed JWT helpers]
-    Service --> DB[(PostgreSQL: athul_week1)]
+    Service --> DB[(PostgreSQL: resq_week1)]
     Permissions --> Security
     Permissions --> DB
     DB --> Users[users]
@@ -311,7 +313,7 @@ Loads and validates the configuration used by the API, database, and JWT helpers
 | 2 | <code>from pathlib import Path</code> | Imports the object-oriented filesystem path class. |
 | 4 | <code>from pydantic import Field, SecretStr, field_validator, model_validator</code> | Imports field constraints, a masked secret type, and Pydantic validation decorators. |
 | 5 | <code>from pydantic_settings import BaseSettings, SettingsConfigDict</code> | Imports environment-based settings and their configuration object. |
-| 8 | <code>WORKSPACE_ROOT = Path(__file__).resolve().parents[1]</code> | Resolves this file's absolute path and selects the project directory: config.py is inside backend, so parents[1] is Athul. |
+| 8 | <code>WORKSPACE_ROOT = Path(__file__).resolve().parents[1]</code> | Resolves this file's absolute path and selects the project directory: config.py is inside backend, so parents[1] is the standalone project root. |
 | 11 | <code>class Settings(BaseSettings):</code> | Defines the settings object; BaseSettings can obtain values from environment variables and the configured .env file. |
 | 12 | <code>model_config = SettingsConfigDict(</code> | Begins the settings-loading configuration. |
 | 13 | <code>env_file=WORKSPACE_ROOT / ".env", env_file_encoding="utf-8", extra="ignore"</code> | Reads the project .env as UTF-8 and ignores extra configuration keys rather than failing on unrelated settings. Process environment variables take precedence over .env values. |
@@ -321,8 +323,8 @@ Loads and validates the configuration used by the API, database, and JWT helpers
 | 18 | <code>jwt_expire_minutes: int = Field(default=30, ge=5, le=1440)</code> | Defaults session lifetime to 30 minutes; valid configured values are integers from 5 through 1440 minutes. |
 | 19 | <code>cors_origins: str = "http://localhost:5175,http://127.0.0.1:5175"</code> | Provides two allowed browser origins for the local frontend. localhost and 127.0.0.1 count as different origins. |
 | 20 | <code>allow_sqlite_for_tests: bool = False</code> | Disallows SQLite unless the test-only configuration explicitly enables it. |
-| 21 | <code>app_version: str = "1.0.0-athul-week1"</code> | Sets the API's default version label. |
-| 22 | <code>database_schema: str = Field(default="athul_week1", pattern=r"^[a-z][a-z0-9_]{0,62}$")</code> | Defaults PostgreSQL isolation to the athul_week1 schema. The regular expression restricts its name to 1-63 lowercase letters, digits, or underscores, beginning with a lowercase letter. |
+| 21 | <code>app_version: str = "1.0.0-resq-week1"</code> | Sets the API's default version label. |
+| 22 | <code>database_schema: str = Field(default="resq_week1", pattern=r"^[a-z][a-z0-9_]{0,62}$")</code> | Defaults PostgreSQL isolation to the resq_week1 schema. The regular expression restricts its name to 1-63 lowercase letters, digits, or underscores, beginning with a lowercase letter. |
 | 24 | <code>@field_validator("jwt_secret")</code> | Registers the following validator for the jwt_secret setting. |
 | 25 | <code>@classmethod</code> | Makes the validator a class method; Pydantic passes the class as cls. |
 | 26 | <code>def validate_secret(cls, value: SecretStr) -&gt; SecretStr:</code> | Accepts and returns a SecretStr, preserving the masked representation. |
@@ -388,7 +390,7 @@ Defines the two database entities: an account and an individually revocable logi
 
 | Line | Code | Explanation |
 | --- | --- | --- |
-| 1 | <code>"""Only the account and authenticated-session entities needed for Athul's task."""</code> | Module docstring identifies the deliberately limited account/session scope. |
+| 1 | <code>"""Only the account and authenticated-session entities needed for ResQ task."""</code> | Module docstring identifies the deliberately limited account/session scope. |
 | 2 | <code>from datetime import datetime, timezone</code> | Imports date/time objects and the UTC timezone. |
 | 3 | <code>from enum import Enum</code> | Imports Python's enumeration base. |
 | 5 | <code>from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, String</code> | Imports database column types, an SQL enum wrapper, and foreign-key support; aliases the SQL enum so it does not collide with Python Enum. |
@@ -511,8 +513,8 @@ Creates a signed JWT tied to a database session and verifies incoming token sign
 | 6 | <code>from sqlalchemy.orm import Session</code> | Imports the ORM session type for annotations. |
 | 8 | <code>from ..config import get_settings</code> | Imports access to validated signing/lifetime settings. |
 | 9 | <code>from ..models import TokenSession, User</code> | Imports account/session models used to link tokens to persisted records. |
-| 12 | <code>TOKEN_ISSUER = "resq-athul-week1"</code> | Defines the issuer identifier included in and required from tokens. |
-| 13 | <code>TOKEN_AUDIENCE = "resq-athul-week1"</code> | Defines the audience identifier; this module expects tokens intended for this same app. |
+| 12 | <code>TOKEN_ISSUER = "resq-week1"</code> | Defines the issuer identifier included in and required from tokens. |
+| 13 | <code>TOKEN_AUDIENCE = "resq-week1"</code> | Defines the audience identifier; this module expects tokens intended for this same app. |
 | 16 | <code>def unauthorized() -&gt; HTTPException:</code> | Defines one reusable authentication-error constructor. |
 | 17 | <code>return HTTPException(</code> | Begins constructing an HTTPException; callers raise the returned exception. |
 | 18 | <code>status_code=status.HTTP_401_UNAUTHORIZED,</code> | Uses HTTP 401 for missing, invalid, expired, or revoked authentication. |
@@ -777,9 +779,9 @@ Locally provisions three demonstration roles without allowing privileged public 
 | 16 | <code>previous = json.loads(destination.read_text()) if destination.exists() else None</code> | Reads an existing generated JSON record when present, otherwise uses None. Invalid JSON would raise an error; this line does not repair it. |
 | 17 | <code>password = previous["password"] if previous else secrets.token_urlsafe(20)</code> | Reuses the previously recorded demonstration password, or generates a random URL-safe password for new local setup. |
 | 18 | <code>accounts = [</code> | Begins the fixed three-account specification list. |
-| 19 | <code>{"email": "citizen@athul.example.com", "full_name": "Demo Citizen", "role": Role.CITIZEN},</code> | Defines the example citizen account; this address is a source-code demo identifier, not a secret. |
-| 20 | <code>{"email": "admin@athul.example.com", "full_name": "Demo Admin", "role": Role.ADMIN},</code> | Defines the example administrator account, which public registration cannot provision. |
-| 21 | <code>{"email": "team@athul.example.com", "full_name": "Demo Response Team", "role": Role.RESPONSE_TEAM},</code> | Defines the example response-team account. |
+| 19 | <code>{"email": "citizen@resq.example.com", "full_name": "Demo Citizen", "role": Role.CITIZEN},</code> | Defines the example citizen account; this address is a source-code demo identifier, not a secret. |
+| 20 | <code>{"email": "admin@resq.example.com", "full_name": "Demo Admin", "role": Role.ADMIN},</code> | Defines the example administrator account, which public registration cannot provision. |
+| 21 | <code>{"email": "team@resq.example.com", "full_name": "Demo Response Team", "role": Role.RESPONSE_TEAM},</code> | Defines the example response-team account. |
 | 22 | <code>]</code> | Closes the list begun above. |
 | 23 | <code>created = []</code> | Creates a list tracking which email addresses are newly inserted on this run. |
 | 24 | <code>with SessionLocal() as db:</code> | Opens a database session that closes at the end of the block. |
@@ -868,7 +870,7 @@ App restores a tab session and verifies it through GET /api/users/me before rend
 | 38 | <code>return (</code> | Starts returning the JSX that React will turn into the permission page. |
 | 39 | <code>&lt;&gt;</code> | Opens a React fragment, grouping sibling elements without adding an extra HTML wrapper. |
 | 40 | <code>&lt;div className="page-heading"&gt;</code> | Opens the page heading container styled by page-heading. |
-| 41 | <code>&lt;div&gt;&lt;span className="eyebrow"&gt;ATHUL · WEEK 1&lt;/span&gt;&lt;h1&gt;{roleLabel(user.role)} workspace&lt;/h1&gt;&lt;p&gt;Authentication and role access, verified through the backend.&lt;/p&gt;&lt;/div&gt;</code> | Shows the project label, friendly role-specific heading, and description of backend verification. JavaScript expressions inside braces insert computed values. |
+| 41 | <code>&lt;div&gt;&lt;span className="eyebrow"&gt;RESQ · WEEK 1&lt;/span&gt;&lt;h1&gt;{roleLabel(user.role)} workspace&lt;/h1&gt;&lt;p&gt;Authentication and role access, verified through the backend.&lt;/p&gt;&lt;/div&gt;</code> | Shows the project label, friendly role-specific heading, and description of backend verification. JavaScript expressions inside braces insert computed values. |
 | 42 | <code>&lt;button className="button secondary" onClick={() =&gt; setAttempt(value =&gt; value + 1)} disabled={busy}&gt;&lt;RefreshCw size={16} className={busy ? 'spin' : ''} /&gt;Check access again&lt;/button&gt;</code> | Shows the retry button. Clicking increments attempt with a functional state update; disabled prevents repeat clicks while busy. RefreshCw spins during the check. |
 | 43 | <code>&lt;/div&gt;</code> | Closes the heading container. |
 | 44 | <code>&lt;section className="workspace-hero" aria-label="Your role access"&gt;</code> | Opens the hero section and gives assistive technology the descriptive label Your role access. |
@@ -892,7 +894,7 @@ App restores a tab session and verifies it through GET /api/users/me before rend
 | 62 | <code>})}&lt;/tbody&gt;</code> | Closes the map expression and table body. |
 | 63 | <code>&lt;/table&gt;&lt;/div&gt;</code> | Closes the table and overflow wrapper. |
 | 64 | <code>{!busy &amp;&amp; results.some(result =&gt; result.status !== 200 &amp;&amp; result.status !== 403) &amp;&amp; &lt;p className="error-box panel-error" role="alert"&gt;One or more permission checks could not complete. Check the server and try again.&lt;/p&gt;}</code> | After loading, shows an accessible error alert if any result is neither 200 nor 403, such as a network failure or unexpected HTTP status. |
-| 65 | <code>&lt;p className="panel-note"&gt;Only your permitted workspace and account page appear in navigation. These pages demonstrate role access for Athul's Week 1 scope.&lt;/p&gt;</code> | Shows a scope note explaining that navigation contains the role's workspace and account page, and that this is a Week 1 access demonstration. |
+| 65 | <code>&lt;p className="panel-note"&gt;Only your permitted workspace and account page appear in navigation. These pages demonstrate role access for ResQ Week 1 scope.&lt;/p&gt;</code> | Shows a scope note explaining that navigation contains the role's workspace and account page, and that this is a Week 1 access demonstration. |
 | 66 | <code>&lt;/section&gt;</code> | Closes the permissions panel. |
 | 67 | <code>&lt;/&gt;</code> | Closes the fragment. |
 | 68 | <code>);</code> | Closes the JSX return expression. |
@@ -981,19 +983,19 @@ App restores a tab session and verifies it through GET /api/users/me before rend
 | 160 | <code>&lt;div className="app-shell"&gt;</code> | Opens the top-level application shell. |
 | 161 | <code>&lt;a className="skip-link" href="#main-content"&gt;Skip to content&lt;/a&gt;</code> | Provides a keyboard skip link to the main-content element, helping users bypass repeated navigation. |
 | 162 | <code>&lt;aside className="sidebar"&gt;</code> | Opens the sidebar containing branding, navigation, and profile controls. |
-| 163 | <code>&lt;a className="brand" href="#" onClick={event =&gt; { event.preventDefault(); navigate('workspace'); }}&gt;&lt;span className="brand-symbol"&gt;&lt;Waves size={25} /&gt;&lt;/span&gt;&lt;span&gt;ResQ &lt;strong&gt;Kerala&lt;/strong&gt;&lt;small&gt;ATHUL · WEEK 1&lt;/small&gt;&lt;/span&gt;&lt;/a&gt;</code> | Displays the ResQ Kerala brand link. Its click handler prevents the default hash jump and selects the workspace through navigate. |
+| 163 | <code>&lt;a className="brand" href="#" onClick={event =&gt; { event.preventDefault(); navigate('workspace'); }}&gt;&lt;span className="brand-symbol"&gt;&lt;Waves size={25} /&gt;&lt;/span&gt;&lt;span&gt;ResQ &lt;strong&gt;Kerala&lt;/strong&gt;&lt;small&gt;RESQ · WEEK 1&lt;/small&gt;&lt;/span&gt;&lt;/a&gt;</code> | Displays the ResQ Kerala brand link. Its click handler prevents the default hash jump and selects the workspace through navigate. |
 | 164 | <code>&lt;div className="workspace-pill"&gt;&lt;ShieldCheck size={14} /&gt;{roleLabel(user.role)} account&lt;/div&gt;</code> | Displays a pill with the friendly role and shield icon; this is descriptive UI, not an access-control decision. |
 | 165 | <code>&lt;div className="navigation-label"&gt;YOUR WORKSPACE&lt;/div&gt;</code> | Shows the fixed navigation group label. |
 | 166 | <code>&lt;nav aria-label="Main navigation"&gt;{links.map(link =&gt; &lt;button type="button" key={link.id} onClick={() =&gt; navigate(link.id)} className={view === link.id ? 'nav-link active' : 'nav-link'} aria-current={view === link.id ? 'page' : undefined}&gt;&lt;link.icon size={19} /&gt;&lt;span&gt;{link.label}&lt;/span&gt;&lt;/button&gt;)}&lt;/nav&gt;</code> | Maps the two link entries into buttons. Each button switches local view, uses an active class and aria-current=page when selected, and renders the entry's icon component dynamically. |
 | 167 | <code>&lt;div className="sidebar-bottom"&gt;</code> | Opens the bottom sidebar area, pushed down by its stylesheet. |
-| 168 | <code>&lt;div className="foundation-card"&gt;&lt;span className="eyebrow light"&gt;ATHUL · WEEK 1&lt;/span&gt;&lt;p&gt;Authentication.&lt;br /&gt;Role permissions.&lt;/p&gt;&lt;span&gt;Local demonstration&lt;/span&gt;&lt;/div&gt;</code> | Displays a static scope card describing this local authentication/permissions demonstration. |
+| 168 | <code>&lt;div className="foundation-card"&gt;&lt;span className="eyebrow light"&gt;RESQ · WEEK 1&lt;/span&gt;&lt;p&gt;Authentication.&lt;br /&gt;Role permissions.&lt;/p&gt;&lt;span&gt;Local demonstration&lt;/span&gt;&lt;/div&gt;</code> | Displays a static scope card describing this local authentication/permissions demonstration. |
 | 169 | <code>&lt;div className="profile-block"&gt;&lt;span className="avatar"&gt;{initials}&lt;/span&gt;&lt;span className="profile-name"&gt;&lt;strong&gt;{user.full_name}&lt;/strong&gt;&lt;small&gt;{roleLabel(user.role)}&lt;/small&gt;&lt;/span&gt;&lt;button className="logout-button" type="button" onClick={logout} disabled={loggingOut} aria-label="Sign out"&gt;{loggingOut ? &lt;LoaderCircle size={18} className="spin" /&gt; : &lt;LogOut size={18} /&gt;}&lt;/button&gt;&lt;/div&gt;</code> | Shows initials, name, role, and the accessible sign-out button. During logout, the button is disabled and its icon changes to a spinning loader. |
 | 170 | <code>&lt;/div&gt;</code> | Closes the sidebar's bottom area. |
 | 171 | <code>&lt;/aside&gt;</code> | Closes the sidebar. |
 | 172 | <code>&lt;div className="workspace"&gt;</code> | Opens the right-hand workspace container. |
-| 173 | <code>&lt;header className="workspace-header"&gt;&lt;span&gt;Athul &lt;span className="breadcrumb-divider"&gt;/&lt;/span&gt; {links.find(link =&gt; link.id === view)?.label}&lt;/span&gt;&lt;span className="week-tag"&gt;WEEK 1&lt;/span&gt;&lt;/header&gt;</code> | Shows a breadcrumb-like header computed from the current link label and a fixed WEEK 1 badge. Optional chaining tolerates a missing match. |
+| 173 | <code>&lt;header className="workspace-header"&gt;&lt;span&gt;ResQ &lt;span className="breadcrumb-divider"&gt;/&lt;/span&gt; {links.find(link =&gt; link.id === view)?.label}&lt;/span&gt;&lt;span className="week-tag"&gt;WEEK 1&lt;/span&gt;&lt;/header&gt;</code> | Shows a breadcrumb-like header computed from the current link label and a fixed WEEK 1 badge. Optional chaining tolerates a missing match. |
 | 174 | <code>&lt;main id="main-content" className="workspace-main"&gt;{view === 'account' ? &lt;Account user={user} /&gt; : &lt;PermissionsWorkspace user={user} /&gt;}&lt;/main&gt;</code> | Provides the skip link's main-content target and renders Account when view is account; every other view value renders PermissionsWorkspace with the authenticated user. |
-| 175 | <code>&lt;footer className="workspace-footer"&gt;&lt;span&gt;ResQ Kerala · Athul&lt;/span&gt;&lt;span&gt;Authentication and role permissions demo&lt;/span&gt;&lt;/footer&gt;</code> | Displays the fixed project footer and scope description. |
+| 175 | <code>&lt;footer className="workspace-footer"&gt;&lt;span&gt;ResQ Kerala · ResQ&lt;/span&gt;&lt;span&gt;Authentication and role permissions demo&lt;/span&gt;&lt;/footer&gt;</code> | Displays the fixed project footer and scope description. |
 | 176 | <code>&lt;/div&gt;</code> | Closes the workspace container. |
 | 177 | <code>&lt;/div&gt;</code> | Closes the application shell. |
 | 178 | <code>);</code> | Closes App's JSX return expression. |
@@ -1042,15 +1044,15 @@ Login keeps form fields in React state. Native input constraints run before a no
 | 34 | <code>}</code> | Ends changeMode. |
 | 36 | <code>return (</code> | Starts returning the authentication page JSX. |
 | 37 | <code>&lt;main className="auth-layout"&gt;</code> | Opens the main authentication layout, arranged by CSS as an explanatory area and form area. |
-| 38 | <code>&lt;section className="auth-story" aria-label="Athul's Week 1 work"&gt;</code> | Opens the explanatory story section and labels it for assistive technology. |
+| 38 | <code>&lt;section className="auth-story" aria-label="ResQ Week 1 work"&gt;</code> | Opens the explanatory story section and labels it for assistive technology. |
 | 39 | <code>&lt;a className="brand auth-brand" href="#" aria-label="ResQ Kerala home"&gt;</code> | Starts the brand anchor with a home label. Unlike App's brand anchor, this anchor has no custom click handler and its href is the page hash. |
 | 40 | <code>&lt;span className="brand-symbol"&gt;&lt;Waves size={26} /&gt;&lt;/span&gt;</code> | Displays the waves icon in the brand symbol box. |
-| 41 | <code>&lt;span&gt;ResQ &lt;strong&gt;Kerala&lt;/strong&gt;&lt;small&gt;ATHUL · WEEK 1&lt;/small&gt;&lt;/span&gt;</code> | Displays the ResQ Kerala brand text and the Athul Week 1 sublabel. |
+| 41 | <code>&lt;span&gt;ResQ &lt;strong&gt;Kerala&lt;/strong&gt;&lt;small&gt;RESQ · WEEK 1&lt;/small&gt;&lt;/span&gt;</code> | Displays the ResQ Kerala brand text and the ResQ Week 1 sublabel. |
 | 42 | <code>&lt;/a&gt;</code> | Closes the brand anchor. |
 | 43 | <code>&lt;div className="story-copy"&gt;</code> | Opens the story text container. |
 | 44 | <code>&lt;span className="eyebrow light"&gt;AUTHENTICATION &amp; ROLE ACCESS&lt;/span&gt;</code> | Shows the small authentication/role-access label. |
 | 45 | <code>&lt;h1&gt;The right access.&lt;br /&gt;For every account.&lt;/h1&gt;</code> | Shows the story heading with an explicit line break, which CSS hides on small screens. |
-| 46 | <code>&lt;p&gt;Athul's first-week foundation: account creation, secure sign-in, sign-out, and access controlled by the server.&lt;/p&gt;</code> | Describes account creation, sign-in, sign-out, and server-controlled access as the demonstration's scope. |
+| 46 | <code>&lt;p&gt;ResQ first-week foundation: account creation, secure sign-in, sign-out, and access controlled by the server.&lt;/p&gt;</code> | Describes account creation, sign-in, sign-out, and server-controlled access as the demonstration's scope. |
 | 47 | <code>&lt;div className="story-steps"&gt;</code> | Opens the checklist container. |
 | 48 | <code>{['Create a citizen account', 'Sign in to your role', 'Verify workspace permissions'].map((step, index) =&gt; (</code> | Maps three fixed explanatory step strings to JSX; the callback receives each step and its zero-based index. |
 | 49 | <code>&lt;div key={step}&gt;&lt;span&gt;{String(index + 1).padStart(2, '0')}&lt;/span&gt;{step}&lt;Check size={15} /&gt;&lt;/div&gt;</code> | Creates a keyed row displaying a two-digit step number, the text, and a check icon. String plus padStart produces 01, 02, and 03. |
@@ -1065,7 +1067,7 @@ Login keeps form fields in React state. Native input constraints run before a no
 | 58 | <code>&lt;section className="auth-main"&gt;</code> | Opens the section containing the sign-in/registration interface. |
 | 59 | <code>&lt;div className="auth-topline"&gt;&lt;ShieldCheck size={17} /&gt;&lt;span&gt;Authentication and role permissions&lt;/span&gt;&lt;/div&gt;</code> | Shows the shield icon and authentication/permissions topline. |
 | 60 | <code>&lt;div className="auth-card"&gt;</code> | Opens the auth-card that centers and constrains the form area. |
-| 61 | <code>&lt;span className="eyebrow"&gt;ATHUL · WEEK 1&lt;/span&gt;</code> | Displays the Athul Week 1 eyebrow label. |
+| 61 | <code>&lt;span className="eyebrow"&gt;RESQ · WEEK 1&lt;/span&gt;</code> | Displays the ResQ Week 1 eyebrow label. |
 | 62 | <code>&lt;h2&gt;{mode === 'login' ? 'Welcome to your workspace.' : 'Create your account.'}&lt;/h2&gt;</code> | Selects the card heading from the current mode. |
 | 63 | <code>&lt;p className="auth-intro"&gt;{mode === 'login' ? 'Sign in to verify your account and open the workspace allowed for your role.' : 'Register as a citizen. Your permissions are assigned by the server.'}&lt;/p&gt;</code> | Selects explanatory text from the mode; registration explicitly says the new account is a citizen and the server assigns permissions. |
 | 64 | <code>&lt;div className="auth-tabs" aria-label="Account access"&gt;</code> | Opens the two mode buttons with an accessible group label. |
@@ -1080,9 +1082,9 @@ Login keeps form fields in React state. Native input constraints run before a no
 | 73 | <code>{error &amp;&amp; &lt;p className="error-box" role="alert"&gt;{error}&lt;/p&gt;}</code> | Displays the current submission error only when nonempty; role=alert makes the failure accessible. |
 | 74 | <code>&lt;button className="button primary auth-submit" type="submit" disabled={busy}&gt;{busy ? &lt;&gt;&lt;LoaderCircle className="spin" size={18} /&gt;{mode === 'register' ? 'Creating your account…' : 'Signing in…'}&lt;/&gt; : &lt;&gt;{mode === 'register' ? 'Create citizen account' : 'Sign in'}&lt;ArrowRight size={18} /&gt;&lt;/&gt;}&lt;/button&gt;</code> | Shows the submit button with conditional fragments: while busy, a spinner and mode-specific progress text; otherwise, mode-specific action text and an arrow. disabled prevents repeated submissions. |
 | 75 | <code>&lt;/form&gt;</code> | Closes the form. |
-| 76 | <code>&lt;p className="auth-help"&gt;{mode === 'register' ? 'Admin and response team accounts are created by the local setup script.' : 'Demo credentials are generated locally. See Athul/README.md and Athul/.runtime/demo-accounts.json.'}&lt;/p&gt;</code> | Displays mode-specific setup guidance. The login text points to README and a private local demo-account file; it does not read that file or put credentials into this source. |
+| 76 | <code>&lt;p className="auth-help"&gt;{mode === 'register' ? 'Admin and response team accounts are created by the local setup script.' : 'Demo credentials are generated locally. See README.md and .runtime/demo-accounts.json.'}&lt;/p&gt;</code> | Displays mode-specific setup guidance. The login text points to README and a private local demo-account file; it does not read that file or put credentials into this source. |
 | 77 | <code>&lt;/div&gt;</code> | Closes auth-card. |
-| 78 | <code>&lt;div className="prototype-note"&gt;&lt;span className="outline-tag"&gt;WEEK 1 AUTH DEMO&lt;/span&gt; Athul's authentication and permissions tasks&lt;/div&gt;</code> | Shows the static WEEK 1 AUTH DEMO scope note below the card. |
+| 78 | <code>&lt;div className="prototype-note"&gt;&lt;span className="outline-tag"&gt;WEEK 1 AUTH DEMO&lt;/span&gt; ResQ authentication and permissions tasks&lt;/div&gt;</code> | Shows the static WEEK 1 AUTH DEMO scope note below the card. |
 | 79 | <code>&lt;/section&gt;</code> | Closes auth-main. |
 | 80 | <code>&lt;/main&gt;</code> | Closes the main authentication layout. |
 | 81 | <code>);</code> | Closes the JSX return expression. |
@@ -1098,8 +1100,8 @@ Both Login and App call this helper using same-origin relative paths. Vite proxi
 
 | Line | Code | Explanation |
 | --- | --- | --- |
-| 1 | <code>export const SESSION_KEY = 'athul-week1-session';</code> | Exports the browser sessionStorage key under which the authentication response is serialized. |
-| 2 | <code>export const SESSION_EXPIRED_EVENT = 'athul:session-expired';</code> | Exports the custom event name used to coordinate session expiration inside the current browser window. |
+| 1 | <code>export const SESSION_KEY = 'resq-week1-session';</code> | Exports the browser sessionStorage key under which the authentication response is serialized. |
+| 2 | <code>export const SESSION_EXPIRED_EVENT = 'resq:session-expired';</code> | Exports the custom event name used to coordinate session expiration inside the current browser window. |
 | 4 | <code>export function readSession() {</code> | Defines and exports the function that reads a usable stored session. |
 | 5 | <code>try {</code> | Starts error handling around browser storage access and JSON parsing. |
 | 6 | <code>const value = JSON.parse(sessionStorage.getItem(SESSION_KEY) &#124;&#124; 'null');</code> | Reads the stored string and parses it. When the key is missing, the fallback string null parses to JavaScript null. |
@@ -1405,8 +1407,8 @@ The browser first receives this HTML page. Its module script loads main.jsx, and
 | 5 | <code>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;</code> | Sets the viewport to the device width and starts at normal scale, allowing the stylesheet's responsive breakpoints to match mobile screen widths. |
 | 6 | <code>&lt;meta name="theme-color" content="#15353d" /&gt;</code> | Supplies the dark theme color that supported browsers may use for browser chrome or UI around the page. |
 | 7 | <code>&lt;link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23237c6b'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-family='sans-serif' font-size='44' fill='white'%3EA%3C/text%3E%3C/svg%3E" /&gt;</code> | Defines the favicon as a URL-encoded inline SVG: a 64-by-64 teal rounded square with a centered white A. It requires no separate favicon image file. |
-| 8 | <code>&lt;meta name="description" content="Athul's ResQ Kerala Week 1 authentication and role permissions implementation." /&gt;</code> | Sets the page description used by browsers/search tools; it describes the Week 1 authentication and role-permissions scope. |
-| 9 | <code>&lt;title&gt;Athul · Week 1 · ResQ Kerala&lt;/title&gt;</code> | Sets the document title displayed in the browser tab. |
+| 8 | <code>&lt;meta name="description" content="ResQ ResQ Kerala Week 1 authentication and role permissions implementation." /&gt;</code> | Sets the page description used by browsers/search tools; it describes the Week 1 authentication and role-permissions scope. |
+| 9 | <code>&lt;title&gt;ResQ · Week 1 · ResQ Kerala&lt;/title&gt;</code> | Sets the document title displayed in the browser tab. |
 | 10 | <code>&lt;/head&gt;</code> | Closes the metadata head. |
 | 11 | <code>&lt;body&gt;</code> | Opens the visible document body. |
 | 12 | <code>&lt;div id="root"&gt;&lt;/div&gt;</code> | Creates the empty root container that ReactDOM.createRoot locates and fills. |
@@ -1447,7 +1449,7 @@ This JSON file tells the package manager what to install and provides the three 
 | Line | Code | Explanation |
 | --- | --- | --- |
 | 1 | <code>{</code> | Opens the top-level JSON package object. |
-| 2 | <code>"name": "resq-athul-week1",</code> | Names the local npm package resq-athul-week1. |
+| 2 | <code>"name": "resq-week1",</code> | Names the local npm package resq-week1. |
 | 3 | <code>"version": "1.0.0",</code> | Declares the project's package version as 1.0.0. |
 | 4 | <code>"private": true,</code> | Marks the package private, preventing accidental publication with the normal npm publishing workflow. |
 | 5 | <code>"type": "module",</code> | Declares JavaScript package files as ES modules, matching import/export syntax in vite.config.js. |
@@ -1478,7 +1480,7 @@ Shared PowerShell helpers loaded by start.ps1 and stop.ps1. Dot-sourcing places 
 | Line | Code | Explanation |
 | --- | --- | --- |
 | 1 | `$ErrorActionPreference = 'Stop'` | Treat PowerShell errors as stopping errors, so an unexpected failure normally interrupts the calling script instead of continuing silently. |
-| 2 | `$ProjectRoot = Split-Path -Parent $PSScriptRoot` | Take the parent of the scripts directory to locate the Athul project root. $PSScriptRoot is the directory containing this script. |
+| 2 | `$ProjectRoot = Split-Path -Parent $PSScriptRoot` | Take the parent of the scripts directory to locate the standalone project root. $PSScriptRoot is the directory containing this script. |
 | 3 | `$RuntimePath = Join-Path $ProjectRoot '.runtime'` | Build the path to the local .runtime directory, where setup metadata, process records, and logs are kept. |
 | 4 | `$setupPath = Join-Path $RuntimePath 'setup.json'` | Build the path to setup.json, which records the Python executable chosen during setup. |
 | 5 | `if (-not (Test-Path -LiteralPath $setupPath)) { throw 'Run .\scripts\setup.ps1 first.' }` | Stop with a clear instruction if setup.json does not exist; start and stop therefore depend on setup having completed. |
@@ -1524,7 +1526,7 @@ Prepare the project's private environment file when one does not already exist. 
 | 2 | `import secrets` | Import Python's secrets module, which provides random values suitable for security-sensitive tokens. |
 | 3 | `from pathlib import Path` | Import Path for clear filesystem path construction and file operations. |
 | 4 | `from dotenv import dotenv_values` | Import dotenv_values, which reads key/value settings from an environment file into a dictionary without printing them. |
-| 7 | `root = Path(__file__).resolve().parents[1]` | Resolve this file's absolute path and select its second parent: configure.py is inside scripts, and this selects the Athul root directory. |
+| 7 | `root = Path(__file__).resolve().parents[1]` | Resolve this file's absolute path and select its second parent: configure.py is inside scripts, and this selects the standalone root directory. |
 | 8 | `destination = root / ".env"` | Set the output destination to the private .env file in the project root. |
 | 9 | `if not destination.exists():` | Run the configuration-generation block only when that destination file is absent. |
 | 10 | `parent_configuration = root.parent / ".env"` | Point to the parent project's .env file, which may contain an existing database connection. |
@@ -1532,7 +1534,7 @@ Prepare the project's private environment file when one does not already exist. 
 | 12 | `if not connection:` | Check whether a nonempty database connection string was found. |
 | 13 | `raise SystemExit("Copy .env.example to .env and configure PostgreSQL and a random JWT_SECRET first.")` | Exit with an instruction to configure .env manually if no connection is available. A message passed to SystemExit also produces an unsuccessful exit status. |
 | 14 | `destination.write_text("\n".join([` | Start writing a newline-joined list of environment settings to the destination file. |
-| 15 | `f"DATABASE_URL={connection}", "DATABASE_SCHEMA=athul_week1",` | Include the reused connection and explicitly isolate this demonstration's database tables in the athul_week1 schema. |
+| 15 | `f"DATABASE_URL={connection}", "DATABASE_SCHEMA=resq_week1",` | Include the reused connection and explicitly isolate this demonstration's database tables in the resq_week1 schema. |
 | 16 | `f"JWT_SECRET={secrets.token_hex(48)}", "JWT_EXPIRE_MINUTES=30",` | Generate a fresh 48-byte random secret encoded as 96 hexadecimal characters, and configure a 30-minute JWT lifetime. |
 | 17 | `"CORS_ORIGINS=http://127.0.0.1:5175,http://localhost:5175", "",` | Allow browser requests from the two local frontend origins. The final empty string gives the written file a trailing newline. |
 | 18 | `]), encoding="utf-8")` | Close the list, join, and write call, saving the text in UTF-8 encoding. |
@@ -1570,7 +1572,7 @@ Install dependencies, create local configuration, provision demonstration accoun
 | 22 | `& $pythonPath -m backend.seed` | Run backend.seed as a Python module to provision local demonstration accounts and initialize the required authentication storage. |
 | 23 | `Assert-Exit 'Authentication account provisioning (PostgreSQL must be running)'` | Check seeding success and explicitly identify PostgreSQL availability as a requirement when it fails. |
 | 24 | `@{python=$pythonPath} \| ConvertTo-Json \| Set-Content -LiteralPath '.runtime\setup.json' -Encoding utf8` | Write a JSON object containing the selected Python path to .runtime/setup.json in UTF-8, allowing common.ps1 to load it later. |
-| 25 | `Write-Host 'Athul Week 1 setup complete. Sign-in details: .runtime/demo-accounts.json'` | Announce completion and identify the private runtime file containing the generated demonstration sign-in details; print the file location, not its contents. |
+| 25 | `Write-Host 'ResQ Week 1 setup complete. Sign-in details: .runtime/demo-accounts.json'` | Announce completion and identify the private runtime file containing the generated demonstration sign-in details; print the file location, not its contents. |
 | 26 | `Write-Host 'Run .\scripts\start.ps1 to open the authentication demo on port 5175.'` | Print the next command and frontend port. Starting services is a separate step. |
 
 **Practical effects and limitations:** A normal setup requires an available Python command, npm/Node, and running PostgreSQL. npm ci relies on the committed lockfile matching package.json. -SkipInstall does not install or verify dependencies, and frontend node_modules must already exist. The script changes the current PowerShell location and TEMP/TMP variables. It provisions authentication accounts, so setup is a database-writing operation. It does not start or stop the PostgreSQL service.
@@ -1582,7 +1584,7 @@ Start or reuse this demonstration's backend and frontend, wait for HTTP readines
 | Line | Code | Explanation |
 | --- | --- | --- |
 | 1 | `. (Join-Path $PSScriptRoot 'common.ps1')` | Dot-source common.ps1, executing its setup-file checks and importing its shared variables/functions into this script's scope. |
-| 2 | `Set-Location -LiteralPath $ProjectRoot` | Change the working directory to the Athul project root. |
+| 2 | `Set-Location -LiteralPath $ProjectRoot` | Change the working directory to the standalone project root. |
 | 3 | `$processFile = Join-Path $RuntimePath 'processes.json'` | Build the path to processes.json, which stores backend/frontend process records. |
 | 4 | `$records = @()` | Create an empty array for all services tracked by this start operation, including services it reuses. |
 | 5 | `$created = @()` | Create an empty array for services newly created by this start operation, used for rollback on an error. |
@@ -1612,7 +1614,7 @@ Start or reuse this demonstration's backend and frontend, wait for HTTP readines
 | 30 | `$records += New-ProcessRecord $frontend 'frontend'` | Add the frontend record to the full tracking array. |
 | 31 | `$records \| ConvertTo-Json -AsArray \| Set-Content -LiteralPath $processFile -Encoding utf8` | Save the final JSON array containing both tracked services. |
 | 32 | `if (-not $created.Count) { Write-Host 'Existing project services reused.' }` | If no service was newly created, print that existing project services were reused. |
-| 33 | `Write-Host 'Athul Week 1: http://127.0.0.1:5175'` | Print the frontend address for the developer to open. |
+| 33 | `Write-Host 'ResQ Week 1: http://127.0.0.1:5175'` | Print the frontend address for the developer to open. |
 | 34 | `Write-Host 'API documentation: http://127.0.0.1:8012/docs'` | Print the backend's generated API documentation address. |
 | 35 | `} catch {` | End the normal startup block and begin the error handler. |
 | 36 | `foreach ($record in $created) { Stop-RecordedProcess $record }` | Attempt to stop each newly created, recorded service using the ownership/start-time checks. Reused services are absent from this cleanup array. |
@@ -1633,7 +1635,7 @@ Stop the backend/frontend services represented by saved process records, subject
 | 4 | `foreach ($record in (Get-Content -LiteralPath $recordFile -Raw \| ConvertFrom-Json)) { Stop-RecordedProcess $record }` | Read and parse the recorded JSON, loop through every service record, and pass each one to the helper that verifies process ID, start time, and workspace ownership before stopping it. |
 | 5 | `Remove-Item -LiteralPath $recordFile` | Remove the process-record file after the loop completes. |
 | 6 | `}` | Close the conditional block. |
-| 7 | `Write-Host 'Recorded Athul authentication services stopped.'` | Print a completion message. This message also appears if no process-record file existed. |
+| 7 | `Write-Host 'Recorded ResQ authentication services stopped.'` | Print a completion message. This message also appears if no process-record file existed. |
 
 **Practical effects and limitations:** Stopping is limited to saved records; services launched outside the tracking script or left unrecorded after a startup failure may continue running. Stale/nonmatching records are skipped by Stop-RecordedProcess. A tracked service may have been reused by start.ps1 rather than newly launched. The final message reports completion of the stopping attempt, not an independent port/readiness check.
 
@@ -1675,9 +1677,9 @@ Show the names and shape of local configuration settings that a developer must r
 
 | Line | Code | Explanation |
 | --- | --- | --- |
-| 1 | `# A separate schema keeps Athul's authentication demo apart from the shared app.` | Explain that the demonstration uses a separate database schema so its tables can be kept apart from the shared app's tables. |
+| 1 | `# A separate schema keeps ResQ authentication demo apart from the shared app.` | Explain that the demonstration uses a separate database schema so its tables can be kept apart from the shared app's tables. |
 | 2 | `DATABASE_URL=postgresql+psycopg://resq:YOUR_DATABASE_PASSWORD@127.0.0.1:5441/resq_week1` | Provide an example SQLAlchemy PostgreSQL connection URL: psycopg driver, database user resq, a password placeholder, loopback host, port 5441, and database resq_week1. Replace the placeholder and adapt the connection to the actual local database. |
-| 3 | `DATABASE_SCHEMA=athul_week1` | Set the namespace for this module's authentication tables to athul_week1. |
+| 3 | `DATABASE_SCHEMA=resq_week1` | Set the namespace for this module's authentication tables to resq_week1. |
 | 4 | `JWT_SECRET=REPLACE_WITH_AT_LEAST_32_RANDOM_CHARACTERS` | Show where a randomly generated signing secret must be placed. The text shown is a replacement instruction; it must not be used as the actual secret. |
 | 5 | `JWT_EXPIRE_MINUTES=30` | Set the access-token lifetime to 30 minutes. |
 | 6 | `CORS_ORIGINS=http://127.0.0.1:5175,http://localhost:5175` | Allow browser requests from the frontend at either 127.0.0.1 or localhost on port 5175. These are different browser origins even when they point to the same machine. |
@@ -1801,7 +1803,7 @@ Provide a compatibility import path for the public account response schema.
 
 ## Existing project documentation
 
-`README.md` is the run-and-demo guide: it maps Athul's responsibilities to files, lists prerequisite software and startup commands, explains the separate schema/ports, and outlines the registration/login/role/logout demonstration. Its verification paragraph records checks reported for 6 October 2026; reading that paragraph does not rerun those checks.
+The historical standalone `README.md` was the run-and-demo guide: it mapped authentication responsibilities to files, lists prerequisite software and startup commands, explains the separate schema/ports, and outlines the registration/login/role/logout demonstration. Its verification paragraph records checks reported for 6 October 2026; reading that paragraph does not rerun those checks.
 
 `docs/week1-tasks.md` defines ownership and integration scope. It records the assignment reference, names the auth responsibilities, gives the API handoff contract and status codes, explains PostgreSQL storage and the isolated test database, and identifies shared files that need coordination in the full project.
 
@@ -1853,7 +1855,7 @@ Line numbers match the current source. Every nonblank physical line is included;
 
 | Line | Code | Explanation |
 | ---: | --- | --- |
-| 1 | `"""Athul's Week 1 authentication and role-permission API checks.` | Start the module docstring: this file describes authentication and role-permission API tests for Athul's Week 1 slice. |
+| 1 | `"""ResQ Week 1 authentication and role-permission API checks.` | Start the module docstring: this file describes authentication and role-permission API tests for ResQ Week 1 slice. |
 | 3 | `Every test has a fresh in-memory database. These checks never read or change the` | Document that each test case receives a fresh in-memory database through the api fixture. This applies to each parametrized case too. |
 | 4 | `full project's accounts, incident reports, team assignments, or demo database.` | Continue the isolation statement: fixture requests use synthetic accounts rather than the full project's operational data. |
 | 5 | `"""` | Close the module docstring; the text above is documentation, not executable assertions. |
@@ -1862,7 +1864,7 @@ Line numbers match the current source. Every nonblank physical line is included;
 | 9 | `from datetime import datetime, timedelta, timezone` | Import timezone-aware timestamps and timedelta, used to deliberately expire a persisted test session. |
 | 11 | `os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"` | Set the application's database URL to an in-memory SQLite database before its configuration module is imported. No database file is created by this URL. |
 | 12 | `os.environ["ALLOW_SQLITE_FOR_TESTS"] = "true"` | Enable the explicit test-only SQLite configuration exception; normal runtime configuration requires PostgreSQL. |
-| 13 | `os.environ["JWT_SECRET"] = "athul-isolated-auth-tests-only-secret-2026"` | Set a public synthetic signing secret solely for this isolated test process. This value must never be reused as a deployment secret. |
+| 13 | `os.environ["JWT_SECRET"] = "resq-isolated-auth-tests-only-secret-2026"` | Set a public synthetic signing secret solely for this isolated test process. This value must never be reused as a deployment secret. |
 | 15 | `import pytest` | Import pytest, which discovers test functions and provides fixtures and parametrization. |
 | 16 | `from fastapi.testclient import TestClient` | Import FastAPI's synchronous TestClient, which invokes the ASGI app inside the process without starting Uvicorn or opening a browser. |
 | 17 | `from sqlalchemy import create_engine, event, select` | Import SQLAlchemy tools: create_engine establishes database access, event installs connection hooks, and select constructs query statements. |

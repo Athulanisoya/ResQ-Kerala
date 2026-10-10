@@ -9,8 +9,8 @@ from ..config import get_settings
 from ..models import TokenSession, User
 
 
-TOKEN_ISSUER = "resq-athul-week1"
-TOKEN_AUDIENCE = "resq-athul-week1"
+TOKEN_ISSUER = "resq-week1"
+TOKEN_AUDIENCE = "resq-week1"
 
 
 def unauthorized() -> HTTPException:

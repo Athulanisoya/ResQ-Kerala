@@ -16,9 +16,9 @@ def seed():
     previous = json.loads(destination.read_text()) if destination.exists() else None
     password = previous["password"] if previous else secrets.token_urlsafe(20)
     accounts = [
-        {"email": "citizen@athul.example.com", "full_name": "Demo Citizen", "role": Role.CITIZEN},
-        {"email": "admin@athul.example.com", "full_name": "Demo Admin", "role": Role.ADMIN},
-        {"email": "team@athul.example.com", "full_name": "Demo Response Team", "role": Role.RESPONSE_TEAM},
+        {"email": "citizen@resq.example.com", "full_name": "Demo Citizen", "role": Role.CITIZEN},
+        {"email": "admin@resq.example.com", "full_name": "Demo Admin", "role": Role.ADMIN},
+        {"email": "team@resq.example.com", "full_name": "Demo Response Team", "role": Role.RESPONSE_TEAM},
     ]
     created = []
     with SessionLocal() as db:

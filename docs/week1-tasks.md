@@ -1,14 +1,16 @@
-# Athul — Week 1 tasks
+# ResQ — historical Week 1 authentication tasks
 
-This folder contains Athul's Week 1 contribution to ResQ Kerala: **registration, login, logout, and role permissions**. It is a small runnable authentication application, with its own backend and frontend, so Athul can develop and demonstrate this contribution independently.
+This note records the original independent ResQ Week 1 authentication contribution: **registration, login, logout, and role permissions**. That contribution had its own backend and React frontend for independent development and demonstration.
 
-The member assignment comes from slide 5, **“Week 1 / V1: Athul”**, in `C:\Users\athul\Downloads\ResQ_Kerala_Member_Weekly_Guide.pptx`. The slide's demo is: register, sign in as each role, show allowed pages, and sign out. The broader architecture and Week 1 scope come from sections 20 and 25 of `C:\Users\athul\DL_Dec\K-ResQ\ResQ_Kerala_Complete_Project_Discussion.md`. The weekly guide determines this member's ownership where the longer discussion describes different divisions.
+**Historical snapshot:** paths, ports and feature limits below describe the original authentication subset. Example identifiers have been adapted to the current ResQ naming. The current workspace combines all four contributions and uses HTMX; use the [current README](../README.md) and [integration record](INTEGRATION.md) for its complete workflow and setup.
+
+The authentication assignment comes from slide 5 of the supplied `ResQ_Kerala_Member_Weekly_Guide.pptx`. The slide's demo is: register, sign in as each role, show allowed pages, and sign out. The broader architecture and Week 1 scope come from sections 20 and 25 of the supplied `ResQ_Kerala_Complete_Project_Discussion.md`. The weekly guide determines this contribution's ownership where the longer discussion describes different divisions.
 
 ## Assigned files
 
-All paths below are relative to `Athul/`.
+All paths below are relative to `<authentication-source-root>`, the original standalone contribution.
 
-| Guide path | Athul's responsibility |
+| Guide path | Authentication responsibility |
 | --- | --- |
 | `backend/routers/auth.py` | Register, login, and logout endpoints. |
 | `backend/services/auth_service.py` | Create citizen accounts, verify credentials, create authenticated account responses, and revoke the current session. |
@@ -52,15 +54,15 @@ Passwords use Argon2 hashes. Each JWT refers to a saved `TokenSession`, so logou
 
 ## Data and setup
 
-PostgreSQL stores this demonstration's two tables, `users` and `token_sessions`, in the separate `athul_week1` schema. Its account/session records are independent of the full Week 1 application's records, even when setup reuses the same local PostgreSQL service. `team_id` is an optional account field retained for the shared response contract; this subset does not provision or manage teams.
+PostgreSQL stores this demonstration's two tables, `users` and `token_sessions`, in the separate `resq_week1` schema. Its account/session records are independent of the full Week 1 application's records, even when setup reuses the same local PostgreSQL service. `team_id` is an optional account field retained for the shared response contract; this subset does not provision or manage teams.
 
-Use the setup and run commands in [`../README.md`](../README.md). The folder has its own environment configuration and JWT secret. Local credential and runtime files are ignored. The API and browser ports are separate from the full application's ports.
+The standalone contribution used its own environment configuration, JWT secret, and separate API/browser ports. Local credential and runtime files were ignored. The [current README](../README.md) now provides setup and run commands for the integrated application.
 
 ## Verification
 
 `backend/tests/test_auth.py` uses a fresh in-memory SQLite database with the explicit test-only setting. It exercises registration validation, hashing, duplicate emails, rejected privilege fields, significant password whitespace, correct/incorrect login, current-account access, logout revocation, expiry, missing sessions, inactive accounts, and the three-role permission matrix. It also checks that database role changes affect existing sessions.
 
-These isolated API tests do not establish PostgreSQL deployment or browser behavior; see the verification results in `../README.md` for the checks actually performed on this folder.
+These isolated API tests do not establish PostgreSQL deployment or browser behavior; see [the current validation record](VALIDATION.md) for the checks performed on the integrated application.
 
 ## Integration into the full project
 

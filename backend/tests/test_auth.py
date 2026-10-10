@@ -1,4 +1,4 @@
-"""Athul's Week 1 authentication and role-permission API checks.
+"""resq's Week 1 authentication and role-permission API checks.
 
 Every test has a fresh in-memory database. These checks never read or change the
 full project's accounts, incident reports, team assignments, or demo database.
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 os.environ["ALLOW_SQLITE_FOR_TESTS"] = "true"
-os.environ["JWT_SECRET"] = "athul-isolated-auth-tests-only-secret-2026"
+os.environ["JWT_SECRET"] = "resq-isolated-auth-tests-only-secret-2026"
 
 import pytest
 from fastapi.testclient import TestClient

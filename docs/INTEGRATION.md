@@ -2,22 +2,22 @@
 
 ## Source branches
 
-Repository: <https://github.com/Athulanisoya/ResQ-Kerala>
+Repository: run `git remote get-url origin` from this project directory to inspect the configured source repository.
 
 The local integration branch is `complete-week1-htmx`. The four supplied branch heads were fetched and preserved in Git history:
 
-| Member / branch | Source commit | Contribution present in the source |
+| Source module | Source commit | Contribution present in the source |
 | --- | --- | --- |
-| Arya / `arya` | `19fa069ee3da232faad82376bd88c7c18d61fd3f` | Incident creation/read/history, validation and report models |
-| Athul / `athul-week1` | `69387831874d1902cf1ef497b846fd7a7daf918c` | Account registration/login/logout, JWT sessions, password hashing and role permissions |
-| Vidya / `vidya-week1` | `129165986bfecf7ad2ce23ad2342f74e65210177` | Report creation/status backend, disaster type and status endpoints |
-| Maanaz / `week1-maanaz` | `19fa069ee3da232faad82376bd88c7c18d61fd3f` | Same source commit as `arya`; no separate admin-review or team-assignment implementation existed at this head |
+| Incident API source | `19fa069ee3da232faad82376bd88c7c18d61fd3f` | Incident creation/read/history, validation and report models |
+| Authentication source | `69387831874d1902cf1ef497b846fd7a7daf918c` | Account registration/login/logout, JWT sessions, password hashing and role permissions |
+| Report/status source | `129165986bfecf7ad2ce23ad2342f74e65210177` | Report creation/status backend, disaster type and status endpoints |
+| Admin review/assignment source | `19fa069ee3da232faad82376bd88c7c18d61fd3f` | Same source commit as the incident API source; no separate admin-review or team-assignment implementation existed at this head |
 
-Merge commits `3d279f3` and `88b9ebe` preserve the authentication and reporting branch ancestry. Arya and Maanaz point to the same commit, so merging that shared ancestor does not produce an additional distinct merge commit. No remote push or publication is part of this local delivery.
+Merge commits `3d279f3` and `88b9ebe` preserve the authentication and reporting branch ancestry. The incident API and admin review/assignment source heads point to the same commit, so merging that shared ancestor does not produce an additional distinct merge commit. No remote push or publication is part of this local delivery.
 
 ## Accepted scope
 
-The supplied `ResQ_Kerala_Complete_Project_Discussion.md`, section 25, defines Week 1 as registration, login, citizen reporting, admin review, team assignment and status tracking. The supplied `ResQ_Kerala_Member_Weekly_Guide.pptx`, slides 4–8, assigns authentication to Athul, incident APIs/validation to Arya, admin review/assignment to Maanaz, and citizen forms/status to Vidya.
+The supplied `ResQ_Kerala_Complete_Project_Discussion.md`, section 25, defines Week 1 as registration, login, citizen reporting, admin review, team assignment and status tracking. The supplied `ResQ_Kerala_Member_Weekly_Guide.pptx`, slides 4–8, assigns authentication, incident APIs/validation, admin review/assignment, and citizen forms/status to the four individual members.
 
 The guide's slide 2 explains that its file references are cumulative final targets rather than saved weekly builds. Later-week modules are therefore not acceptance requirements for this delivery. The user's current HTMX requirement replaces the plans' React frontend examples.
 
@@ -40,7 +40,7 @@ The source branches could not be combined into a working application unchanged. 
 - Connect citizen ownership and role checks to the authentication principal. Retain the report reference and history behavior from the reporting work.
 - Save initial report/history rows in one transaction and replace the original count-derived report reference with a unique UUID-based reference; concurrent submissions could otherwise reuse a reference. Keep the authentication branch's account/password/JWT implementation intact.
 - Restrict the supplied status-update endpoint to the Week 1 review states and permitted admin actions, preserving a coherent saved timeline.
-- Supply the missing admin queue/review and available-team assignment behavior. The Maanaz branch head contained no distinct implementation of these required tasks. Persist assignment, availability and status/history changes together, and expose assigned reports to the appropriate team.
+- Supply the missing admin queue/review and available-team assignment behavior. The admin review/assignment source head contained no distinct implementation of these required tasks. Persist assignment, availability and status/history changes together, and expose assigned reports to the appropriate team.
 - Seed local demonstration accounts and a usable response team for the required three-role demonstration.
 
 These changes enable the specified basic workflow; they do not add the later disaster-response modules. For review, compare the final backend files against the source commits above and inspect the integration diff rather than assuming every member supplied a complete module.

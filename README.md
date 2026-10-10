@@ -7,19 +7,19 @@ This version combines the four member branches into one flood reporting applicat
 From this project directory in PowerShell:
 
 ```powershell
-.\scripts\setup.ps1 -PythonCommand 'C:\Users\athul\anaconda3\python.exe'
+.\scripts\setup.ps1 -PythonCommand python
 .\scripts\start.ps1
 ```
 
 Open [the application](http://127.0.0.1:8013) or [API documentation](http://127.0.0.1:8013/docs). Setup creates a fresh `.venv` if needed, installs `requirements.txt`, initializes this workspace's PostgreSQL cluster and provisions the demo accounts. HTMX and CSS are served by the same Python application; Node.js and a separate frontend server are unnecessary.
 
-Requirements: Windows, Python 3.11+, and PostgreSQL 18 binaries at `C:\Program Files\PostgreSQL\18\bin`. Use `-PythonCommand python` on another computer with Python available on PATH. If dependencies are already installed, rerun `.\scripts\setup.ps1 -SkipInstall`.
+Requirements: Windows, Python 3.11+, and PostgreSQL 18 binaries at `C:\Program Files\PostgreSQL\18\bin`. Python must be available on PATH, or pass its executable path with `-PythonCommand`. If dependencies are already installed, rerun `.\scripts\setup.ps1 -SkipInstall`.
 
 The database listens only on `127.0.0.1:5443`, uses database/schema `resq_week1`, and stores its files in `.runtime/postgres`. This isolates it from the other ResQ checkouts. Both ports, **5443** and **8013**, must be available. Setup preserves generated credentials and existing records on subsequent runs.
 
 ## Demo accounts
 
-Setup writes the generated password and three account details to the ignored, local **`.runtime/demo-accounts.json`** file. Open that file locally to sign in as `citizen@athul.example.com`, `admin@athul.example.com`, or `team@athul.example.com`. Public registration creates citizens only. Admin and team roles are provisioned by setup.
+Setup writes the generated password and three account details to the ignored, local **`.runtime/demo-accounts.json`** file. Open that file locally to sign in as `citizen@resq.example.com`, `admin@resq.example.com`, or `team@resq.example.com`. Public registration creates citizens only. Admin and team roles are provisioned by setup.
 
 Keep `.env`, `.runtime`, and `.venv` private and outside commits. `.runtime/pgpass.conf` contains the database password; `.env` contains the signing secret and the connection configuration.
 

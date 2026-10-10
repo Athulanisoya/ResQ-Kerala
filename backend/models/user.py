@@ -1,4 +1,4 @@
-"""Only the account and authenticated-session entities needed for Athul's task."""
+"""Only the account and authenticated-session entities needed for resq's task."""
 from datetime import datetime, timezone
 from enum import Enum
 

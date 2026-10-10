@@ -77,7 +77,7 @@ class IncidentResponse(BaseModel):
 
 
 class IncidentStatusUpdate(BaseModel):
-    """Vidya's status endpoint, limited to the Week 1 admin review states."""
+    """resq's status endpoint, limited to the Week 1 admin review states."""
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     status: Literal["UNDER_REVIEW", "VERIFIED"]
     note: Optional[str] = Field(default=None, max_length=1000)
