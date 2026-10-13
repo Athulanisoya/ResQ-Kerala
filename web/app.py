@@ -256,7 +256,7 @@ async def assign_report(request: Request, incident_id: int):
     if not await current_user(request):
         return redirect(request, "/login")
     form = request.state.form
-    response = await api_call(request, "POST", "/api/admin/assign-team", {"incident_id": incident_id, "team_id": form.get("team_id")})
+    response = await api_call(request, "POST", "/api/incidents/admin/assign-team", {"incident_id": incident_id, "team_id": form.get("team_id")})
     if response.status_code == 200:
         return redirect(request, f"/reports/{incident_id}")
     return await detail_page(request, incident_id, error=error_message(response), status_code=response.status_code, values=form)
