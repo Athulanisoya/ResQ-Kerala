@@ -23,6 +23,16 @@ Setup writes the generated password and three account details to the ignored, lo
 
 Keep `.env`, `.runtime`, and `.venv` private and outside commits. `.runtime/pgpass.conf` contains the database password; `.env` contains the signing secret and the connection configuration.
 
+### Sign-in, account and permissions
+
+Each tab keeps its bearer session in `sessionStorage`, so citizens, administrators and response teams can sign in independently in separate tabs of the same browser. Reloads, direct links and history navigation revalidate that tab's session with the server. JavaScript is required. Tabs opened by duplicating an existing tab may initially inherit its session; sign out and sign in independently when demonstrating different accounts. The previous shared authentication cookie is ignored and removed, so existing cookie-based sign-ins require one fresh login after this update.
+
+**My account** shows the authenticated name, email, role, user ID and optional team ID. **Workspace permissions** checks all three protected role endpoints and displays their actual allowed/denied results, with a button to check again.
+
+Expired sessions show a sign-in notice. Temporary service failures keep the saved tab session and offer **Try again** or **Sign in again**. Signing out revokes only that server session; if revocation cannot be confirmed, the app clears this tab's sign-in and explains that the previous server session may remain valid until expiry.
+
+User team memberships reference `response_teams.id` with a database foreign key. Startup adds this constraint to existing valid PostgreSQL tables without changing account data. If existing accounts reference missing teams, startup stops with an explanation and preserves those records for correction.
+
 ## Week 1 demonstration
 
 1. Register a citizen, sign in and submit a flood report with its location, people affected and help required.
@@ -44,6 +54,8 @@ Stop checks the recorded application's PID, creation time and command line befor
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m scripts.verify_local
+# Optional client-state checks; Node is needed only to run this test.
+node tests/session_client.cjs
 ```
 
 The readiness command requires the application to be running and checks PostgreSQL, the home page, API docs and the authentication gate without creating a report. Tests use an isolated test database. Browser demonstration is a separate check from automated tests.

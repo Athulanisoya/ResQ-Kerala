@@ -51,6 +51,10 @@ The UI adapter is `web/app.py`, served by `uvicorn web.app:app` on `127.0.0.1:80
 
 The original React source remains available in the source branch history. Its active files were replaced by the HTMX frontend. There is one application process and no Node.js requirement for the delivered UI.
 
+The authentication parity update restores per-tab bearer sessions using `sessionStorage`. Top-level HTML navigation serves a public bootstrap shell, then HTMX requests the page with that tab's Authorization header. Credentials never appear in page URLs or rendered HTML. The old shared auth cookie is ignored and cleared. CSRF protection remains on UI forms, and HTMX history misses and browser back-forward cache restoration revalidate authentication instead of reusing protected pages.
+
+The UI now includes account details, real role-permission checks, expired-session notices, reconnect/retry handling, and explicit warnings when logout revocation cannot be confirmed. The backend account model also restores the team relationship and foreign key. The PostgreSQL startup migration validates existing memberships under table locks, adds the constraint idempotently, and refuses invalid references without deleting or rewriting account data.
+
 HTMX **2.0.11** is vendored at `frontend/static/vendor/htmx.min.js` from the official npm distribution (`https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js`). Its verified SHA-384 integrity value is `sha384-2OatzQy1H+Zd/IIrjr1TcuDGqLXeHhbooAyJY1KdQMKnr4LZ22k31GBLdYKHmVjg`. The upstream license is included at `frontend/static/vendor/HTMX-LICENSE.txt`. Serving this file locally removes the UI's dependency on a live CDN connection.
 
 ## Local configuration and verification

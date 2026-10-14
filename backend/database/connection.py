@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import CreateSchema
 
 from ..config import get_settings
+from .migrations import ensure_user_team_foreign_key
 
 
 settings = get_settings()
@@ -45,3 +46,6 @@ def initialize_database():
         with engine.begin() as connection:
             connection.execute(CreateSchema(settings.database_schema, if_not_exists=True))
     Base.metadata.create_all(engine)
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as connection:
+            ensure_user_team_foreign_key(connection, settings.database_schema)

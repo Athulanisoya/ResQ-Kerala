@@ -1,6 +1,7 @@
 """Render HTML through the existing JSON API; business rules stay in backend/."""
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+import json
 import secrets
 from pathlib import Path
 
@@ -11,10 +12,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from backend.main import app as api
-from backend.config import get_settings
 
 ROOT = Path(__file__).resolve().parents[1]
-TOKEN_COOKIE = "resq_session"
+# Old browser-wide credentials are never used for authentication.
+LEGACY_TOKEN_COOKIE = "resq_session"
 CSRF_COOKIE = "resq_csrf"
 templates = Jinja2Templates(directory=str(ROOT / "frontend" / "templates"))
 
@@ -56,7 +57,9 @@ def render(request, content_template, *, status_code=200, **context):
                "error": None, "notice": None, "values": {}, "stats": {},
                "reports": [], "teams": [], "timeline": [], "filter_status": "",
                **context, "csrf_token": token, "content_template": content_template}
-    partial = request.headers.get("HX-Request") == "true" and request.headers.get("HX-History-Restore-Request") != "true"
+    partial = (request.headers.get("HX-Request") == "true"
+               and request.headers.get("HX-History-Restore-Request") != "true"
+               and request.headers.get("X-ResQ-Bootstrap") != "true")
     response = templates.TemplateResponse(request=request, name=content_template if partial else "page.html",
                                           context=context, status_code=status_code)
     response.set_cookie(CSRF_COOKIE, token, httponly=True, samesite="strict", secure=request.url.scheme == "https")
@@ -65,6 +68,15 @@ def render(request, content_template, *, status_code=200, **context):
 
 @app.middleware("http")
 async def browser_security(request: Request, call_next):
+    path = request.url.path
+    ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions"} or (
+        path.startswith("/reports/") and path.rsplit("/", 1)[-1].isdigit())
+    # Document navigation cannot attach a bearer header. The public shell loads
+    # the requested page through HTMX using only this tab's saved session.
+    if (request.method == "GET" and ui_page and request.headers.get("HX-Request") != "true"
+            and request.headers.get("X-ResQ-Page") != "true"):
+        response = render(request, "session_bootstrap.html", page_title="Opening your workspace")
+        return secure_response(request, response)
     if request.url.path.startswith("/ui/") and request.method == "POST":
         origin = request.headers.get("origin")
         if origin and origin.rstrip("/") != str(request.base_url).rstrip("/"):
@@ -77,6 +89,12 @@ async def browser_security(request: Request, call_next):
         # Retain parsed data across Starlette middleware/request instances.
         request.state.form = dict(form)
     response = await call_next(request)
+    return secure_response(request, response)
+
+
+def secure_response(request, response):
+    if LEGACY_TOKEN_COOKIE in request.cookies:
+        response.delete_cookie(LEGACY_TOKEN_COOKIE)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "same-origin"
@@ -86,10 +104,13 @@ async def browser_security(request: Request, call_next):
 
 
 async def api_call(request, method, path, payload=None):
-    token = request.cookies.get(TOKEN_COOKIE)
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    authorization = request.headers.get("Authorization")
+    headers = {"Authorization": authorization} if authorization else {}
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=api), base_url="http://api.local") as client:
-        return await client.request(method, path, json=payload, headers=headers)
+        try:
+            return await client.request(method, path, json=payload, headers=headers)
+        except httpx.HTTPError:
+            return httpx.Response(503, json={"detail": "The service is temporarily unavailable. Please try again."})
 
 
 def error_message(response):
@@ -102,11 +123,47 @@ def error_message(response):
     return str(detail)
 
 
+class SessionExpired(Exception):
+    pass
+
+
+class SessionUnavailable(Exception):
+    pass
+
+
+@app.exception_handler(SessionExpired)
+async def expired_session(request: Request, _error):
+    response = redirect(request, "/login?notice=expired")
+    response.headers["X-ResQ-Session"] = "expired"
+    return response
+
+
+@app.exception_handler(SessionUnavailable)
+async def unavailable_session(request: Request, _error):
+    path = request.url.path
+    if request.method == "POST":
+        if path == "/ui/reports":
+            path = "/reports/new"
+        elif path.startswith("/ui/reports/") and path.split("/")[3].isdigit():
+            path = "/reports/" + path.split("/")[3]
+        else:
+            path = "/dashboard"
+    elif request.url.query:
+        path += f"?{request.url.query}"
+    return render(request, "reconnect.html", status_code=503,
+                  retry_path=path,
+                  page_title="Reconnect your workspace")
+
+
 async def current_user(request):
-    if not request.cookies.get(TOKEN_COOKIE):
+    if not request.headers.get("Authorization"):
         return None
     response = await api_call(request, "GET", "/api/users/me")
-    return response.json() if response.status_code == 200 else None
+    if response.status_code in {401, 403}:
+        raise SessionExpired()
+    if response.status_code != 200:
+        raise SessionUnavailable()
+    return response.json()
 
 
 async def list_reports(request, user):
@@ -135,7 +192,13 @@ async def auth_page(request: Request):
     if await current_user(request):
         return redirect(request, "/dashboard")
     mode = "register" if request.url.path == "/register" else "login"
-    return render(request, "auth.html", mode=mode, page_title="Create account" if mode == "register" else "Welcome back")
+    notices = {
+        "expired": "Your session has expired. Please sign in again.",
+        "signed-out": "You have signed out. Your server session has been revoked.",
+        "logout-unconfirmed": "You have signed out in this tab. The server could not confirm session revocation. Your previous session may remain valid until it expires.",
+    }
+    return render(request, "auth.html", mode=mode, notice=notices.get(request.query_params.get("notice")),
+                  page_title="Create account" if mode == "register" else "Welcome back")
 
 
 @app.post("/ui/login")
@@ -148,18 +211,47 @@ async def sign_in(request: Request):
     if response.status_code not in {200, 201}:
         return render(request, "auth.html", mode=mode, values={"email": form.get("email", ""), "full_name": form.get("full_name", "")},
                       error=error_message(response), status_code=response.status_code)
-    result = redirect(request, "/dashboard")
-    result.set_cookie(TOKEN_COOKIE, response.json()["access_token"], httponly=True, samesite="strict",
-                      secure=request.url.scheme == "https", max_age=get_settings().jwt_expire_minutes * 60)
-    return result
+    return Response(status_code=204, headers={"HX-Trigger": json.dumps({
+        "resq:authenticated": {"access_token": response.json()["access_token"]},
+    })})
 
 
 @app.post("/ui/logout")
 async def sign_out(request: Request):
-    await api_call(request, "POST", "/api/auth/logout")
-    result = redirect(request, "/login")
-    result.delete_cookie(TOKEN_COOKIE)
-    return result
+    response = await api_call(request, "POST", "/api/auth/logout")
+    notice = "signed-out" if response.status_code == 204 else "logout-unconfirmed"
+    return Response(status_code=204, headers={"HX-Trigger": json.dumps({
+        "resq:signed-out": {"notice": notice},
+    })})
+
+
+@app.get("/account", response_class=HTMLResponse)
+async def account_page(request: Request):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    return render(request, "account.html", user=user, active_nav="account", page_title="My account")
+
+
+@app.get("/permissions", response_class=HTMLResponse)
+async def permissions_page(request: Request):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    checks = []
+    for role, title, path in (
+        ("citizen", "Citizen workspace", "/api/workspaces/citizen"),
+        ("admin", "Admin workspace", "/api/workspaces/admin"),
+        ("response_team", "Response team workspace", "/api/workspaces/response-team"),
+    ):
+        response = await api_call(request, "GET", path)
+        if response.status_code == 401:
+            raise SessionExpired()
+        checks.append({"role": role, "title": title, "status": response.status_code,
+                       "message": response.json()["message"] if response.status_code == 200 else error_message(response)})
+    error = "Some access checks could not complete. Please try again." if any(c["status"] not in {200, 403} for c in checks) else None
+    return render(request, "permissions.html", user=user, access_checks=checks, error=error,
+                  active_nav="permissions", page_title="Workspace permissions")
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

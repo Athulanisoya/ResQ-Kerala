@@ -1,0 +1,11 @@
+{% from 'icons.html' import icon %}
+<section class="error-page reconnect-page" aria-labelledby="reconnect-heading">
+  <span class="empty-icon">{{ icon('wave') }}</span>
+  <span class="section-kicker">LET'S RECONNECT</span>
+  <h1 id="reconnect-heading">Reconnect your workspace.</h1>
+  <p role="alert">{{ error or 'We could not verify your session right now. Please try again.' }}</p>
+  <div class="reconnect-actions">
+    <a class="button button-primary" href="{{ retry_path }}">Try again{{ icon('arrow') }}</a>
+    <button class="button button-secondary" type="button" data-sign-in-again>Sign in again</button>
+  </div>
+</section>

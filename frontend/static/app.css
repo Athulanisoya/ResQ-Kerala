@@ -451,3 +451,44 @@ h3 { font-size: 15px; font-weight: 650; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+.account-card { max-width: 850px; }
+.account-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 25px 30px; margin: 0; padding: 26px 24px; }
+.account-facts dt { margin-bottom: 8px; color: var(--muted); font-size: 10px; font-weight: 550; }
+.account-facts dd { margin: 0; color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+.account-role { display: inline-flex; align-items: center; gap: 7px; color: var(--teal); font-size: 11px; font-weight: 600; }
+.account-role .icon { width: 15px; height: 15px; }
+.account-note { padding: 18px 24px; border-top: 1px solid var(--line); background: #fcfdf9; color: var(--muted); font-size: 11px; line-height: 1.8; }
+.permissions-table { width: 100%; border-collapse: collapse; text-align: left; }
+.permissions-table thead th { padding: 13px 24px; background: #fcfdf9; color: var(--muted); font-size: 10px; font-weight: 600; }
+.permissions-table tbody th, .permissions-table td { padding: 20px 24px; border-top: 1px solid var(--line); vertical-align: top; }
+.permissions-table tbody th { color: var(--ink); font-size: 12px; font-weight: 600; }
+.permission-current { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; font-weight: 400; }
+.permission-state { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border-radius: 5px; white-space: nowrap; font-size: 10px; font-weight: 600; }
+.permission-state .icon { width: 14px; height: 14px; }
+.permission-allowed { color: #4d835d; background: #eaf4ec; }
+.permission-denied { color: #758072; background: #eef1ee; }
+.permission-failed { color: #96643b; background: #fcf2e8; }
+.permission-response { display: block; color: var(--body); font-size: 11px; font-weight: 550; }
+.permission-message { max-width: 360px; margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.permission-check-error { display: flex; align-items: flex-start; gap: 9px; padding: 16px 24px; border-top: 1px solid #eedbc9; color: #96643b; background: #fcf2e8; font-size: 11px; }
+.permission-check-error .icon { width: 17px; height: 17px; margin-top: 1px; }
+.reconnect-page { min-height: 100svh; padding: 40px 24px; }
+.reconnect-page .section-kicker { margin-bottom: 13px; }
+.reconnect-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 25px; }
+.reconnect-actions .button { margin-top: 0; }
+.session-startup { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 100svh; padding: 35px 24px; text-align: center; }
+.session-startup h1 { font-size: 24px; letter-spacing: -.6px; }
+.session-startup p { color: var(--body); font-size: 12px; }
+.session-spinner { width: 32px; height: 32px; border: 3px solid #dce7dc; border-top-color: var(--teal); border-radius: 50%; animation: session-spin .9s linear infinite; }
+@keyframes session-spin { to { transform: rotate(360deg); } }
+@media (max-width: 760px) {
+  .permissions-card .card-heading { flex-wrap: wrap; }
+  .permissions-table { min-width: 530px; }
+  .permissions-table thead th, .permissions-table tbody th, .permissions-table td { padding-left: 20px; padding-right: 20px; }
+}
+@media (max-width: 500px) {
+  .account-facts { grid-template-columns: 1fr; gap: 23px; padding: 23px 20px; }
+  .account-note, .permission-check-error { padding-left: 20px; padding-right: 20px; }
+  .reconnect-actions { width: 100%; }
+  .reconnect-actions .button { flex: 1; }
+}

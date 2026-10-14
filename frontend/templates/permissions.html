@@ -1,0 +1,30 @@
+{% from 'icons.html' import icon %}
+{% include 'partials/alerts.html' %}
+<div class="page-heading">
+  <div><span class="section-kicker">YOUR WORKSPACE ACCESS</span><h1>Workspace permissions</h1><p>Check which role workspaces accept your signed-in account.</p></div>
+  <a class="button button-secondary" href="/permissions" hx-get="/permissions" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('shield') }}Check access again</a>
+</div>
+<section class="card permissions-card" aria-labelledby="permissions-heading">
+  <div class="card-heading"><div><h2 id="permissions-heading">Access checked by the server</h2><p>Each row shows the result of a protected workspace request.</p></div><span class="account-role">{{ icon('shield') }}{{ user.role|replace('_', ' ')|title }} account</span></div>
+  <div class="table-scroll">
+    <table class="permissions-table">
+      <caption class="sr-only">Workspace permissions for your signed-in account</caption>
+      <thead><tr><th scope="col">Workspace</th><th scope="col">Your access</th><th scope="col">Server response</th></tr></thead>
+      <tbody>
+        {% set checks = namespace(failed=false) %}
+        {% for check in access_checks %}
+        {% set allowed = check.status == 200 %}
+        {% set denied = check.status == 403 %}
+        {% if not allowed and not denied %}{% set checks.failed = true %}{% endif %}
+        <tr>
+          <th scope="row">{{ check.title }}{% if check.role == user.role %}<span class="permission-current">Your role</span>{% endif %}</th>
+          <td><span class="permission-state {{ 'permission-allowed' if allowed else 'permission-denied' if denied else 'permission-failed' }}">{{ icon('check' if allowed else 'lock' if denied else 'info') }}{{ 'Allowed' if allowed else 'Denied by server' if denied else 'Check failed' }}</span></td>
+          <td><strong class="permission-response">{{ 'HTTP ' ~ check.status if check.status else 'Server unavailable' }}</strong>{% if check.message %}<p class="permission-message">{{ check.message }}</p>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if checks.failed %}<div class="permission-check-error" role="alert">{{ icon('info') }}<p>One or more checks could not complete. Try checking access again.</p></div>{% endif %}
+  <p class="account-note">Your account role controls workspace access. A denied workspace does not change your access to your own workspace.</p>
+</section>

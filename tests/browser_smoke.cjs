@@ -15,10 +15,12 @@ async function main() {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', headless: true });
   const errors = [];
   const contexts = [];
+  const sharedContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  contexts.push(sharedContext);
   async function page(width = 1440, height = 1000) {
-    const context = await browser.newContext({ viewport: { width, height } });
-    contexts.push(context);
-    const page = await context.newPage();
+    // All roles use tabs in the same context, so shared-cookie contamination fails.
+    const page = await sharedContext.newPage();
+    await page.setViewportSize({ width, height });
     page.on('pageerror', e => errors.push(e.message));
     page.on('response', r => { if (r.status() >= 500) errors.push(`${r.status()} ${r.url()}`); });
     return page;
@@ -92,12 +94,16 @@ async function main() {
     await team.getByRole('heading', { name: 'Incident details', exact: true }).waitFor();
     await team.screenshot({ path: path.join(qa, 'team-assignment-desktop.png'), fullPage: true });
     await citizen.getByRole('button', { name: 'Sign out', exact: true }).click();
-    await citizen.waitForURL(base + '/login');
+    await citizen.waitForURL(base + '/login?notice=signed-out');
+    await citizen.getByText('You have signed out. Your server session has been revoked.', { exact: true }).waitFor();
+    await admin.goto(base + '/account');
+    await admin.getByRole('heading', { name: 'My account', exact: true }).waitFor();
+    await admin.getByText('admin@resq.example.com', { exact: true }).waitFor();
     await citizen.goto(base + '/dashboard');
     await citizen.waitForURL(base + '/login');
     assert.deepEqual(errors, [], `Browser errors: ${errors.join('; ')}`);
     fs.writeFileSync(path.join(qa, 'browser-result.json'), JSON.stringify({ passed: true, report_id: reportId,
-      checks: ['registration', 'HTMX navigation without reload', 'report submission', 'session reload', 'admin review', 'verification', 'team assignment', 'citizen timeline', 'team view', 'mobile overflow', 'logout'], screenshots: 5, browser_errors: errors }, null, 2));
+      checks: ['registration', 'HTMX navigation without reload', 'report submission', 'session reload', 'admin review', 'verification', 'team assignment', 'citizen timeline', 'team view', 'mobile overflow', 'logout', 'same-browser tab isolation'], screenshots: 5, browser_errors: errors }, null, 2));
     console.log('Browser workflow passed: registration -> report -> review -> verified -> assigned -> citizen/team tracking -> logout. Desktop/mobile screenshots saved in .runtime/qa.');
   } finally {
     for (const context of contexts) await context.close();

@@ -1,5 +1,6 @@
-"""Presentation-layer checks: HTML, cookies, CSRF and UI -> JSON API workflow."""
+"""Presentation-layer checks: HTML, tab bearer sessions, CSRF and API workflow."""
 import os
+import json
 
 os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 os.environ["ALLOW_SQLITE_FOR_TESTS"] = "true"
@@ -16,7 +17,7 @@ from backend.main import app as api
 from backend.models import Role, User
 from backend.models.team import Team
 from backend.utils.security import hash_password
-from web.app import app, CSRF_COOKIE, TOKEN_COOKIE
+from web.app import app, CSRF_COOKIE
 
 PASSWORD = "Synthetic-ui-test!2026"
 
@@ -41,6 +42,8 @@ def clients():
 
     api.dependency_overrides[get_db] = override
     with TestClient(app) as citizen, TestClient(app) as admin, TestClient(app) as team_client:
+        for client in (citizen, admin, team_client):
+            client.headers['X-ResQ-Page'] = 'true'
         yield citizen, admin, team_client
     api.dependency_overrides.clear()
     engine.dispose()
@@ -53,9 +56,10 @@ def post(client, path, **data):
 def login(client, role):
     assert client.get("/login").status_code == 200
     response = post(client, "/ui/login", email=f"{role}@example.com", password=PASSWORD)
-    assert response.status_code == 200
-    assert response.headers["HX-Redirect"] == "/dashboard"
-    assert "HttpOnly" in response.headers["set-cookie"]
+    assert response.status_code == 204
+    token = json.loads(response.headers['HX-Trigger'])['resq:authenticated']['access_token']
+    client.headers['Authorization'] = f'Bearer {token}'
+    assert 'resq_session=' not in response.headers.get('set-cookie', '')
 
 
 def test_csrf_and_registration(clients):
@@ -66,8 +70,9 @@ def test_csrf_and_registration(clients):
     cross_site = client.post("/ui/register", data={"_csrf": client.cookies.get(CSRF_COOKIE)}, headers={"Origin": "https://other.example"})
     assert cross_site.status_code == 403
     registered = post(client, "/ui/register", email="new@example.com", full_name="New Citizen", password=PASSWORD)
-    assert registered.status_code == 200
-    assert registered.headers["HX-Redirect"] == "/dashboard"
+    assert registered.status_code == 204
+    token = json.loads(registered.headers['HX-Trigger'])['resq:authenticated']['access_token']
+    client.headers['Authorization'] = f'Bearer {token}'
     assert client.get("/dashboard").status_code == 200
 
 
@@ -87,9 +92,9 @@ def test_htmx_fragments_validation_and_logout(clients):
     assert invalid.status_code == 422
     assert "<script>alert(1)</script>" not in invalid.text
     assert "&lt;script&gt;" in invalid.text
-    token = citizen.cookies.get(TOKEN_COOKIE)
-    assert post(citizen, "/ui/logout").headers["HX-Redirect"] == "/login"
-    assert not citizen.cookies.get(TOKEN_COOKIE)
+    token = citizen.headers['Authorization'].split(' ', 1)[1]
+    logout = post(citizen, "/ui/logout")
+    assert json.loads(logout.headers['HX-Trigger'])['resq:signed-out']['notice'] == 'signed-out'
     assert citizen.get("/api/users/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
 
 

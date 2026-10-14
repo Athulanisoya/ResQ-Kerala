@@ -1,11 +1,15 @@
 """Only the account and authenticated-session entities needed for resq's task."""
 from datetime import datetime, timezone
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Enum as SAEnum, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database.connection import Base
+
+if TYPE_CHECKING:
+    from .team import Team
 
 
 def utc_now():
@@ -25,9 +29,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[Role] = mapped_column(SAEnum(Role, values_callable=lambda values: [item.value for item in values], native_enum=False, create_constraint=True), default=Role.CITIZEN)
-    # Preserve the account response contract for integration with the shared app.
-    # Team membership/operations are managed by other members and are absent here.
-    team_id: Mapped[int | None] = mapped_column(nullable=True)
+    team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("response_teams.id", name="fk_users_team_id_response_teams"), nullable=True
+    )
+    team: Mapped["Team | None"] = relationship()
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 

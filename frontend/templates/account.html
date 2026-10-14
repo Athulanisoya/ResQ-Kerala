@@ -1,0 +1,17 @@
+{% from 'icons.html' import icon %}
+{% include 'partials/alerts.html' %}
+<div class="page-heading">
+  <div><span class="section-kicker">ACCOUNT DETAILS</span><h1>My account</h1><p>Your signed-in profile and workspace role.</p></div>
+  <a class="button button-secondary" href="/permissions" hx-get="/permissions" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('shield') }}Check workspace permissions</a>
+</div>
+<section class="card account-card" aria-labelledby="account-heading">
+  <div class="card-heading"><div><h2 id="account-heading">Signed-in profile</h2><p>Your identity determines which workspace you can access.</p></div>{{ icon('people') }}</div>
+  <dl class="account-facts">
+    <div><dt>Full name</dt><dd>{{ user.full_name }}</dd></div>
+    <div><dt>Email address</dt><dd>{{ user.email }}</dd></div>
+    <div><dt>Role</dt><dd><span class="account-role">{{ icon('shield') }}{{ user.role|replace('_', ' ')|title }}</span></dd></div>
+    <div><dt>User ID</dt><dd>{{ user.id }}</dd></div>
+    {% if user.team_id %}<div><dt>Team ID</dt><dd>{{ user.team_id }}</dd></div>{% endif %}
+  </dl>
+  <p class="account-note">Public registration creates citizen accounts. Administrator and response team accounts are provisioned by the project administrator.</p>
+</section>
