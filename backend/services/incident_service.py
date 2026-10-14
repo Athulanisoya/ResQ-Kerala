@@ -140,13 +140,10 @@ def assign_incident_team(
         )
 
         if incident is None:
-            return None
+            raise HTTPException(status_code=404, detail="Incident not found")
 
-        if incident.status != "VERIFIED":
-            return None
-
-        if incident.assigned_team_id is not None:
-            return None
+        if incident.status != "VERIFIED" or incident.assigned_team_id is not None:
+            raise HTTPException(status_code=409, detail="Only a verified, unassigned report can be assigned.")
 
         # Lock the selected team while checking availability.
         team = db.scalar(
@@ -156,10 +153,10 @@ def assign_incident_team(
         )
 
         if team is None:
-            return None
+            raise HTTPException(status_code=404, detail="Response team not found")
 
         if team.status != "AVAILABLE":
-            return None
+            raise HTTPException(status_code=409, detail="This response team is already assigned.")
 
         team.status = "BUSY"
         incident.assigned_team_id = team.id
@@ -181,3 +178,8 @@ def assign_incident_team(
     except Exception:
         db.rollback()
         raise
+
+
+def assign_team(db: Session, incident_id: int, team_id: int):
+    """Compatibility entry point for the existing admin API and validation tools."""
+    return assign_incident_team(db, incident_id, team_id)

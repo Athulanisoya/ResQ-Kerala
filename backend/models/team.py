@@ -9,3 +9,12 @@ class Team(Base):
     name = Column(String(100), nullable=False)
     team_type = Column(String(50), nullable=False)
     status = Column(String(30), nullable=False, default="AVAILABLE")
+
+    @property
+    def available(self):
+        """Keep the Week 1 UI/API contract backed by the team's status."""
+        return self.status == "AVAILABLE"
+
+    @available.setter
+    def available(self, value):
+        self.status = "AVAILABLE" if value else "BUSY"
