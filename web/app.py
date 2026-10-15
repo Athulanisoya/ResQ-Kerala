@@ -57,7 +57,8 @@ async def lifespan(_app):
         yield
 
 
-app = FastAPI(title="ResQ Kerala · Week 2", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="ResQ Kerala · Week 2", lifespan=lifespan,
+              openapi_url=None, docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=str(ROOT / "frontend" / "static"), check_dir=False), name="static")
 
 

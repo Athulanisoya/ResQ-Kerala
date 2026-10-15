@@ -62,6 +62,20 @@ def login(client, role):
     assert 'resq_session=' not in response.headers.get('set-cookie', '')
 
 
+def test_swagger_exposes_backend_incident_authentication(clients):
+    citizen, _, _ = clients
+    response = citizen.get('/openapi.json')
+    assert response.status_code == 200
+    schema = response.json()
+    scheme = schema['components']['securitySchemes']['HTTPBearer']
+    assert scheme['type'] == 'http' and scheme['scheme'] == 'bearer'
+    assert '/api/auth/login' in schema['paths']
+    assert '/ui/login' not in schema['paths']
+    for method in ('get', 'post'):
+        assert schema['paths']['/api/incidents/'][method]['security'] == [{'HTTPBearer': []}]
+    assert citizen.get('/docs').status_code == 200
+
+
 def test_csrf_and_registration(clients):
     client, _, _ = clients
     assert client.get("/register").status_code == 200
