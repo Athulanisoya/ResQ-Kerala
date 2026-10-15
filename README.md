@@ -1,6 +1,17 @@
-# ResQ Kerala — complete Week 1
+# ResQ Kerala — Week 1 plus Athul's Week 2
 
 This version combines the four member branches into one flood reporting application with an HTMX frontend. Citizens register, sign in, submit reports and view their status. Administrators review and verify reports, then assign an available response team. Response teams can view their assigned reports. The timeline ends at **Team assigned** for Week 1.
+
+Athul's Week 2 adds sourced Kerala location extraction, administrator alert creation/editing/scheduling/expiry, and `MATCH`, `NO_MATCH`, or `UNCERTAIN` results. Each submitted report gets a local geography check. Admins can rerun it or use **Run Gemini agent** on the report detail screen. The agent uses the **OpenAI Agents SDK** with **Gemini Flash Live** (`gemini-3.1-flash-live-preview`), calling controlled extraction and active-alert tools through the server-side Live API. The frontend remains HTMX. See [Week 2 implementation and demo](docs/week2-athul.md).
+
+On the configured Fedora computer, start or stop from this directory:
+
+```bash
+.venv/bin/python .runtime/linux.py start
+.venv/bin/python .runtime/linux.py stop
+```
+
+The Fedora launcher uses the persistent rootless Podman PostgreSQL container prepared for this workspace. Its local instructions are in `.runtime/LINUX.md`. The Windows setup below remains available.
 
 ## Run on this computer
 
@@ -41,7 +52,7 @@ User team memberships reference `response_teams.id` with a database foreign key.
 4. Assign an available response team. Check that the report shows **Team assigned**.
 5. Sign in as the team to view its assignment, then as the citizen to view the updated timeline.
 
-AI analysis, alerts, rescue progress, relief, shelters, chatbot, notifications, Malayalam translation and case closure remain later-week work.
+Urgency classification, summaries and investigation belong to the other members' Week 2 modules. Rescue progress, relief, shelters, chatbot, notifications, Malayalam translation and case closure remain later-week work. Curated Malayalam place aliases are supported by the geography tool; report translation is outside this change.
 
 ## Stop and verify
 

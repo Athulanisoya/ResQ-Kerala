@@ -1,0 +1,1361 @@
+{
+  "version": "1.0",
+  "curated_on": "2026-10-15",
+  "scope": "All 14 Kerala districts and a curated, incomplete selection of towns, villages and taluk areas useful for flood-report triage.",
+  "limitations": [
+    "This is not a comprehensive gazetteer, geocoder, flood-risk map or proof that an incident occurred.",
+    "Locality is a general label: selected entries may name a town, revenue village or taluk area, not an exact address.",
+    "A name unique in this subset is not guaranteed unique throughout Kerala. Expand the reviewed dataset before operational deployment.",
+    "No coordinates are provided or inferred. District-only matches have district-level precision.",
+    "English spelling variants and Malayalam aliases are manually curated search aids, not official boundary identifiers.",
+    "Puthenpally has no reviewed entry; do not conflate it with Puthuppally. Unknown or conflicting reports need clarification."
+  ],
+  "provenance": "Names and district membership were checked against the official NIC district administration pages cited on each place. Aliases are curated, and sources do not assert flood severity or current conditions.",
+  "places": [
+    {
+      "id": "thiruvananthapuram",
+      "name": "Thiruvananthapuram",
+      "district_id": "thiruvananthapuram",
+      "district": "Thiruvananthapuram",
+      "kind": "district",
+      "aliases": [
+        "Trivandrum",
+        "തിരുവനന്തപുരം"
+      ],
+      "source": "https://trivandrum.nic.in/en/villages/"
+    },
+    {
+      "id": "thiruvananthapuram-neyyattinkara",
+      "name": "Neyyattinkara",
+      "district_id": "thiruvananthapuram",
+      "district": "Thiruvananthapuram",
+      "kind": "locality",
+      "aliases": [
+        "നെയ്യാറ്റിൻകര"
+      ],
+      "source": "https://trivandrum.nic.in/en/villages/"
+    },
+    {
+      "id": "thiruvananthapuram-poovar",
+      "name": "Poovar",
+      "district_id": "thiruvananthapuram",
+      "district": "Thiruvananthapuram",
+      "kind": "locality",
+      "aliases": [
+        "പൂവാർ"
+      ],
+      "source": "https://trivandrum.nic.in/en/villages/"
+    },
+    {
+      "id": "thiruvananthapuram-kazhakkoottam",
+      "name": "Kazhakkoottam",
+      "district_id": "thiruvananthapuram",
+      "district": "Thiruvananthapuram",
+      "kind": "locality",
+      "aliases": [
+        "Kazhakoottam",
+        "Kazhakootam",
+        "കഴക്കൂട്ടം"
+      ],
+      "source": "https://trivandrum.nic.in/en/villages/"
+    },
+    {
+      "id": "thiruvananthapuram-thiruvallam",
+      "name": "Thiruvallam",
+      "district_id": "thiruvananthapuram",
+      "district": "Thiruvananthapuram",
+      "kind": "locality",
+      "aliases": [
+        "തിരുവല്ലം"
+      ],
+      "source": "https://trivandrum.nic.in/en/villages/"
+    },
+    {
+      "id": "thiruvananthapuram-pallippuram",
+      "name": "Pallippuram",
+      "district_id": "thiruvananthapuram",
+      "district": "Thiruvananthapuram",
+      "kind": "locality",
+      "aliases": [
+        "Pallipuram",
+        "പള്ളിപ്പുറം"
+      ],
+      "source": "https://trivandrum.nic.in/en/villages/"
+    },
+    {
+      "id": "thiruvananthapuram-kadinamkulam",
+      "name": "Kadinamkulam",
+      "district_id": "thiruvananthapuram",
+      "district": "Thiruvananthapuram",
+      "kind": "locality",
+      "aliases": [],
+      "source": "https://trivandrum.nic.in/en/villages/"
+    },
+    {
+      "id": "kollam",
+      "name": "Kollam",
+      "district_id": "kollam",
+      "district": "Kollam",
+      "kind": "district",
+      "aliases": [
+        "Quilon",
+        "കൊല്ലം"
+      ],
+      "source": "https://kollam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kollam-munroe-island",
+      "name": "Munroe Island",
+      "district_id": "kollam",
+      "district": "Kollam",
+      "kind": "locality",
+      "aliases": [
+        "Mundrothuruth",
+        "Mandrothuruth",
+        "Munrothuruthu",
+        "Munroe Thuruth",
+        "മൺറോത്തുരുത്ത്"
+      ],
+      "source": "https://kollam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kollam-punalur",
+      "name": "Punalur",
+      "district_id": "kollam",
+      "district": "Kollam",
+      "kind": "locality",
+      "aliases": [
+        "പുനലൂർ"
+      ],
+      "source": "https://kollam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kollam-karunagappally",
+      "name": "Karunagappally",
+      "district_id": "kollam",
+      "district": "Kollam",
+      "kind": "locality",
+      "aliases": [
+        "Karunagapally",
+        "കരുനാഗപ്പള്ളി"
+      ],
+      "source": "https://kollam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kollam-paravur",
+      "name": "Paravur",
+      "district_id": "kollam",
+      "district": "Kollam",
+      "kind": "locality",
+      "aliases": [
+        "Paravoor",
+        "പരവൂർ"
+      ],
+      "source": "https://kollam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kollam-thenmala",
+      "name": "Thenmala",
+      "district_id": "kollam",
+      "district": "Kollam",
+      "kind": "locality",
+      "aliases": [
+        "തെന്മല"
+      ],
+      "source": "https://kollam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kollam-kottarakkara",
+      "name": "Kottarakkara",
+      "district_id": "kollam",
+      "district": "Kollam",
+      "kind": "locality",
+      "aliases": [
+        "Kottarakara",
+        "കൊട്ടാരക്കര"
+      ],
+      "source": "https://kollam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "pathanamthitta",
+      "name": "Pathanamthitta",
+      "district_id": "pathanamthitta",
+      "district": "Pathanamthitta",
+      "kind": "district",
+      "aliases": [
+        "Pathanamthita",
+        "പത്തനംതിട്ട"
+      ],
+      "source": "https://pathanamthitta.nic.in/en/administrative-setup/"
+    },
+    {
+      "id": "pathanamthitta-ranni",
+      "name": "Ranni",
+      "district_id": "pathanamthitta",
+      "district": "Pathanamthitta",
+      "kind": "locality",
+      "aliases": [
+        "Ranny",
+        "റാന്നി"
+      ],
+      "source": "https://pathanamthitta.nic.in/en/administrative-setup/"
+    },
+    {
+      "id": "pathanamthitta-thiruvalla",
+      "name": "Thiruvalla",
+      "district_id": "pathanamthitta",
+      "district": "Pathanamthitta",
+      "kind": "locality",
+      "aliases": [
+        "Tiruvalla",
+        "തിരുവല്ല"
+      ],
+      "source": "https://pathanamthitta.nic.in/en/administrative-setup/"
+    },
+    {
+      "id": "pathanamthitta-konni",
+      "name": "Konni",
+      "district_id": "pathanamthitta",
+      "district": "Pathanamthitta",
+      "kind": "locality",
+      "aliases": [
+        "കോന്നി"
+      ],
+      "source": "https://pathanamthitta.nic.in/en/administrative-setup/"
+    },
+    {
+      "id": "pathanamthitta-adoor",
+      "name": "Adoor",
+      "district_id": "pathanamthitta",
+      "district": "Pathanamthitta",
+      "kind": "locality",
+      "aliases": [
+        "അടൂർ"
+      ],
+      "source": "https://pathanamthitta.nic.in/en/administrative-setup/"
+    },
+    {
+      "id": "pathanamthitta-kozhencherry",
+      "name": "Kozhencherry",
+      "district_id": "pathanamthitta",
+      "district": "Pathanamthitta",
+      "kind": "locality",
+      "aliases": [
+        "Kozhenchery",
+        "കോഴഞ്ചേരി"
+      ],
+      "source": "https://pathanamthitta.nic.in/en/administrative-setup/"
+    },
+    {
+      "id": "pathanamthitta-mallappally",
+      "name": "Mallappally",
+      "district_id": "pathanamthitta",
+      "district": "Pathanamthitta",
+      "kind": "locality",
+      "aliases": [
+        "Mallapally",
+        "മല്ലപ്പള്ളി"
+      ],
+      "source": "https://pathanamthitta.nic.in/en/administrative-setup/"
+    },
+    {
+      "id": "alappuzha",
+      "name": "Alappuzha",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "district",
+      "aliases": [
+        "Alleppey",
+        "Alapuzha",
+        "ആലപ്പുഴ"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-kuttanad",
+      "name": "Kuttanad",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Kuttanadu",
+        "കുട്ടനാട്"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-chengannur",
+      "name": "Chengannur",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Chenganoor",
+        "ചെങ്ങന്നൂർ"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-ambalappuzha",
+      "name": "Ambalappuzha",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Ambalapuzha",
+        "അമ്പലപ്പുഴ"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-edathua",
+      "name": "Edathua",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Edathva",
+        "എടത്വ"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-champakulam",
+      "name": "Champakulam",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "ചമ്പക്കുളം"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-haripad",
+      "name": "Haripad",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Harippad",
+        "ഹരിപ്പാട്"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-puthuppally",
+      "name": "Puthuppally",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Puthupally",
+        "Puthuppalli",
+        "പുതുപ്പള്ളി"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-pallippuram",
+      "name": "Pallippuram",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Pallipuram",
+        "പള്ളിപ്പുറം"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-paravur",
+      "name": "Paravur",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "Paravoor",
+        "പരവൂർ"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-nedumudi",
+      "name": "Nedumudi",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "നെടുമുടി"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "alappuzha-pulinkunnu",
+      "name": "Pulinkunnu",
+      "district_id": "alappuzha",
+      "district": "Alappuzha",
+      "kind": "locality",
+      "aliases": [
+        "പുളിങ്കുന്ന്"
+      ],
+      "source": "https://alappuzha.nic.in/en/villages/"
+    },
+    {
+      "id": "kottayam",
+      "name": "Kottayam",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "district",
+      "aliases": [
+        "കോട്ടയം"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-vaikom",
+      "name": "Vaikom",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "Vaikkam",
+        "വൈക്കം"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-kumarakom",
+      "name": "Kumarakom",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "Kumarakam",
+        "കുമരകം"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-changanassery",
+      "name": "Changanassery",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "Changanacherry",
+        "Changanachery",
+        "ചങ്ങനാശ്ശേരി"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-mundakayam",
+      "name": "Mundakayam",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "മുണ്ടക്കയം"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-koottickal",
+      "name": "Koottickal",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "Koottikkal",
+        "കൂട്ടിക്കൽ"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-puthuppally",
+      "name": "Puthuppally",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "Puthupally",
+        "Puthuppalli",
+        "പുതുപ്പള്ളി"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-ettumanoor",
+      "name": "Ettumanoor",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "ഏറ്റുമാനൂർ"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-pampady",
+      "name": "Pampady",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "Pampadi",
+        "പാമ്പാടി"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kottayam-kanjirappally",
+      "name": "Kanjirappally",
+      "district_id": "kottayam",
+      "district": "Kottayam",
+      "kind": "locality",
+      "aliases": [
+        "Kanjirapally",
+        "കാഞ്ഞിരപ്പള്ളി"
+      ],
+      "source": "https://kottayam.nic.in/en/tehsil/"
+    },
+    {
+      "id": "idukki",
+      "name": "Idukki",
+      "district_id": "idukki",
+      "district": "Idukki",
+      "kind": "district",
+      "aliases": [
+        "ഇടുക്കി"
+      ],
+      "source": "https://idukki.nic.in/en/revenue/"
+    },
+    {
+      "id": "idukki-munnar",
+      "name": "Munnar",
+      "district_id": "idukki",
+      "district": "Idukki",
+      "kind": "locality",
+      "aliases": [
+        "മൂന്നാർ"
+      ],
+      "source": "https://idukki.nic.in/en/revenue/"
+    },
+    {
+      "id": "idukki-thodupuzha",
+      "name": "Thodupuzha",
+      "district_id": "idukki",
+      "district": "Idukki",
+      "kind": "locality",
+      "aliases": [
+        "തൊടുപുഴ"
+      ],
+      "source": "https://idukki.nic.in/en/revenue/"
+    },
+    {
+      "id": "idukki-devikulam",
+      "name": "Devikulam",
+      "district_id": "idukki",
+      "district": "Idukki",
+      "kind": "locality",
+      "aliases": [
+        "ദേവികുളം"
+      ],
+      "source": "https://idukki.nic.in/en/revenue/"
+    },
+    {
+      "id": "idukki-peermade",
+      "name": "Peermade",
+      "district_id": "idukki",
+      "district": "Idukki",
+      "kind": "locality",
+      "aliases": [
+        "Peerumedu",
+        "Peerumade",
+        "പീരുമേട്"
+      ],
+      "source": "https://idukki.nic.in/en/revenue/"
+    },
+    {
+      "id": "idukki-mankulam",
+      "name": "Mankulam",
+      "district_id": "idukki",
+      "district": "Idukki",
+      "kind": "locality",
+      "aliases": [
+        "മാങ്കുളം"
+      ],
+      "source": "https://idukki.nic.in/en/revenue/"
+    },
+    {
+      "id": "idukki-marayoor",
+      "name": "Marayoor",
+      "district_id": "idukki",
+      "district": "Idukki",
+      "kind": "locality",
+      "aliases": [
+        "Marayur",
+        "മറയൂർ"
+      ],
+      "source": "https://idukki.nic.in/en/revenue/"
+    },
+    {
+      "id": "ernakulam",
+      "name": "Ernakulam",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "district",
+      "aliases": [
+        "എറണാകുളം"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-aluva",
+      "name": "Aluva",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Alwaye",
+        "ആലുവ"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-kochi",
+      "name": "Kochi",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Cochin",
+        "കൊച്ചി"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-north-paravur",
+      "name": "North Paravur",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "North Paravoor",
+        "N Paravur",
+        "Paravur",
+        "Paravoor",
+        "വടക്കൻ പറവൂർ",
+        "പറവൂർ"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-perumbavoor",
+      "name": "Perumbavoor",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Perumbavur",
+        "പെരുമ്പാവൂർ"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-kothamangalam",
+      "name": "Kothamangalam",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "കോതമംഗലം"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-muvattupuzha",
+      "name": "Muvattupuzha",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Moovattupuzha",
+        "മൂവാറ്റുപുഴ"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-kalamassery",
+      "name": "Kalamassery",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Kalamasseri",
+        "കളമശ്ശേരി"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-chellanam",
+      "name": "Chellanam",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "ചെല്ലാനം"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-puthenvelikkara",
+      "name": "Puthenvelikkara",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Puthenvelikara",
+        "പുത്തൻവേലിക്കര"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-pallippuram",
+      "name": "Pallippuram",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Pallipuram",
+        "പള്ളിപ്പുറം"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "ernakulam-varappuzha",
+      "name": "Varappuzha",
+      "district_id": "ernakulam",
+      "district": "Ernakulam",
+      "kind": "locality",
+      "aliases": [
+        "Varapuzha",
+        "വരാപ്പുഴ"
+      ],
+      "source": "https://ernakulam.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "thrissur",
+      "name": "Thrissur",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "district",
+      "aliases": [
+        "Trichur",
+        "Trissur",
+        "തൃശ്ശൂർ",
+        "തൃശൂർ"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "thrissur-chalakudy",
+      "name": "Chalakudy",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "Chalakkudy",
+        "Chalakudi",
+        "ചാലക്കുടി"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "thrissur-kodungallur",
+      "name": "Kodungallur",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "Kodungalloor",
+        "കൊടുങ്ങല്ലൂർ"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "thrissur-chavakkad",
+      "name": "Chavakkad",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "ചാവക്കാട്"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "thrissur-cheruthuruthy",
+      "name": "Cheruthuruthy",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "Cheruthuruthi",
+        "ചെറുതുരുത്തി"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "thrissur-wadakkanchery",
+      "name": "Wadakkanchery",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "Wadakkancherry",
+        "വടക്കാഞ്ചേരി"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "thrissur-pallippuram",
+      "name": "Pallippuram",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "Pallipuram",
+        "പള്ളിപ്പുറം"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "thrissur-pampady",
+      "name": "Pampady",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "Pampadi",
+        "പാമ്പാടി"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    },
+    {
+      "id": "palakkad",
+      "name": "Palakkad",
+      "district_id": "palakkad",
+      "district": "Palakkad",
+      "kind": "district",
+      "aliases": [
+        "Palghat",
+        "പാലക്കാട്"
+      ],
+      "source": "https://palakkad.nic.in/en/villages/"
+    },
+    {
+      "id": "palakkad-ottapalam",
+      "name": "Ottapalam",
+      "district_id": "palakkad",
+      "district": "Palakkad",
+      "kind": "locality",
+      "aliases": [
+        "Ottappalam",
+        "ഒറ്റപ്പാലം"
+      ],
+      "source": "https://palakkad.nic.in/en/villages/"
+    },
+    {
+      "id": "palakkad-pattambi",
+      "name": "Pattambi",
+      "district_id": "palakkad",
+      "district": "Palakkad",
+      "kind": "locality",
+      "aliases": [
+        "പട്ടാമ്പി"
+      ],
+      "source": "https://palakkad.nic.in/en/villages/"
+    },
+    {
+      "id": "palakkad-shoranur",
+      "name": "Shoranur",
+      "district_id": "palakkad",
+      "district": "Palakkad",
+      "kind": "locality",
+      "aliases": [
+        "Shornur",
+        "ഷൊർണൂർ"
+      ],
+      "source": "https://palakkad.nic.in/en/villages/"
+    },
+    {
+      "id": "palakkad-mannarkkad",
+      "name": "Mannarkkad",
+      "district_id": "palakkad",
+      "district": "Palakkad",
+      "kind": "locality",
+      "aliases": [
+        "Mannarkad",
+        "മണ്ണാർക്കാട്"
+      ],
+      "source": "https://palakkad.nic.in/en/villages/"
+    },
+    {
+      "id": "palakkad-agali",
+      "name": "Agali",
+      "district_id": "palakkad",
+      "district": "Palakkad",
+      "kind": "locality",
+      "aliases": [
+        "അഗളി"
+      ],
+      "source": "https://palakkad.nic.in/en/villages/"
+    },
+    {
+      "id": "palakkad-malampuzha",
+      "name": "Malampuzha",
+      "district_id": "palakkad",
+      "district": "Palakkad",
+      "kind": "locality",
+      "aliases": [
+        "മലമ്പുഴ"
+      ],
+      "source": "https://palakkad.nic.in/en/villages/"
+    },
+    {
+      "id": "malappuram",
+      "name": "Malappuram",
+      "district_id": "malappuram",
+      "district": "Malappuram",
+      "kind": "district",
+      "aliases": [
+        "Malapuram",
+        "മലപ്പുറം"
+      ],
+      "source": "https://malappuram.nic.in/en/tehsil/"
+    },
+    {
+      "id": "malappuram-nilambur",
+      "name": "Nilambur",
+      "district_id": "malappuram",
+      "district": "Malappuram",
+      "kind": "locality",
+      "aliases": [
+        "നിലമ്പൂർ"
+      ],
+      "source": "https://malappuram.nic.in/en/tehsil/"
+    },
+    {
+      "id": "malappuram-ponnani",
+      "name": "Ponnani",
+      "district_id": "malappuram",
+      "district": "Malappuram",
+      "kind": "locality",
+      "aliases": [
+        "പൊന്നാനി"
+      ],
+      "source": "https://malappuram.nic.in/en/tehsil/"
+    },
+    {
+      "id": "malappuram-tirur",
+      "name": "Tirur",
+      "district_id": "malappuram",
+      "district": "Malappuram",
+      "kind": "locality",
+      "aliases": [
+        "തിരൂർ"
+      ],
+      "source": "https://malappuram.nic.in/en/tehsil/"
+    },
+    {
+      "id": "malappuram-perinthalmanna",
+      "name": "Perinthalmanna",
+      "district_id": "malappuram",
+      "district": "Malappuram",
+      "kind": "locality",
+      "aliases": [
+        "Perintalmanna",
+        "പെരിന്തൽമണ്ണ"
+      ],
+      "source": "https://malappuram.nic.in/en/tehsil/"
+    },
+    {
+      "id": "malappuram-kondotty",
+      "name": "Kondotty",
+      "district_id": "malappuram",
+      "district": "Malappuram",
+      "kind": "locality",
+      "aliases": [
+        "Kondotti",
+        "കൊണ്ടോട്ടി"
+      ],
+      "source": "https://malappuram.nic.in/en/tehsil/"
+    },
+    {
+      "id": "malappuram-tirurangadi",
+      "name": "Tirurangadi",
+      "district_id": "malappuram",
+      "district": "Malappuram",
+      "kind": "locality",
+      "aliases": [
+        "Thirurangadi",
+        "തിരൂരങ്ങാടി"
+      ],
+      "source": "https://malappuram.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kozhikode",
+      "name": "Kozhikode",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "district",
+      "aliases": [
+        "Calicut",
+        "കോഴിക്കോട്"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "kozhikode-beypore",
+      "name": "Beypore",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "locality",
+      "aliases": [
+        "ബേപ്പൂർ"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "kozhikode-feroke",
+      "name": "Feroke",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "locality",
+      "aliases": [
+        "Ferok",
+        "ഫറോക്ക്"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "kozhikode-kadalundi",
+      "name": "Kadalundi",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "locality",
+      "aliases": [
+        "കടലുണ്ടി"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "kozhikode-mavoor",
+      "name": "Mavoor",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "locality",
+      "aliases": [
+        "മാവൂർ"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "kozhikode-ramanattukara",
+      "name": "Ramanattukara",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "locality",
+      "aliases": [
+        "രാമനാട്ടുകര"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "kozhikode-kunnamangalam",
+      "name": "Kunnamangalam",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "locality",
+      "aliases": [
+        "കുന്ദമംഗലം"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "wayanad",
+      "name": "Wayanad",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "district",
+      "aliases": [
+        "Wynad",
+        "Wayanadu",
+        "വയനാട്"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "wayanad-kalpetta",
+      "name": "Kalpetta",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "locality",
+      "aliases": [
+        "കൽപ്പറ്റ"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "wayanad-mananthavady",
+      "name": "Mananthavady",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "locality",
+      "aliases": [
+        "Mananthavadi",
+        "മാനന്തവാടി"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "wayanad-sulthan-bathery",
+      "name": "Sulthan Bathery",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "locality",
+      "aliases": [
+        "Sultan Bathery",
+        "Sulthanbathery",
+        "Sultanbathery",
+        "സുൽത്താൻ ബത്തേരി"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "wayanad-panamaram",
+      "name": "Panamaram",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "locality",
+      "aliases": [
+        "പനമരം"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "wayanad-vellarmala",
+      "name": "Vellarmala",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "locality",
+      "aliases": [
+        "Vellarimala",
+        "വെള്ളാർമല"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "wayanad-ambalavayal",
+      "name": "Ambalavayal",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "locality",
+      "aliases": [
+        "അമ്പലവയൽ"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "kannur",
+      "name": "Kannur",
+      "district_id": "kannur",
+      "district": "Kannur",
+      "kind": "district",
+      "aliases": [
+        "Cannanore",
+        "കണ്ണൂർ"
+      ],
+      "source": "https://kannur.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "kannur-thalassery",
+      "name": "Thalassery",
+      "district_id": "kannur",
+      "district": "Kannur",
+      "kind": "locality",
+      "aliases": [
+        "Tellicherry",
+        "തലശ്ശേരി"
+      ],
+      "source": "https://kannur.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "kannur-iritty",
+      "name": "Iritty",
+      "district_id": "kannur",
+      "district": "Kannur",
+      "kind": "locality",
+      "aliases": [
+        "ഇരിട്ടി"
+      ],
+      "source": "https://kannur.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "kannur-payyannur",
+      "name": "Payyannur",
+      "district_id": "kannur",
+      "district": "Kannur",
+      "kind": "locality",
+      "aliases": [
+        "Payyanur",
+        "പയ്യന്നൂർ"
+      ],
+      "source": "https://kannur.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "kannur-thaliparamba",
+      "name": "Thaliparamba",
+      "district_id": "kannur",
+      "district": "Kannur",
+      "kind": "locality",
+      "aliases": [
+        "Taliparamba",
+        "തളിപ്പറമ്പ്"
+      ],
+      "source": "https://kannur.nic.in/en/village-panchayats/"
+    },
+    {
+      "id": "kasaragod",
+      "name": "Kasaragod",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "district",
+      "aliases": [
+        "Kasargod",
+        "Kasargode",
+        "Kasaragode",
+        "കാസർഗോഡ്",
+        "കാസര്‍ഗോഡ്"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kasaragod-kanhangad",
+      "name": "Kanhangad",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "locality",
+      "aliases": [
+        "Kanjangad",
+        "കാഞ്ഞങ്ങാട്"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kasaragod-nileshwar",
+      "name": "Nileshwar",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "locality",
+      "aliases": [
+        "Nileshwaram",
+        "Neeleswaram",
+        "നീലേശ്വരം"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kasaragod-hosdurg",
+      "name": "Hosdurg",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "locality",
+      "aliases": [
+        "ഹോസ്ദുർഗ്"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kasaragod-manjeshwaram",
+      "name": "Manjeshwaram",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "locality",
+      "aliases": [
+        "Manjeshwar",
+        "മഞ്ചേശ്വരം"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kasaragod-uduma",
+      "name": "Uduma",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "locality",
+      "aliases": [
+        "Udma",
+        "ഉദുമ"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kasaragod-adoor",
+      "name": "Adoor",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "locality",
+      "aliases": [
+        "അടൂർ"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "kasaragod-periya",
+      "name": "Periya",
+      "district_id": "kasaragod",
+      "district": "Kasaragod",
+      "kind": "locality",
+      "aliases": [
+        "പെരിയ"
+      ],
+      "source": "https://kasargod.nic.in/en/tehsil/"
+    },
+    {
+      "id": "wayanad-periya",
+      "name": "Periya",
+      "district_id": "wayanad",
+      "district": "Wayanad",
+      "kind": "locality",
+      "aliases": [
+        "പെരിയ"
+      ],
+      "source": "https://wayanad.nic.in/village-panchayats/"
+    },
+    {
+      "id": "kozhikode-neeleswaram",
+      "name": "Neeleswaram",
+      "district_id": "kozhikode",
+      "district": "Kozhikode",
+      "kind": "locality",
+      "aliases": [
+        "നീലേശ്വരം"
+      ],
+      "source": "https://kozhikode.nic.in/en/about-district/adminstration/villages/"
+    },
+    {
+      "id": "thrissur-thalassery",
+      "name": "Thalassery",
+      "district_id": "thrissur",
+      "district": "Thrissur",
+      "kind": "locality",
+      "aliases": [
+        "തലശ്ശേരി"
+      ],
+      "source": "https://thrissur.nic.in/en/villages-255/"
+    }
+  ]
+}

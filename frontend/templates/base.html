@@ -24,6 +24,7 @@
       <a href="/dashboard" data-nav="dashboard" class="nav-item {{ 'active' if active_nav|default('') == 'dashboard' }}" hx-get="/dashboard" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('grid') }}<span>Overview</span></a>
       <a href="/reports" data-nav="reports" class="nav-item {{ 'active' if active_nav|default('') == 'reports' }}" hx-get="/reports" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('reports') }}<span>{{ 'Report queue' if user.role == 'admin' else 'Assignments' if user.role == 'response_team' else 'My reports' }}</span></a>
       {% if user.role == 'citizen' %}<a href="/reports/new" data-nav="new" class="nav-item {{ 'active' if active_nav|default('') == 'new' }}" hx-get="/reports/new" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('plus') }}<span>New report</span></a>{% endif %}
+      <a href="/alerts" data-nav="alerts" class="nav-item {{ 'active' if active_nav|default('') == 'alerts' }}" hx-get="/alerts" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('wave') }}<span>Official alerts</span></a>
       <a href="/account" data-nav="account" class="nav-item {{ 'active' if active_nav|default('') == 'account' }}" hx-get="/account" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('shield') }}<span>My account</span></a>
       <a href="/permissions" data-nav="permissions" class="nav-item {{ 'active' if active_nav|default('') == 'permissions' }}" hx-get="/permissions" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('grid') }}<span>Workspace permissions</span></a>
     </nav>
@@ -35,7 +36,7 @@
     </div>
   </aside>
   <div class="workspace-body">
-    <header class="topbar"><div><span class="topbar-brand">ResQ Kerala</span><span class="topbar-label">DISASTER RESPONSE WORKSPACE</span></div><span class="week-badge"><span></span>Week 1</span></header>
+    <header class="topbar"><div><span class="topbar-brand">ResQ Kerala</span><span class="topbar-label">DISASTER RESPONSE WORKSPACE</span></div><span class="week-badge"><span></span>Week 2</span></header>
   {% endif %}
     <main id="main-content" class="{{ 'main-content' if user else 'auth-content' }}" tabindex="-1">{% block content %}{% endblock %}</main>
   {% if user %}<footer class="workspace-footer"><span>ResQ Kerala</span><span>Connected communities. Coordinated care.</span></footer></div>{% endif %}

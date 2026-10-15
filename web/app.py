@@ -35,13 +35,29 @@ def local_time(value):
 templates.env.filters["local_time"] = local_time
 
 
+def input_time(value):
+    """Format API timestamps for an explicitly IST datetime-local control."""
+    if not value:
+        return ""
+    try:
+        timestamp = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+        return timestamp.astimezone(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%dT%H:%M")
+    except ValueError:
+        return str(value)
+
+
+templates.env.filters["input_time"] = input_time
+
+
 @asynccontextmanager
 async def lifespan(_app):
     async with api.router.lifespan_context(api):
         yield
 
 
-app = FastAPI(title="ResQ Kerala · Week 1", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="ResQ Kerala · Week 2", lifespan=lifespan, docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=str(ROOT / "frontend" / "static"), check_dir=False), name="static")
 
 
@@ -69,7 +85,7 @@ def render(request, content_template, *, status_code=200, **context):
 @app.middleware("http")
 async def browser_security(request: Request, call_next):
     path = request.url.path
-    ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions"} or (
+    ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions", "/alerts"} or (
         path.startswith("/reports/") and path.rsplit("/", 1)[-1].isdigit())
     # Document navigation cannot attach a bearer header. The public shell loads
     # the requested page through HTMX using only this tab's saved session.
@@ -146,6 +162,8 @@ async def unavailable_session(request: Request, _error):
             path = "/reports/new"
         elif path.startswith("/ui/reports/") and path.split("/")[3].isdigit():
             path = "/reports/" + path.split("/")[3]
+        elif path.startswith("/ui/alerts"):
+            path = "/alerts"
         else:
             path = "/dashboard"
     elif request.url.query:
@@ -299,6 +317,7 @@ async def detail_page(request, incident_id, *, error=None, status_code=200, valu
     report = display_report(response.json(), user)
     history = await api_call(request, "GET", f"/api/incidents/{incident_id}/history")
     teams = []
+    analysis, analysis_error, agent_status = None, None, {"configured": False, "model": None}
     if user["role"] == "admin":
         team_response = await api_call(request, "GET", "/api/teams")
         if team_response.status_code == 200:
@@ -306,8 +325,10 @@ async def detail_page(request, incident_id, *, error=None, status_code=200, valu
             assigned = next((team for team in teams if team["id"] == report.get("assigned_team_id")), None)
             if assigned:
                 report["assigned_team"] = assigned["name"]
+        analysis, analysis_error, agent_status = await location_analysis_context(request, incident_id)
     return render(request, "detail.html", user=user, report=report, timeline=history.json() if history.status_code == 200 else [],
                   teams=teams, values=values or {}, error=error or (error_message(history) if history.status_code != 200 else None),
+                  analysis=analysis, analysis_error=analysis_error, agent_status=agent_status,
                   active_nav="reports", page_title=report["reference"], status_code=status_code)
 
 
@@ -352,6 +373,125 @@ async def assign_report(request: Request, incident_id: int):
     if response.status_code == 200:
         return redirect(request, f"/reports/{incident_id}")
     return await detail_page(request, incident_id, error=error_message(response), status_code=response.status_code, values=form)
+
+
+async def alerts_view(request, *, error=None, status_code=200, values=None, edit_id=None, notice=None):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    is_admin = user["role"] == "admin"
+    response = await api_call(request, "GET", "/api/alerts?include_inactive=true" if is_admin else "/api/alerts")
+    places_response = await api_call(request, "GET", "/api/alerts/places")
+    alerts = response.json() if response.status_code == 200 else []
+    places = places_response.json() if places_response.status_code == 200 else []
+    place_map = {place["id"]: place for place in places}
+    alerts = [{**alert, "place": place_map.get(alert["place_id"], {
+        "name": alert.get("place_name"), "district": alert.get("district")})} for alert in alerts]
+    editing = next((alert for alert in alerts if alert["id"] == edit_id), None) if is_admin else None
+    if edit_id and is_admin and not editing and not error:
+        error, status_code = "This alert could not be found. Choose an alert from the list.", 404
+    if editing and values is None:
+        values = {**editing, "starts_at": input_time(editing["starts_at"]), "expires_at": input_time(editing["expires_at"])}
+    load_error = error_message(response) if response.status_code != 200 else (
+        error_message(places_response) if places_response.status_code != 200 else None)
+    return render(request, "alerts_workspace.html", user=user, active_nav="alerts", page_title="Official alerts",
+                  official_alerts=alerts, places=places, editing=editing, values=values or {},
+                  error=error or load_error, notice=notice, status_code=status_code)
+
+
+@app.get("/alerts", response_class=HTMLResponse)
+async def alerts_page(request: Request, edit: int | None = None):
+    notices = {"created": "Official alert created.", "updated": "Official alert updated.", "expired": "Official alert expired."}
+    return await alerts_view(request, edit_id=edit, notice=notices.get(request.query_params.get("notice")))
+
+
+def alert_form_payload(form):
+    payload = {key: form.get(key, "") for key in ("title", "message", "level", "place_id")}
+    for key in ("starts_at", "expires_at"):
+        value = str(form.get(key, "")).strip()
+        if not value and key == "starts_at":
+            continue
+        try:
+            timestamp = datetime.fromisoformat(value)
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+            payload[key] = timestamp.isoformat()
+        except ValueError:
+            label = "Start time" if key == "starts_at" else "Expiry time"
+            raise ValueError(f"{label}: enter a valid date and time in IST.") from None
+    return payload
+
+
+async def save_alert(request, alert_id=None):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    if user["role"] != "admin":
+        return await alerts_view(request, error="Only administrators can manage official alerts.", status_code=403)
+    form = request.state.form
+    try:
+        payload = alert_form_payload(form)
+    except ValueError as exc:
+        return await alerts_view(request, error=str(exc), status_code=422, values=form, edit_id=alert_id)
+    response = await api_call(request, "PATCH" if alert_id else "POST",
+                              f"/api/alerts/{alert_id}" if alert_id else "/api/alerts", payload)
+    if response.status_code in {200, 201}:
+        return redirect(request, "/alerts?notice=updated" if alert_id else "/alerts?notice=created")
+    return await alerts_view(request, error=error_message(response), status_code=response.status_code,
+                             values=form, edit_id=alert_id)
+
+
+@app.post("/ui/alerts")
+async def create_alert(request: Request):
+    return await save_alert(request)
+
+
+@app.post("/ui/alerts/{alert_id}/update")
+async def update_alert(request: Request, alert_id: int):
+    return await save_alert(request, alert_id)
+
+
+@app.post("/ui/alerts/{alert_id}/expire")
+async def expire_alert(request: Request, alert_id: int):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    if user["role"] != "admin":
+        return await alerts_view(request, error="Only administrators can manage official alerts.", status_code=403)
+    response = await api_call(request, "POST", f"/api/alerts/{alert_id}/expire")
+    if response.status_code == 200:
+        return redirect(request, "/alerts?notice=expired")
+    return await alerts_view(request, error=error_message(response), status_code=response.status_code)
+
+
+async def location_analysis_context(request, incident_id):
+    response = await api_call(request, "GET", f"/api/incidents/{incident_id}/location-analysis")
+    config = await api_call(request, "GET", "/api/agent/status")
+    analysis = response.json() if response.status_code == 200 else None
+    error = error_message(response) if response.status_code not in {200, 404} else None
+    agent_status = config.json() if config.status_code == 200 else {"configured": False, "model": None}
+    if config.status_code != 200:
+        error = error or "Agent availability could not be checked. Try again shortly."
+    return analysis, error, agent_status
+
+
+@app.post("/ui/reports/{incident_id}/location-analysis", response_class=HTMLResponse)
+async def analyze_location(request: Request, incident_id: int):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    if user["role"] != "admin":
+        return HTMLResponse("Only administrators can analyze incident locations.", status_code=403)
+    response = await api_call(request, "POST", f"/api/incidents/{incident_id}/location-analysis",
+                              {"use_agent": request.state.form.get("mode") == "agent"})
+    analysis, analysis_error, agent_status = await location_analysis_context(request, incident_id)
+    if response.status_code == 200:
+        analysis = response.json()
+    else:
+        analysis_error = error_message(response)
+    return render(request, "partials/location_analysis.html", user=user, report={"id": incident_id},
+                  analysis=analysis, analysis_error=analysis_error, agent_status=agent_status,
+                  status_code=response.status_code)
 
 
 # All original JSON endpoints remain reachable on the same origin.
