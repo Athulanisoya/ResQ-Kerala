@@ -10,7 +10,7 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=WORKSPACE_ROOT / ".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=WORKSPACE_ROOT / ".env.example", env_file_encoding="utf-8", extra="ignore"
     )
 
     database_url: str

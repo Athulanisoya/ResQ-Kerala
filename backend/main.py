@@ -11,6 +11,7 @@ from .config import get_settings
 from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
 from .routers import admin, auth, incidents, teams, users, workspaces
+from backend.routers.severity import router as severity_router
 
 
 settings = get_settings()
@@ -28,6 +29,8 @@ app = FastAPI(
     description="Week 1 accounts, citizen reports, admin review and manual response-team assignment.",
     lifespan=lifespan,
 )
+
+app.include_router(severity_router)
 app.add_middleware(
     CORSMiddleware, allow_origins=settings.allowed_origins,
     allow_credentials=False, allow_methods=["GET", "POST", "PATCH"],
