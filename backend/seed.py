@@ -33,7 +33,10 @@ def seed():
                 user = User(**data, password_hash=hash_password(password))
                 db.add(user)
                 created.append(data["email"])
-            if user.role == Role.RESPONSE_TEAM and user.team_id is None:
+            else:
+                user.full_name=data["full_name"]
+                user.role=data["role"]
+            if (user.role == Role.RESPONSE_TEAM and user.team_id is None):
                 user.team_id = team.id
         db.commit()
     if created or not previous:
