@@ -11,13 +11,13 @@ if ([IO.Path]::GetFullPath($Setup.python) -ne [IO.Path]::GetFullPath($expectedPy
 function Test-WorkspaceProcess([int]$ProcessId) {
     $info = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue
     if (-not $info -or -not $info.CommandLine) { return $false }
-    return $info.CommandLine.Contains('web.app:app') -and $info.CommandLine.Contains('--port 8013') -and $info.CommandLine.Contains($ProjectRoot) -and $info.CommandLine.Contains('--app-dir')
+    return $info.CommandLine.Contains('web.app:app') -and $info.CommandLine.Contains('--port 8000') -and $info.CommandLine.Contains($ProjectRoot) -and $info.CommandLine.Contains('--app-dir')
 }
 function Find-WorkspaceListener {
-    $listeners = @(Get-NetTCPConnection -LocalPort 8013 -State Listen -ErrorAction SilentlyContinue)
+    $listeners = @(Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue)
     if (-not $listeners.Count) { return $null }
     $serviceId = $listeners[0].OwningProcess
-    if (-not (Test-WorkspaceProcess $serviceId)) { throw 'Port 8013 is occupied by another application.' }
+    if (-not (Test-WorkspaceProcess $serviceId)) { throw 'Port 8000 is occupied by another application.' }
     return Get-Process -Id $serviceId
 }
 function New-ProcessRecord($Process) {

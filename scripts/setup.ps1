@@ -27,6 +27,6 @@ if (-not $SkipInstall) {
 Assert-Exit 'Workspace PostgreSQL setup'
 & $pythonPath -m backend.seed
 Assert-Exit 'Week 1 demonstration account and team provisioning'
-@{python=$pythonPath; port=8013; database_port=5443; project_root=$ProjectRoot} | ConvertTo-Json | Set-Content -LiteralPath '.runtime\setup.json' -Encoding utf8
+@{python=$pythonPath; port=8000; database_port=5432; project_root=$ProjectRoot} | ConvertTo-Json | Set-Content -LiteralPath '.runtime\setup.json' -Encoding utf8
 Write-Host 'ResQ Kerala Week 1 setup complete. Private sign-in details: .runtime/demo-accounts.json'
-Write-Host 'Run .\scripts\start.ps1 to start http://127.0.0.1:8013.'
+Write-Host 'Run .\scripts\start.ps1 to start http://127.0.0.1:8000.'

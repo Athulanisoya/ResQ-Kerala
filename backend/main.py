@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import logging
+
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,9 +12,9 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
-from .routers import admin, alerts, auth, incidents, location_analysis, teams, users, workspaces
-
-
+from .routers import admin, auth, incidents, teams, users, workspaces
+from .routers import (admin,auth,incidents,teams,users,workspaces,investigations)
+logger=logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -24,8 +26,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="ResQ Kerala — Week 2 (Athul)", version=settings.app_version,
-    description="Accounts, citizen reports, admin review, team assignment, Kerala location extraction and controlled alert matching.",
+    title="ResQ Kerala — Week 1", version=settings.app_version,
+    description="Week 1 accounts, citizen reports, admin review and manual response-team assignment.",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -45,7 +47,9 @@ async def response_headers(request: Request, call_next):
 
 
 @app.exception_handler(SQLAlchemyError)
-async def database_error(_request: Request, _error: SQLAlchemyError):
+async def database_error(request: Request, error: SQLAlchemyError):
+    logger.error("Datebase error on %s %s:%s",request.method,request.url.path,error,exc_info=(type(error),error,error.__traceback__))
+
     # Connection strings and driver diagnostics can contain credentials.
     return JSONResponse(status_code=503, content={"detail": "The database is temporarily unavailable. Please try again."})
 
@@ -64,8 +68,7 @@ def health(db: Session = Depends(get_db)):
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(workspaces.router)
-app.include_router(alerts.router)
-app.include_router(location_analysis.router)
 app.include_router(incidents.router)
 app.include_router(admin.router)
 app.include_router(teams.router)
+app.include_router(investigations.router)
