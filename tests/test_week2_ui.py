@@ -16,7 +16,9 @@ web = importlib.import_module("web.app")
 @pytest.fixture
 def workspace(monkeypatch):
     calls = []
-    state = {"validation_error": False, "analysis": None, "configured": True}
+    state = {"validation_error": False, "analysis": None, "configured": True,
+             "report_analysis": None, "investigation": None, "predicted_severity": "Moderate",
+             "assessment_error": False, "severity_error": False}
     place = {"id": "locality:chengannur", "name": "Chengannur", "district": "Alappuzha", "kind": "locality"}
     alert = {"id": 3, "title": "River warning", "message": "Keep clear of the river.", "level": "ORANGE",
              "place_id": place["id"], "starts_at": "2026-10-15T04:30:00Z", "expires_at": "2026-10-16T09:30:00Z",
@@ -37,6 +39,24 @@ def workspace(monkeypatch):
             return httpx.Response(201 if method == "POST" and path == "/api/alerts" else 200, json=alert)
         if path == "/api/agent/status":
             return httpx.Response(200, json={"configured": state["configured"], "model": "gemini-3.1-flash-live-preview"})
+        if path == "/api/admin/incidents/7/analysis":
+            if method == "PUT":
+                if state["assessment_error"]:
+                    return httpx.Response(422, json={"detail": "Choose a supported severity."})
+                state["report_analysis"] = {"id": 4, "incident_id": 7, "updated_at": "2026-10-15T05:00:00Z", **payload}
+            return httpx.Response(200, json=state["report_analysis"]) if state["report_analysis"] else httpx.Response(200, content="null")
+        if path == "/api/ai/predict-severity":
+            if state["severity_error"]:
+                return httpx.Response(503, json={"detail": "The severity model is temporarily unavailable."})
+            return httpx.Response(200, json={"predicted_severity": state["predicted_severity"]})
+        if path == "/api/admin/incidents/7/investigation":
+            if method == "POST":
+                state["investigation"] = {"id": 8, "incident_id": 7, "status": "IN_PROGRESS", "findings": None,
+                                          "action_taken": None, "updated_at": "2026-10-15T05:00:00Z", **payload}
+            return httpx.Response(201 if method == "POST" else 200, json=state["investigation"]) if state["investigation"] else httpx.Response(200, content="null")
+        if path == "/api/admin/incidents/investigations/8":
+            state["investigation"].update(payload)
+            return httpx.Response(200, json=state["investigation"])
         if path.endswith("/location-analysis"):
             if state["analysis"]:
                 return httpx.Response(200, json=state["analysis"])
@@ -137,3 +157,86 @@ def test_admin_location_card_modes_freshness_and_tool_evidence(workspace):
     client.headers["Authorization"] = "Bearer citizen"
     assert 'id="location-analysis"' not in client.get("/reports/7").text
     assert submit(client, "/ui/reports/7/location-analysis", mode="agent").status_code == 403
+
+
+def test_admin_assessment_and_investigation_ui_complete_workflow(workspace):
+    client, calls, state = workspace
+    page = client.get("/reports/7")
+    assert 'id="report-analysis"' in page.text and 'id="investigation"' in page.text
+    assert "Predict severity" in page.text
+    response = submit(client, "/ui/reports/7/analysis", severity="HIGH", extracted_location="Chengannur",
+                      alert_match="MATCH", summary="Location and warning reviewed.", requires_investigation="yes")
+    assert response.headers["HX-Redirect"] == "/reports/7"
+    assert state["report_analysis"] == {
+        "id": 4, "incident_id": 7, "updated_at": "2026-10-15T05:00:00Z", "severity": "HIGH",
+        "extracted_location": "Chengannur", "alert_match": "MATCH", "summary": "Location and warning reviewed.",
+        "requires_investigation": True, "source": "MANUAL_DEMO",
+    }
+    assert "Start investigation" in client.get("/reports/7").text
+    assert submit(client, "/ui/reports/7/investigation/start", assigned_to_name="Field officer").headers["HX-Redirect"] == "/reports/7"
+    assert "Save investigation" in client.get("/reports/7").text
+    completed = submit(client, "/ui/reports/7/investigation/update", status="COMPLETED",
+                       findings="All residents are safe.", action_taken="Rescue team confirmed safety.")
+    assert completed.headers["HX-Redirect"] == "/reports/7"
+    assert ("PATCH", "/api/admin/incidents/investigations/8", {
+        "status": "COMPLETED", "findings": "All residents are safe.", "action_taken": "Rescue team confirmed safety.",
+    }) in calls
+    finished = client.get("/reports/7")
+    assert "All residents are safe." in finished.text and "Rescue team confirmed safety." in finished.text
+    assert "This investigation is complete" in finished.text
+    assert "Save investigation" not in finished.text and "Start investigation" not in finished.text
+
+
+def test_severity_prediction_preserves_assessment_and_normalizes_model_labels(workspace):
+    client, calls, state = workspace
+    state["report_analysis"] = {
+        "severity": "HIGH", "extracted_location": "Chengannur", "alert_match": "UNCERTAIN",
+        "summary": "A reviewer must confirm the street.", "requires_investigation": False, "source": "MANUAL_DEMO",
+    }
+    result = submit(client, "/ui/reports/7/severity")
+    assert result.status_code == 200
+    assert "Severity prediction saved" in result.text
+    assert ("POST", "/api/ai/predict-severity", {"message": "Water near Chengannur bridge."}) in calls
+    assert ("PUT", "/api/admin/incidents/7/analysis", {
+        "severity": "MEDIUM", "extracted_location": "Chengannur", "alert_match": "UNCERTAIN",
+        "summary": "A reviewer must confirm the street.", "requires_investigation": False, "source": "AI_MODULE",
+    }) in calls
+    state["predicted_severity"] = "unsupported"
+    calls.clear()
+    failed = submit(client, "/ui/reports/7/severity")
+    assert failed.status_code == 502 and "unsupported result" in failed.text
+    assert not any(method == "PUT" for method, _, _ in calls)
+
+
+def test_investigation_ui_reports_missing_start_and_validation_without_losing_input(workspace):
+    client, calls, state = workspace
+    missing = submit(client, "/ui/reports/7/investigation/update", status="COMPLETED", findings="Checked safely.")
+    assert missing.status_code == 409 and "Start an investigation before updating it" in missing.text
+    assert not any(method == "PATCH" for method, _, _ in calls)
+    state["assessment_error"] = True
+    invalid = submit(client, "/ui/reports/7/analysis", analysis_form="yes", severity="HIGH",
+                     extracted_location='<script>alert("x")</script>', summary="Please preserve this note.",
+                     requires_investigation="no")
+    assert invalid.status_code == 422 and "Choose a supported severity" in invalid.text
+    assert "Please preserve this note." in invalid.text
+    assert '<script>alert("x")</script>' not in invalid.text and "&lt;script&gt;" in invalid.text
+    assert 'value="no" selected' in invalid.text
+    state["severity_error"] = True
+    calls.clear()
+    failed = submit(client, "/ui/reports/7/severity")
+    assert failed.status_code == 503 and "severity model is temporarily unavailable" in failed.text
+    assert not any(method == "PUT" for method, _, _ in calls)
+
+
+@pytest.mark.parametrize("role", ["citizen", "response_team"])
+def test_investigation_and_severity_ui_enforce_admin_role_and_csrf(workspace, role):
+    client, calls, _ = workspace
+    client.headers["Authorization"] = f"Bearer {role}"
+    page = client.get("/reports/7")
+    assert 'id="report-analysis"' not in page.text and 'id="investigation"' not in page.text
+    calls.clear()
+    for action in ("analysis", "severity", "investigation/start", "investigation/update"):
+        assert submit(client, f"/ui/reports/7/{action}").status_code == 403
+    assert not any(method in {"PUT", "POST", "PATCH"} for method, _, _ in calls)
+    client.headers["Authorization"] = "Bearer admin"
+    assert client.post("/ui/reports/7/severity", data={}).status_code == 403

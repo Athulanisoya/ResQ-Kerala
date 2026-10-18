@@ -1,0 +1,46 @@
+{% from 'icons.html' import icon %}
+{% set saved_analysis = report_analysis or {} %}
+{% set analysis_values = form_values if form_values.get('analysis_form') else saved_analysis %}
+<section id="report-analysis" class="card location-analysis-card" aria-labelledby="report-analysis-heading">
+  <div class="card-heading"><div><h2 id="report-analysis-heading">Severity &amp; investigation review</h2><p>Review the severity model, record your assessment and decide whether investigation is needed.</p></div>{{ icon('shield') }}</div>
+  <div class="location-analysis-body">
+    {% if investigation_error %}<div class="alert alert-error" role="alert">{{ icon('info') }}<div>{{ investigation_error }}</div></div>{% endif %}
+    {% if report_analysis %}
+    <dl class="analysis-facts"><div><dt>Saved severity</dt><dd>{{ report_analysis.severity|title }}</dd></div><div><dt>Investigation needed</dt><dd>{{ 'Yes' if report_analysis.requires_investigation else 'No' }}</dd></div><div><dt>Assessment source</dt><dd>{{ 'Severity model' if report_analysis.source == 'AI_MODULE' else 'Admin review' }}</dd></div><div><dt>Last assessment</dt><dd>{{ report_analysis.updated_at|local_time }}</dd></div></dl>
+    {% else %}<p class="analysis-empty">No severity assessment has been saved for this report.</p>{% endif %}
+    <form action="/ui/reports/{{ report.id }}/severity" method="post" hx-post="/ui/reports/{{ report.id }}/severity" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="analysis-actions"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button type="submit" class="button button-secondary"><span class="button-label">Predict severity</span><span class="button-loading">Predicting…</span>{{ icon('arrow') }}</button></form>
+    <p class="field-hint">The classifier uses the reported situation. Its prediction updates severity while preserving the other saved assessment fields. Review the result before acting.</p>
+    <form action="/ui/reports/{{ report.id }}/analysis" method="post" hx-post="/ui/reports/{{ report.id }}/analysis" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="analysis_form" value="yes">
+      <div class="field"><label for="analysis-severity">Reviewed severity</label><select id="analysis-severity" name="severity">{% for severity in ['UNKNOWN', 'LOW', 'MEDIUM', 'HIGH'] %}<option value="{{ severity }}" {{ 'selected' if analysis_values.get('severity', 'UNKNOWN') == severity }}>{{ severity|title }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="analysis-location">Reviewed location <span class="optional">Optional</span></label><input id="analysis-location" name="extracted_location" maxlength="255" value="{{ analysis_values.get('extracted_location') or '' }}"><p class="field-hint">This assessment is separate from the sourced location and alert check above.</p></div>
+      <div class="field"><label for="analysis-alert-match">Reviewed alert match</label><select id="analysis-alert-match" name="alert_match">{% for match in ['NOT_CHECKED', 'MATCH', 'NO_MATCH', 'UNCERTAIN'] %}<option value="{{ match }}" {{ 'selected' if analysis_values.get('alert_match', 'NOT_CHECKED') == match }}>{{ match|replace('_', ' ')|title }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="analysis-summary">Assessment summary <span class="optional">Optional</span></label><textarea id="analysis-summary" name="summary" rows="3">{{ analysis_values.get('summary') or '' }}</textarea></div>
+      <div class="field"><label for="analysis-investigation">Investigation needed</label>{% set needs_investigation = analysis_values.get('requires_investigation', true) %}<select id="analysis-investigation" name="requires_investigation"><option value="yes" {{ 'selected' if needs_investigation in [true, 'yes'] }}>Yes</option><option value="no" {{ 'selected' if needs_investigation in [false, 'no'] }}>No</option></select></div>
+      <button type="submit" class="button button-primary"><span class="button-label">Save assessment</span><span class="button-loading">Saving…</span>{{ icon('check') }}</button>
+    </form>
+  </div>
+</section>
+<section id="investigation" class="card location-analysis-card" aria-labelledby="investigation-heading">
+  <div class="card-heading"><div><h2 id="investigation-heading">Investigation</h2><p>Assign a reviewer and record the findings before completing the investigation.</p></div>{{ icon('reports') }}</div>
+  <div class="location-analysis-body">
+    {% if investigation %}
+    <dl class="analysis-facts"><div><dt>Assigned investigator</dt><dd>{{ investigation.assigned_to_name }}</dd></div><div><dt>Status</dt><dd>{{ investigation.status|replace('_', ' ')|title }}</dd></div><div><dt>Last updated</dt><dd>{{ investigation.updated_at|local_time }}</dd></div></dl>
+    {% if investigation.status in ['COMPLETE', 'COMPLETED'] %}
+    <p class="analysis-explanation"><strong>Findings:</strong> {{ investigation.findings }}</p>{% if investigation.action_taken %}<p class="analysis-explanation"><strong>Action taken:</strong> {{ investigation.action_taken }}</p>{% endif %}<p class="field-hint">This investigation is complete. Its findings are preserved.</p>
+    {% else %}
+    <form action="/ui/reports/{{ report.id }}/investigation/update" method="post" hx-post="/ui/reports/{{ report.id }}/investigation/update" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="investigation-status">Investigation status</label><select id="investigation-status" name="status">{% for status in ['IN_PROGRESS', 'COMPLETED'] %}<option value="{{ status }}" {{ 'selected' if form_values.get('status', investigation.status) == status }}>{{ status|replace('_', ' ')|title }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="investigation-findings">Findings</label><textarea id="investigation-findings" name="findings" rows="4" required minlength="5" maxlength="5000">{{ form_values.get('findings', investigation.findings) or '' }}</textarea></div>
+      <div class="field"><label for="investigation-action">Action taken <span class="optional">Optional</span></label><textarea id="investigation-action" name="action_taken" rows="3" maxlength="2000">{{ form_values.get('action_taken', investigation.action_taken) or '' }}</textarea></div>
+      <button type="submit" class="button button-primary"><span class="button-label">Save investigation</span><span class="button-loading">Saving…</span>{{ icon('check') }}</button>
+    </form>
+    {% endif %}
+    {% elif report_analysis and report_analysis.requires_investigation %}
+    <form action="/ui/reports/{{ report.id }}/investigation/start" method="post" hx-post="/ui/reports/{{ report.id }}/investigation/start" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}"><div class="field"><label for="investigator-name">Assigned investigator</label><input id="investigator-name" name="assigned_to_name" required minlength="2" maxlength="120" value="{{ form_values.get('assigned_to_name', '') }}"></div><button type="submit" class="button button-primary"><span class="button-label">Start investigation</span><span class="button-loading">Starting…</span>{{ icon('arrow') }}</button>
+    </form>
+    {% else %}<p class="analysis-empty">Save an assessment with investigation needed set to Yes to begin.</p>{% endif %}
+  </div>
+</section>

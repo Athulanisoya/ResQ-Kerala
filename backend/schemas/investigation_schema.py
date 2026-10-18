@@ -5,7 +5,7 @@ Severity=Literal["LOW","MEDIUM","HIGH","UNKNOWN"]
 AlertMatch=Literal["MATCH","NO_MATCH","UNCERTAIN","NOT_CHECKED"]
 class AnalysisUpsert(BaseModel):
     model_config=ConfigDict(extra="forbid",str_strip_whitespace=True)
-    severity: str = Field(default="UNKNOWN")
+    severity: Severity = "UNKNOWN"
     extracted_location: str | None = Field(default=None, max_length=255)
     alert_match:AlertMatch="NOT_CHECKED"
     summary: str | None = Field(default=None)

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=30, ge=5, le=1440)
     cors_origins: str = "http://localhost:5175,http://127.0.0.1:5175"
     allow_sqlite_for_tests: bool = False
-    app_version: str = "1.0.0-resq-week1"
+    app_version: str = "2.0.0-integrated"
     database_schema: str = Field(default="resq_week1", pattern=r"^[a-z][a-z0-9_]{0,62}$")
     gemini_api_key: SecretStr | None = None
     gemini_api_key_file: Path = Field(default_factory=default_gemini_key_file)

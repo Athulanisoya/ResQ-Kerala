@@ -13,5 +13,4 @@ Jinja2==3.1.6
 python-multipart==0.0.32
 openai-agents==0.24.0
 websockets==16.1.1
-starlette==0.48.0
-openai-agents
+scikit-learn==1.6.1

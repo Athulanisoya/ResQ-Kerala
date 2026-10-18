@@ -1,17 +1,8 @@
-# ResQ Kerala — Week 1 plus Athul's Week 2
+# ResQ Kerala — integrated Week 2
 
-This version combines the four member branches into one flood reporting application with an HTMX frontend. Citizens register, sign in, submit reports and view their status. Administrators review and verify reports, then assign an available response team. Response teams can view their assigned reports. The timeline ends at **Team assigned** for Week 1.
+This local integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-maanaz` in one PostgreSQL-backed FastAPI/HTMX application. It retains citizen reporting, per-tab login, administrator review and team assignment, and adds Kerala location extraction, scheduled alerts and alert matching, the trained severity classifier, reviewed analysis, and investigation assignment/findings/completion. Nothing has been pushed to GitHub.
 
-Athul's Week 2 adds sourced Kerala location extraction, administrator alert creation/editing/scheduling/expiry, and `MATCH`, `NO_MATCH`, or `UNCERTAIN` results. Each submitted report gets a local geography check. Admins can rerun it or use **Run Gemini agent** on the report detail screen. The agent uses the **OpenAI Agents SDK** with **Gemini Flash Live** (`gemini-3.1-flash-live-preview`), calling controlled extraction and active-alert tools through the server-side Live API. The frontend remains HTMX. See [Week 2 implementation and demo](docs/week2-athul.md).
-
-On the configured Fedora computer, start or stop from this directory:
-
-```bash
-.venv/bin/python .runtime/linux.py start
-.venv/bin/python .runtime/linux.py stop
-```
-
-The Fedora launcher uses the persistent rootless Podman PostgreSQL container prepared for this workspace. Its local instructions are in `.runtime/LINUX.md`. The Windows setup below remains available.
+Each submitted report receives a sourced Kerala geography check. On the admin report detail page, **Analyze location** checks current alerts, **Predict severity** runs Vidya's bundled classifier, and **Save assessment** records the reviewed severity, location, alert match, summary and investigation decision. Investigators can be assigned and their findings updated or completed. The original citizen report and its status/team workflow are preserved.
 
 ## Run on this computer
 
@@ -52,7 +43,26 @@ User team memberships reference `response_teams.id` with a database foreign key.
 4. Assign an available response team. Check that the report shows **Team assigned**.
 5. Sign in as the team to view its assignment, then as the citizen to view the updated timeline.
 
-Urgency classification, summaries and investigation belong to the other members' Week 2 modules. Rescue progress, relief, shelters, chatbot, notifications, Malayalam translation and case closure remain later-week work. Curated Malayalam place aliases are supported by the geography tool; report translation is outside this change.
+## Week 2 demonstration
+
+1. Sign in as admin and open **Official alerts**. Create an active demo alert for Alappuzha district, or choose another recognised Kerala place. Alert form times use IST.
+2. In a separate citizen tab, submit a clearly labelled synthetic flood report in Chengannur, Alappuzha. Open it as admin and check the saved **Location & alert check**. The district alert covers Chengannur and produces `MATCH`.
+3. Select **Predict severity** to run the bundled model against the reported situation. The saved assessment uses Low, Medium or High; the model's Moderate label maps to Medium. No external API key is required for severity prediction.
+4. Review the assessment fields, enter a summary, set **Investigation needed** to Yes, and select **Save assessment**. Summaries are entered by the admin; automatic summary generation is not implemented by these branches.
+5. Enter an investigator's name and select **Start investigation**. Save findings while In progress, then choose Completed and save again. Completed investigation findings remain available for review and cannot be edited.
+6. Expire the demo alert and select **Analyze location** again to demonstrate `NO_MATCH`. An unknown or ambiguous location produces `UNCERTAIN`. No matching alert does not establish that the report is false or the area is safe.
+
+Admins can also select **Run Gemini agent** after configuring a Gemini API key. The optional agent uses the OpenAI Agents SDK with the configured Gemini model (`gemini-3.1-flash-live-preview` by default) and controlled location extraction/active-alert tools. Deterministic geography and the severity classifier work without that key. Missing provider configuration or failed agent runs produce a labelled local fallback.
+
+To enter a Gemini key locally with hidden input:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.configure_gemini
+```
+
+The app reads the saved key on the next agent request. `GEMINI_API_KEY` or `GEMINI_API_KEY_FILE` can also be supplied through local configuration. See [Athul's location and agent implementation](docs/week2-athul.md) for technical details; its original branch-specific Linux launch instructions are historical.
+
+Rescue progress, relief, shelters, chatbot, notifications, Malayalam report translation and case closure remain later-week work. Curated Malayalam place aliases are supported by the geography tool.
 
 ## Stop and verify
 
@@ -64,15 +74,17 @@ Stop checks the recorded application's PID, creation time and command line befor
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -m scripts.verify_local
+.\.venv\Scripts\python.exe -m scripts.check_location_agent
 # Optional client-state checks; Node is needed only to run this test.
 node tests/session_client.cjs
 ```
 
-The readiness command requires the application to be running and checks PostgreSQL, the home page, API docs and the authentication gate without creating a report. Tests use an isolated test database. Browser demonstration is a separate check from automated tests.
+The readiness command requires the application to be running and checks PostgreSQL, the home page, API docs and the authentication gate without creating a report. The location-agent check above uses local geography and current database alerts; it makes no provider call. Automated tests isolate their records, and optional PostgreSQL checks use temporary schemas. Browser demonstration is a separate check from automated tests.
 
-API paths include `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/users/me`, `/api/incidents/`, report detail/history/status, the admin report queue/assignment actions, and `/api/teams/assignments`. Consult the running API docs for exact methods and request bodies. Protected JSON APIs require the bearer token returned by login.
+API paths include authentication and `/api/users/me`, `/api/incidents/` and report detail/history/status, team assignment and `/api/teams/assignments`, `/api/alerts`, incident location analysis, `/api/ai/predict-severity`, and `/api/admin/incidents/{id}/analysis` or `/investigation`. Consult the running API docs for exact methods and request bodies. Protected JSON APIs require the bearer token returned by login; assessment, prediction and investigation actions require an admin.
 
 If setup fails, confirm the PostgreSQL binary path and port availability. If startup fails, check `.runtime/postgres.log`, `.runtime/web.log` and `.runtime/web-error.log`. Do not replace the generated database password while retaining an existing cluster. If PowerShell's script policy blocks a command, run it explicitly with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1` and then the corresponding `start.ps1` command.
 
-See [integration notes](docs/INTEGRATION.md) for branch provenance, Week 1 boundaries and the necessary backend compatibility changes, and [validation results](docs/VALIDATION.md) for the completed checks. Original React files are preserved in the source branch history; the active frontend uses HTMX templates and static assets. Older member-specific documents describe their original branches and should be read in that context.
+See [Week 2 merge notes](docs/WEEK2-MERGE.md) for current branch provenance, integration fixes and validation. [Week 1 integration notes](docs/INTEGRATION.md) and [Week 1 validation results](docs/VALIDATION.md) document the earlier baseline. Original React files are preserved in branch history; the active frontend uses HTMX templates and static assets. Older member-specific documents describe their original branches.
