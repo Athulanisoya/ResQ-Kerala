@@ -9,7 +9,7 @@ The local branch `integration/week2-all` combines these fetched branch tips:
 | `aryaweek2` | `501d245` | Reviewed incident analysis, investigator assignment, findings/actions and investigation completion |
 | `Vidya-week2` | `b0974ad` | Trained TF-IDF/logistic regression severity pipeline and prediction API |
 
-`week2-maanaz` matched `main` and was already an ancestor of Athul. Arya was based on Athul. Local merge commits preserve each requested branch's history; no remote branch or pull request was created or updated.
+`week2-maanaz` matched `main` and was already an ancestor of Athul. Arya was based on Athul. The integration merge commits preserve each requested branch's history. The initial merge and validation were completed locally before publication was authorized.
 
 ## Integration fixes
 
@@ -44,4 +44,4 @@ One clearly labelled synthetic report remains as report #1 with completed invest
 
 The restricted process sandbox stalled the first test/database startup attempts. Tests and database initialization completed outside that sandbox. The incomplete first cluster was preserved at `.runtime/postgres-incomplete-sandbox`; the working cluster is `.runtime/postgres`.
 
-Existing Pydantic class-config deprecation warnings remain from the branch baseline. No GitHub push, PR, deployment or external-provider request was performed.
+Existing Pydantic class-config deprecation warnings remain from the branch baseline. The initial local integration and validation performed no GitHub push, PR creation, deployment or external-provider request.

@@ -1,6 +1,6 @@
 # ResQ Kerala — integrated Week 2
 
-This local integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-maanaz` in one PostgreSQL-backed FastAPI/HTMX application. It retains citizen reporting, per-tab login, administrator review and team assignment, and adds Kerala location extraction, scheduled alerts and alert matching, the trained severity classifier, reviewed analysis, and investigation assignment/findings/completion. Nothing has been pushed to GitHub.
+This integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-maanaz` in one PostgreSQL-backed FastAPI/HTMX application. It retains citizen reporting, per-tab login, administrator review and team assignment, and adds Kerala location extraction, scheduled alerts and alert matching, the trained severity classifier, reviewed analysis, and investigation assignment/findings/completion.
 
 Each submitted report receives a sourced Kerala geography check. On the admin report detail page, **Analyze location** checks current alerts, **Predict severity** runs Vidya's bundled classifier, and **Save assessment** records the reviewed severity, location, alert match, summary and investigation decision. Investigators can be assigned and their findings updated or completed. The original citizen report and its status/team workflow are preserved.
 
