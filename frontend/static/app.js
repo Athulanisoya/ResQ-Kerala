@@ -75,7 +75,7 @@
     const root = document.getElementById('app-root');
     if (root) document.body.className = root.dataset.authenticated === 'true' ? 'workspace' : 'auth-page';
     const path = window.location.pathname;
-    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports' : path === '/account' ? 'account' : path === '/permissions' ? 'permissions' : 'dashboard';
+    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports' : path === '/alerts' ? 'alerts' : path === '/account' ? 'account' : path === '/permissions' ? 'permissions' : 'dashboard';
     document.querySelectorAll('[data-nav]').forEach(link => {
       const selected = link.dataset.nav === active;
       link.classList.toggle('active', selected);

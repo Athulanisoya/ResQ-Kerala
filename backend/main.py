@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
-from .routers import admin, auth, incidents, teams, users, workspaces
+from .routers import admin, alerts, auth, incidents, location_analysis, teams, users, workspaces
 
 
 settings = get_settings()
@@ -24,8 +24,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="ResQ Kerala — Week 1", version=settings.app_version,
-    description="Week 1 accounts, citizen reports, admin review and manual response-team assignment.",
+    title="ResQ Kerala — Week 2 (Athul)", version=settings.app_version,
+    description="Accounts, citizen reports, admin review, team assignment, Kerala location extraction and controlled alert matching.",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -64,6 +64,8 @@ def health(db: Session = Depends(get_db)):
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(workspaces.router)
+app.include_router(alerts.router)
+app.include_router(location_analysis.router)
 app.include_router(incidents.router)
 app.include_router(admin.router)
 app.include_router(teams.router)

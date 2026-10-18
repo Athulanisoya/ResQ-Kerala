@@ -1,0 +1,35 @@
+{% from 'icons.html' import icon %}
+{% set form_values = values|default({}) %}
+{% set is_admin = user.role == 'admin' %}
+{% include 'partials/alerts.html' %}
+<div class="page-heading"><div><span class="section-kicker">KERALA · OFFICIAL UPDATES</span><h1>Official alerts</h1><p>{{ 'Create, schedule and maintain alerts for recognised Kerala locations.' if is_admin else 'Current alerts published by your disaster response administrators.' }}</p></div>{% if is_admin %}<a href="#alert-form" class="button button-primary">{{ icon('plus') }}{{ 'Edit alert' if editing else 'Create alert' }}</a>{% endif %}</div>
+<div class="alerts-layout {{ 'alerts-layout-admin' if is_admin }}">
+  <section class="card official-alerts-card" aria-labelledby="official-alerts-heading">
+    <div class="card-heading"><div><h2 id="official-alerts-heading">{{ 'Alert register' if is_admin else 'Active alerts' }}</h2><p>{{ 'Active, scheduled and expired alerts.' if is_admin else 'Times are shown in Indian Standard Time.' }}</p></div>{{ icon('wave') }}</div>
+    <div class="official-alert-list">
+    {% for alert in official_alerts %}
+      <article class="official-alert-item">
+        <div class="official-alert-meta"><span class="alert-level alert-level-{{ alert.level|lower }}">{{ alert.level|title }} alert</span>{% if is_admin %}<span class="alert-state">{{ alert.status|title }}</span>{% endif %}</div>
+        <h3>{{ alert.title }}</h3><p class="official-alert-message">{{ alert.message }}</p>
+        <dl class="official-alert-facts"><div><dt>Location</dt><dd>{{ alert.place.name|default('Location #' ~ alert.place_id, true) }}{% if alert.place.district %}<span> · {{ alert.place.district }}</span>{% endif %}</dd></div><div><dt>Starts</dt><dd>{{ alert.starts_at|local_time }}</dd></div><div><dt>Expires</dt><dd>{{ alert.expires_at|local_time }}</dd></div>{% if alert.expired_at %}<div><dt>Expired by administrator</dt><dd>{{ alert.expired_at|local_time }}</dd></div>{% endif %}</dl>
+        {% if is_admin and not alert.expired_at %}<div class="official-alert-actions"><a href="/alerts?edit={{ alert.id }}" class="text-link" hx-get="/alerts?edit={{ alert.id }}" hx-target="#main-content" hx-push-url="true">Edit alert{{ icon('arrow') }}</a>{% if alert.status != 'EXPIRED' %}<form action="/ui/alerts/{{ alert.id }}/expire" method="post" hx-post="/ui/alerts/{{ alert.id }}/expire" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button" hx-confirm="Expire this official alert now? It will no longer appear in active alerts."><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button type="submit" class="button button-secondary"><span class="button-label">Expire now</span><span class="button-loading">Expiring…</span></button></form>{% endif %}</div>{% endif %}
+      </article>
+    {% else %}<div class="empty-state"><span class="empty-icon">{{ icon('wave') }}</span><h3>{{ 'No official alerts yet' if is_admin else 'No active official alerts' }}</h3><p>{{ 'Create an alert with a location and expiry time to begin.' if is_admin else 'Check this page for updates. The absence of an alert does not confirm that an area is safe.' }}</p></div>{% endfor %}
+    </div>
+  </section>
+  {% if is_admin %}
+  <section id="alert-form" class="card alert-form-card" aria-labelledby="alert-form-heading">
+    <div class="card-heading"><div><h2 id="alert-form-heading">{{ 'Edit official alert' if editing else 'Create official alert' }}</h2><p>All form dates and times use IST (UTC+05:30).</p></div>{{ icon('shield') }}</div>
+    <form action="{{ '/ui/alerts/' ~ editing.id ~ '/update' if editing else '/ui/alerts' }}" method="post" hx-post="{{ '/ui/alerts/' ~ editing.id ~ '/update' if editing else '/ui/alerts' }}" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="alert-title">Alert title</label><input id="alert-title" name="title" type="text" required minlength="3" maxlength="160" value="{{ form_values.get('title', '') }}" placeholder="Flood warning for Chengannur"></div>
+      <div class="field"><label for="alert-message">Public message</label><textarea id="alert-message" name="message" rows="4" required minlength="5" maxlength="5000" placeholder="Describe the alert and the action people should take.">{{ form_values.get('message', '') }}</textarea></div>
+      <div class="field"><label for="alert-level">Alert level</label><select id="alert-level" name="level" required>{% for level in ['YELLOW', 'ORANGE', 'RED'] %}<option value="{{ level }}" {{ 'selected' if form_values.get('level', 'YELLOW') == level }}>{{ level|title }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="alert-place">Affected location</label><select id="alert-place" name="place_id" required><option value="">Choose a Kerala location</option>{% for place in places %}<option value="{{ place.id }}" {{ 'selected' if form_values.get('place_id')|string == place.id|string }}>{{ place.name }}{% if place.district and place.district != place.name %} · {{ place.district }}{% endif %}{% if place.kind %} ({{ place.kind|title }}){% endif %}</option>{% endfor %}</select><p class="field-hint">Select a district to cover its recognised places.</p></div>
+      <div class="field"><label for="alert-starts">Starts at (IST) <span class="optional">Optional</span></label><input id="alert-starts" name="starts_at" type="datetime-local" value="{{ form_values.get('starts_at', '') }}"><p class="field-hint">{{ 'Leave blank to keep its original start time.' if editing else 'Leave blank to start immediately.' }} A future time schedules the alert.</p></div>
+      <div class="field"><label for="alert-expires">Expires at (IST)</label><input id="alert-expires" name="expires_at" type="datetime-local" required value="{{ form_values.get('expires_at', '') }}"><p class="field-hint">Expiry must be later than the start time.</p></div>
+      <div class="alert-form-actions"><button type="submit" class="button button-primary"><span class="button-label">{{ 'Save changes' if editing else 'Create alert' }}</span><span class="button-loading">Saving…</span>{{ icon('check') }}</button>{% if editing %}<a href="/alerts" class="text-link" hx-get="/alerts" hx-target="#main-content" hx-push-url="true">Cancel edit</a>{% endif %}</div>
+    </form>
+  </section>
+  {% endif %}
+</div>
