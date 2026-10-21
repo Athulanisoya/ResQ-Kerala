@@ -37,4 +37,4 @@ The app is left running at `http://127.0.0.1:8013`. One clearly labelled synthet
 
 No live Gemini request or external data export is needed for these fixes. Provider transport/function-tool behavior is exercised by simulated transport tests; successful live provider execution is a separate check requiring configured credentials. Passing model integration checks establishes executable behavior and preservation of the supplied pipeline, not a measured real-world severity classification accuracy.
 
-Changes remain on local branch `fix/week2-summary-audit`; this audit does not publish them to GitHub.
+The fixes were prepared and validated on `fix/week2-summary-audit` before the user authorized publication to `main`.
