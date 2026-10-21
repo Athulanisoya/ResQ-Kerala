@@ -50,6 +50,11 @@ def create_incident(
         from backend.services.location_analysis_service import analyze_new_incident
         analyze_new_incident(db, incident)
 
+        # Save a local report summary in the same transaction, independently
+        # of the administrator's reviewed assessment and optional providers.
+        from backend.services.summary_service import save_summary
+        save_summary(db, incident, user_id)
+
         db.commit()
 
     except Exception:

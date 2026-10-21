@@ -2,7 +2,7 @@
 
 This integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-maanaz` in one PostgreSQL-backed FastAPI/HTMX application. It retains citizen reporting, per-tab login, administrator review and team assignment, and adds Kerala location extraction, scheduled alerts and alert matching, the trained severity classifier, reviewed analysis, and investigation assignment/findings/completion.
 
-Each submitted report receives a sourced Kerala geography check. On the admin report detail page, **Analyze location** checks current alerts, **Predict severity** runs Vidya's bundled classifier, and **Save assessment** records the reviewed severity, location, alert match, summary and investigation decision. Investigators can be assigned and their findings updated or completed. The original citizen report and its status/team workflow are preserved.
+Each submitted report receives a sourced Kerala geography check and a saved local summary draft. On the admin report detail page, **Analyze location** checks current alerts, **Predict severity** runs Vidya's bundled classifier, and **Save assessment** records the reviewed severity, location, alert match, summary and investigation decision. Older reports expose **Generate summary**, and **Refresh summary** updates the generated draft without changing a reviewed assessment. Investigators can be assigned and their findings updated or completed. The original citizen report and its status/team workflow are preserved.
 
 ## Run on this computer
 
@@ -48,8 +48,8 @@ User team memberships reference `response_teams.id` with a database foreign key.
 1. Sign in as admin and open **Official alerts**. Create an active demo alert for Alappuzha district, or choose another recognised Kerala place. Alert form times use IST.
 2. In a separate citizen tab, submit a clearly labelled synthetic flood report in Chengannur, Alappuzha. Open it as admin and check the saved **Location & alert check**. The district alert covers Chengannur and produces `MATCH`.
 3. Select **Predict severity** to run the bundled model against the reported situation. The saved assessment uses Low, Medium or High; the model's Moderate label maps to Medium. No external API key is required for severity prediction.
-4. Review the assessment fields, enter a summary, set **Investigation needed** to Yes, and select **Save assessment**. Summaries are entered by the admin; automatic summary generation is not implemented by these branches.
-5. Enter an investigator's name and select **Start investigation**. Save findings while In progress, then choose Completed and save again. Completed investigation findings remain available for review and cannot be edited.
+4. Read the **Report summary** draft. It is generated automatically from report excerpts and submitted location, people and help fields, using local extraction without an API key. Older reports have **Generate summary**. Review or edit the assessment summary, set **Investigation needed** to Yes, and select **Save assessment**. Refreshing the draft preserves reviewed text, severity and investigation findings. Claims remain unverified; always read the original report.
+5. Enter an investigator's name and select **Start investigation**. Save findings while In progress, use **Reassign investigator** if needed, then choose Completed and save again. Completed investigation findings remain available for review and cannot be edited.
 6. Expire the demo alert and select **Analyze location** again to demonstrate `NO_MATCH`. An unknown or ambiguous location produces `UNCERTAIN`. No matching alert does not establish that the report is false or the area is safe.
 
 Admins can also select **Run Gemini agent** after configuring a Gemini API key. The optional agent uses the OpenAI Agents SDK with the configured Gemini model (`gemini-3.1-flash-live-preview` by default) and controlled location extraction/active-alert tools. Deterministic geography and the severity classifier work without that key. Missing provider configuration or failed agent runs produce a labelled local fallback.
@@ -60,7 +60,7 @@ To enter a Gemini key locally with hidden input:
 .\.venv\Scripts\python.exe -m scripts.configure_gemini
 ```
 
-The app reads the saved key on the next agent request. `GEMINI_API_KEY` or `GEMINI_API_KEY_FILE` can also be supplied through local configuration. See [Athul's location and agent implementation](docs/week2-athul.md) for technical details; its original branch-specific Linux launch instructions are historical.
+Setup reruns preserve private Gemini options, custom configuration and comments. The app reads the saved key on the next agent request. `GEMINI_API_KEY` or `GEMINI_API_KEY_FILE` can also be supplied through local configuration. See [Athul's location and agent implementation](docs/week2-athul.md) for technical details; its original branch-specific Linux launch instructions are historical.
 
 Rescue progress, relief, shelters, chatbot, notifications, Malayalam report translation and case closure remain later-week work. Curated Malayalam place aliases are supported by the geography tool.
 
@@ -88,3 +88,5 @@ API paths include authentication and `/api/users/me`, `/api/incidents/` and repo
 If setup fails, confirm the PostgreSQL binary path and port availability. If startup fails, check `.runtime/postgres.log`, `.runtime/web.log` and `.runtime/web-error.log`. Do not replace the generated database password while retaining an existing cluster. If PowerShell's script policy blocks a command, run it explicitly with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1` and then the corresponding `start.ps1` command.
 
 See [Week 2 merge notes](docs/WEEK2-MERGE.md) for current branch provenance, integration fixes and validation. [Week 1 integration notes](docs/INTEGRATION.md) and [Week 1 validation results](docs/VALIDATION.md) document the earlier baseline. Original React files are preserved in branch history; the active frontend uses HTMX templates and static assets. Older member-specific documents describe their original branches.
+
+See [the 21 October feature audit](docs/WEEK2-AUDIT.md) for branch comparisons, summary implementation and current verification evidence.

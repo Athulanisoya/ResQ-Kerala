@@ -1,0 +1,15 @@
+{% from 'icons.html' import icon %}
+<section id="report-summary" class="card location-analysis-card" aria-labelledby="report-summary-heading">
+  <div class="card-heading"><div><h2 id="report-summary-heading">Report summary</h2><p>A concise draft from the submitted report details.</p></div>{{ icon('reports') }}</div>
+  <div class="location-analysis-body">
+    {% if summary_error %}<div class="alert alert-error" role="alert">{{ summary_error }}</div>{% endif %}
+    {% if report_summary %}
+    <p class="analysis-explanation">{{ report_summary.summary }}</p>
+    <p class="field-hint">Generated locally from report excerpts and submitted fields. Claims are unverified; read the original report before deciding on a response. Generated {{ report_summary.created_at|local_time }}.</p>
+    {% else %}<p class="analysis-empty">This older report has no generated summary yet.{% if user.role != 'admin' %} An administrator can generate one.{% endif %}</p>{% endif %}
+    {% if user.role == 'admin' %}
+    <form action="/ui/reports/{{ report.id }}/summary" method="post" hx-post="/ui/reports/{{ report.id }}/summary" hx-include="#analysis-review-form" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="analysis-actions"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button type="submit" class="button button-secondary"><span class="button-label">{{ 'Refresh summary' if report_summary else 'Generate summary' }}</span><span class="button-loading">Generating…</span>{{ icon('arrow') }}</button></form>
+    <p class="field-hint">Refreshing this draft preserves your saved assessment and investigation.</p>
+    {% endif %}
+  </div>
+</section>

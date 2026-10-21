@@ -39,6 +39,8 @@ def workspace(monkeypatch):
             return httpx.Response(201 if method == "POST" and path == "/api/alerts" else 200, json=alert)
         if path == "/api/agent/status":
             return httpx.Response(200, json={"configured": state["configured"], "model": "gemini-3.1-flash-live-preview"})
+        if path == "/api/incidents/7/summary":
+            return httpx.Response(404, json={"detail": "No generated summary is available."})
         if path == "/api/admin/incidents/7/analysis":
             if method == "PUT":
                 if state["assessment_error"]:
@@ -49,6 +51,19 @@ def workspace(monkeypatch):
             if state["severity_error"]:
                 return httpx.Response(503, json={"detail": "The severity model is temporarily unavailable."})
             return httpx.Response(200, json={"predicted_severity": state["predicted_severity"]})
+        if path == "/api/ai/incidents/7/predict-severity":
+            if state["severity_error"]:
+                return httpx.Response(503, json={"detail": "The severity model is temporarily unavailable."})
+            severity = {"High": "HIGH", "Moderate": "MEDIUM", "Low": "LOW"}.get(state["predicted_severity"])
+            if severity is None:
+                return httpx.Response(502, json={"detail": "The severity model returned an unsupported result."})
+            previous = state["report_analysis"] or {
+                "extracted_location": None, "alert_match": "NOT_CHECKED", "summary": None,
+                "requires_investigation": True,
+            }
+            state["report_analysis"] = {"id": 4, "incident_id": 7, "updated_at": "2026-10-15T05:00:00Z",
+                                        **previous, "severity": severity, "source": "AI_MODULE"}
+            return httpx.Response(200, json=state["report_analysis"])
         if path == "/api/admin/incidents/7/investigation":
             if method == "POST":
                 state["investigation"] = {"id": 8, "incident_id": 7, "status": "IN_PROGRESS", "findings": None,
@@ -196,11 +211,12 @@ def test_severity_prediction_preserves_assessment_and_normalizes_model_labels(wo
     result = submit(client, "/ui/reports/7/severity")
     assert result.status_code == 200
     assert "Severity prediction saved" in result.text
-    assert ("POST", "/api/ai/predict-severity", {"message": "Water near Chengannur bridge."}) in calls
-    assert ("PUT", "/api/admin/incidents/7/analysis", {
-        "severity": "MEDIUM", "extracted_location": "Chengannur", "alert_match": "UNCERTAIN",
-        "summary": "A reviewer must confirm the street.", "requires_investigation": False, "source": "AI_MODULE",
-    }) in calls
+    assert ("POST", "/api/ai/incidents/7/predict-severity", None) in calls
+    assert state["report_analysis"]["severity"] == "MEDIUM"
+    assert state["report_analysis"]["summary"] == "A reviewer must confirm the street."
+    assert state["report_analysis"]["extracted_location"] == "Chengannur"
+    assert state["report_analysis"]["requires_investigation"] is False
+    assert not any(method == "PUT" for method, _, _ in calls)
     state["predicted_severity"] = "unsupported"
     calls.clear()
     failed = submit(client, "/ui/reports/7/severity")

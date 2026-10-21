@@ -64,6 +64,15 @@ def test_merged_severity_assessment_and_investigation_through_html(week2_report)
                     findings="The bridge location has been confirmed.", action_taken="Contacted the response coordinator.")
     assert progress.status_code == 200, progress.text
     assert progress.headers["HX-Redirect"] == path
+    before_reassignment = admin.get(investigation_path).json()
+    active_page = admin.get(path)
+    assert "Reassign investigator" in active_page.text
+    reassigned = post(admin, f"/ui/reports/{incident_id}/investigation/start", assigned_to_name="Field supervisor")
+    assert reassigned.status_code == 200 and reassigned.headers["HX-Redirect"] == path
+    after_reassignment = admin.get(investigation_path).json()
+    assert after_reassignment["assigned_to_name"] == "Field supervisor"
+    for field in ("id", "created_by_user_id", "created_at", "status", "findings", "action_taken"):
+        assert after_reassignment[field] == before_reassignment[field]
     complete = post(admin, f"/ui/reports/{incident_id}/investigation/update", status="COMPLETED",
                     findings="The child was located and the incident details were verified.",
                     action_taken="Passed findings to the rescue coordinator.")
@@ -73,6 +82,9 @@ def test_merged_severity_assessment_and_investigation_through_html(week2_report)
     completed_page = admin.get(path)
     assert completed["findings"] in completed_page.text
     assert f'action="/ui/reports/{incident_id}/investigation/update"' not in completed_page.text
+    assert "Reassign investigator" not in completed_page.text
+    assert post(admin, f"/ui/reports/{incident_id}/investigation/start",
+                assigned_to_name="Forbidden reassignment").status_code == 409
 
     rejected = post(admin, f"/ui/reports/{incident_id}/investigation/update", status="IN_PROGRESS",
                     findings="Attempt to replace the completed investigation.")

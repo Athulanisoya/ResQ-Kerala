@@ -8,7 +8,7 @@ from pathlib import Path
 
 import psycopg
 from psycopg import sql
-from dotenv import dotenv_values
+from dotenv import dotenv_values, set_key
 from sqlalchemy import URL
 
 
@@ -46,7 +46,8 @@ def port_is_busy():
 
 
 def write_private_configuration():
-    existing = dotenv_values(ROOT / ".env")
+    destination = ROOT / ".env"
+    existing = dotenv_values(destination)
     url = URL.create(
         "postgresql+psycopg", username=USER, host="127.0.0.1", port=PORT,
         database=DATABASE, query={"passfile": PASSFILE.as_posix()},
@@ -61,13 +62,23 @@ def write_private_configuration():
         "CORS_ORIGINS": "http://127.0.0.1:8013,http://localhost:8013",
         "APP_VERSION": "2.0.0-integrated",
     }
+    changes = {key: value for key, value in values.items() if existing.get(key) != value}
+    if not changes:
+        return
     pending = RUNTIME / "env.tmp"
-    pending.write_text(
-        "# Generated local configuration. Keep this file private.\n"
-        + "".join(f"{key}={value}\n" for key, value in values.items()),
-        encoding="utf-8",
-    )
-    os.replace(pending, ROOT / ".env")
+    try:
+        if destination.exists():
+            pending.write_bytes(destination.read_bytes())
+        else:
+            pending.write_text("# Generated local configuration. Keep this file private.\n", encoding="utf-8")
+        # Edit only setup-owned values. Preserve Gemini/agent options, custom
+        # settings and unchanged comments, and quote values using dotenv syntax.
+        # Work on a copy so an interrupted update leaves the current file intact.
+        for key, value in changes.items():
+            set_key(pending, key, value, quote_mode="always", encoding="utf-8")
+        os.replace(pending, destination)
+    finally:
+        pending.unlink(missing_ok=True)
 
 
 def initialize_cluster():
