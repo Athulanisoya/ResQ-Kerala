@@ -52,3 +52,87 @@ def ensure_user_team_foreign_key(connection: Connection, schema: str) -> None:
         f"ALTER TABLE {users} ADD CONSTRAINT {quote(USER_TEAM_CONSTRAINT)} "
         f"FOREIGN KEY (team_id) REFERENCES {teams} (id)"
     ))
+
+def migrate_incident_summaries(
+    connection: Connection,
+    schema: str | None = None,
+) -> None:
+    """
+    Move existing incident summaries into report_analysis.
+
+    Preserve original incident records and avoid duplicate
+    analysis records when initialization runs repeatedly.
+    """
+    if connection.dialect.name not in {"postgresql", "sqlite"}:
+        return
+
+    inspector = inspect(connection)
+
+    if connection.dialect.name == "postgresql":
+        if not schema:
+            raise RuntimeError(
+                "A database schema is required for PostgreSQL."
+            )
+
+        incident_table = (
+            f"{connection.dialect.identifier_preparer.quote(schema)}."
+            f"{connection.dialect.identifier_preparer.quote('incident_reports')}"
+        )
+
+        analysis_table = (
+            f"{connection.dialect.identifier_preparer.quote(schema)}."
+            f"{connection.dialect.identifier_preparer.quote('report_analysis')}"
+        )
+
+        incident_columns = {
+            column["name"]
+            for column in inspector.get_columns(
+                "incident_reports",
+                schema=schema,
+            )
+        }
+
+    else:
+        incident_table = "incident_reports"
+        analysis_table = "report_analysis"
+
+        incident_columns = {
+            column["name"]
+            for column in inspector.get_columns("incident_reports")
+        }
+
+    # Existing databases may not have these columns.
+    required_columns = {
+        "summary",
+        "summary_is_provisional",
+        "requires_manual_review",
+    }
+
+    if not required_columns.issubset(incident_columns):
+        return
+
+    connection.execute(
+        text(
+            f"""
+            INSERT INTO {analysis_table} (
+                incident_id,
+                summary,
+                summary_is_provisional,
+                requires_manual_review
+            )
+            SELECT
+                incident.id,
+                incident.summary,
+                incident.summary_is_provisional,
+                incident.requires_manual_review
+            FROM {incident_table} AS incident
+            WHERE incident.summary IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM {analysis_table} AS analysis
+                  WHERE analysis.incident_id = incident.id
+                    AND analysis.summary = incident.summary
+              )
+            """
+        )
+    )
