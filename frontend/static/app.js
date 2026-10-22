@@ -75,7 +75,7 @@
     const root = document.getElementById('app-root');
     if (root) document.body.className = root.dataset.authenticated === 'true' ? 'workspace' : 'auth-page';
     const path = window.location.pathname;
-    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports' : path === '/alerts' ? 'alerts' : path === '/account' ? 'account' : path === '/permissions' ? 'permissions' : 'dashboard';
+    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports' : path === '/alerts' ? 'alerts' : path === '/account' ? 'account' : path === '/permissions' ? 'permissions' : path === '/updates' ? 'updates' : path === '/operations' ? 'operations' : path === '/assignments-history' ? 'history' : 'dashboard';
     document.querySelectorAll('[data-nav]').forEach(link => {
       const selected = link.dataset.nav === active;
       link.classList.toggle('active', selected);
@@ -97,6 +97,8 @@
   document.addEventListener('htmx:afterSettle', event => {
     refreshPage();
     if (event.detail.target.id === 'main-content') {
+      // The sidebar survives main-content swaps; HTMX owns its single polling timer.
+      if (window.htmx) window.htmx.trigger(document.body, 'resq:refresh-updates');
       document.getElementById('main-content').focus({ preventScroll: true });
       window.scrollTo({ top: 0, behavior: 'instant' });
       const heading = document.querySelector('#main-content h1, #main-content h2');

@@ -19,6 +19,7 @@ from sqlalchemy import delete, select, text
 
 from backend.database.connection import SessionLocal, engine
 from backend.models import Incident, IncidentStatusHistory, Role, Team, User
+from backend.models.operations import IncidentTask, IncidentTaskEvent
 from backend.services.incident_service import assign_team, create_incident, review_incident
 
 
@@ -120,6 +121,9 @@ def main():
                 require(set(report_ids).issubset(owned_reports), "QA report cleanup ownership check failed.")
                 require(set(team_ids).issubset(owned_teams), "QA team cleanup ownership check failed.")
                 if owned_reports:
+                    owned_tasks = select(IncidentTask.id).where(IncidentTask.incident_id.in_(owned_reports))
+                    db.execute(delete(IncidentTaskEvent).where(IncidentTaskEvent.task_id.in_(owned_tasks)))
+                    db.execute(delete(IncidentTask).where(IncidentTask.incident_id.in_(owned_reports)))
                     db.execute(delete(IncidentStatusHistory).where(IncidentStatusHistory.incident_id.in_(owned_reports)))
                     db.execute(delete(Incident).where(Incident.id.in_(owned_reports)))
                 if owned_teams:

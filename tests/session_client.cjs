@@ -16,6 +16,7 @@ function createTab({ token = null, pathname = '/dashboard', search = '', bootstr
   const windowListeners = new Map();
   const navigations = [];
   const requests = [];
+  const triggers = [];
   let mainPresent = !missingMain;
   let failedRequests = 0;
   let rootText = 'Private report for the previous account';
@@ -80,6 +81,7 @@ function createTab({ token = null, pathname = '/dashboard', search = '', bootstr
   };
   const htmx = {
     config: {},
+    trigger(element, name) { triggers.push({ element, name }); },
     ajax(method, url, options = {}) {
       const detail = { headers: { ...options.headers } };
       emit('htmx:configRequest', detail);
@@ -117,7 +119,7 @@ function createTab({ token = null, pathname = '/dashboard', search = '', bootstr
     draft() { return storage.get('draft-report'); },
     failNextRequest() { failedRequests += 1; },
     hasMainContent() { return mainPresent; },
-    root, main, retry, requests, navigations, config: htmx.config,
+    root, main, retry, requests, triggers, navigations, config: htmx.config,
   };
 }
 
@@ -335,4 +337,14 @@ test('choosing sign in again clears the current tab without affecting a parallel
   assert.equal(current.token(), null);
   assert.equal(current.navigations.at(-1).url, '/login');
   assert.equal(other.token(), 'other-session');
+});
+
+test('page swaps refresh unread updates without a badge response creating a refresh loop', () => {
+  const current = createTab({ token: 'current-session', pathname: '/updates' });
+  current.emit('htmx:afterSettle', { target: { id: 'main-content' } });
+  assert.equal(current.triggers.length, 1);
+  assert.equal(current.triggers[0].name, 'resq:refresh-updates');
+  current.emit('htmx:afterSettle', { target: { id: 'updates-count' } });
+  assert.equal(current.triggers.length, 1);
+  assert.equal(current.request('/ui/updates/count').headers.Authorization, 'Bearer current-session');
 });

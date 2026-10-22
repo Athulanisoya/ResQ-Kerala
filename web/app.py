@@ -57,7 +57,7 @@ async def lifespan(_app):
         yield
 
 
-app = FastAPI(title="ResQ Kerala · Week 2", lifespan=lifespan,
+app = FastAPI(title="ResQ Kerala · Response workspace", lifespan=lifespan,
               openapi_url=None, docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=str(ROOT / "frontend" / "static"), check_dir=False), name="static")
 
@@ -86,7 +86,7 @@ def render(request, content_template, *, status_code=200, **context):
 @app.middleware("http")
 async def browser_security(request: Request, call_next):
     path = request.url.path
-    ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions", "/alerts"} or (
+    ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions", "/alerts", "/updates", "/operations", "/assignments-history"} or (
         path.startswith("/reports/") and path.rsplit("/", 1)[-1].isdigit())
     # Document navigation cannot attach a bearer header. The public shell loads
     # the requested page through HTMX using only this tab's saved session.
@@ -280,7 +280,10 @@ async def dashboard(request: Request):
         return redirect(request, "/login")
     reports, error = await list_reports(request, user)
     stats = {"total": len(reports), "pending_review": sum(r["status"] in {"SUBMITTED", "UNDER_REVIEW"} for r in reports),
-             "verified": sum(r["status"] == "VERIFIED" for r in reports), "assigned": sum(r["status"] == "ASSIGNED" for r in reports)}
+             "verified": sum(r["status"] == "VERIFIED" for r in reports),
+             "assigned": sum(r["status"] in {"ASSIGNED", "TASK_ACCEPTED", "EN_ROUTE", "IN_PROGRESS"} for r in reports),
+             "resolved": sum(r["status"] == "RESOLVED" for r in reports),
+             "closed": sum(r["status"] == "CLOSED" for r in reports)}
     return render(request, "dashboard.html", user=user, reports=reports[:5], stats=stats,
                   error=error, active_nav="dashboard", page_title="Overview")
 
@@ -296,7 +299,7 @@ async def report_form(request: Request):
 
 
 @app.get("/reports", response_class=HTMLResponse)
-async def reports_page(request: Request, status: str = ""):
+async def reports_page(request: Request, status: str = "", q: str = ""):
     user = await current_user(request)
     if not user:
         return redirect(request, "/login")
@@ -304,7 +307,13 @@ async def reports_page(request: Request, status: str = ""):
     total = len(reports)
     if status:
         reports = [report for report in reports if report["status"] == status]
+    q = q.strip()[:200]
+    if q:
+        query = q.casefold()
+        reports = [report for report in reports if query in " ".join(str(report.get(key) or "") for key in
+                    ("reference", "location", "message", "help_required", "disaster_type")).casefold()]
     return render(request, "reports.html", user=user, reports=reports, total=total, filter_status=status,
+                  search_query=q,
                   error=error, active_nav="reports", page_title="Reports")
 
 
@@ -316,6 +325,10 @@ async def detail_page(request, incident_id, *, error=None, status_code=200, valu
     if response.status_code != 200:
         return render(request, "reports.html", user=user, error=error_message(response), status_code=response.status_code)
     report = display_report(response.json(), user)
+    from web.communication import communication_context
+    from web.operations import operation_detail_context
+    communication = await communication_context(request, incident_id)
+    operations = await operation_detail_context(request, user, incident_id)
     history = await api_call(request, "GET", f"/api/incidents/{incident_id}/history")
     summary_response = await api_call(request, "GET", f"/api/incidents/{incident_id}/summary")
     report_summary = summary_response.json() if summary_response.status_code == 200 else None
@@ -337,6 +350,7 @@ async def detail_page(request, incident_id, *, error=None, status_code=200, valu
                   analysis=analysis, analysis_error=analysis_error, agent_status=agent_status,
                   report_analysis=report_analysis, investigation=investigation, investigation_error=investigation_error,
                   report_summary=report_summary, summary_error=summary_error,
+                  **communication, **operations,
                   notice=notice,
                   active_nav="reports", page_title=report["reference"], status_code=status_code)
 
@@ -611,4 +625,8 @@ async def update_report_investigation(request: Request, incident_id: int):
 
 
 # Keep the API mount last so every HTML action remains reachable.
+from web.communication import router as communication_ui
+from web.operations import router as operations_ui
+app.include_router(communication_ui)
+app.include_router(operations_ui)
 app.mount("/", api)

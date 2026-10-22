@@ -11,6 +11,7 @@ from .config import get_settings
 from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
 from .routers import admin, alerts, auth, incidents, investigations, location_analysis, severity, summaries, teams, users, workspaces
+from .routers import communication, operations
 
 
 settings = get_settings()
@@ -24,8 +25,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="ResQ Kerala - Week 2 integrated", version=settings.app_version,
-    description="Accounts, citizen reports, admin review, team assignment, Kerala location extraction, alert matching, severity prediction and investigation workflows.",
+    title="ResQ Kerala - Integrated response workspace", version=settings.app_version,
+    description="Citizen reports, review, rescue progress, stock-safe relief, private updates, clarification and case closure.",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -73,3 +74,5 @@ app.include_router(teams.router)
 app.include_router(severity.router)
 app.include_router(investigations.router)
 app.include_router(summaries.router)
+app.include_router(operations.router)
+app.include_router(communication.router)

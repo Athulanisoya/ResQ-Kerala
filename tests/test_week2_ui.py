@@ -29,6 +29,10 @@ def workspace(monkeypatch):
         role = request.headers.get("Authorization", "").removeprefix("Bearer ")
         if path == "/api/users/me":
             return httpx.Response(200, json={"id": 1, "role": role, "full_name": "Test User"})
+        if method == "GET" and (path.endswith("/clarifications") or path == "/api/operations/tasks"):
+            return httpx.Response(200, json=[])
+        if method == "GET" and path == "/api/operations/incidents/7/task":
+            return httpx.Response(200, content="null")
         if path == "/api/alerts/places":
             return httpx.Response(200, json=[place])
         if method == "GET" and path.startswith("/api/alerts"):

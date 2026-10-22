@@ -1,4 +1,4 @@
-# ResQ Kerala — integrated Week 2
+# ResQ Kerala — integrated workspace with Athul's Weeks 1–4
 
 This integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-maanaz` in one PostgreSQL-backed FastAPI/HTMX application. It retains citizen reporting, per-tab login, administrator review and team assignment, and adds Kerala location extraction, scheduled alerts and alert matching, the trained severity classifier, reviewed analysis, and investigation assignment/findings/completion.
 
@@ -62,7 +62,13 @@ To enter a Gemini key locally with hidden input:
 
 Setup reruns preserve private Gemini options, custom configuration and comments. The app reads the saved key on the next agent request. `GEMINI_API_KEY` or `GEMINI_API_KEY_FILE` can also be supplied through local configuration. See [Athul's location and agent implementation](docs/week2-athul.md) for technical details; its original branch-specific Linux launch instructions are historical.
 
-Rescue progress, relief, shelters, chatbot, notifications, Malayalam report translation and case closure remain later-week work. Curated Malayalam place aliases are supported by the geography tool.
+## Athul's Week 3 and Week 4
+
+**Week 3:** Assigned teams accept a task, then mark En route, In progress and Resolved. Admins manage audited inventory and assign linked relief requests. Relief teams record partial deliveries with item/unit snapshots, remaining demand, stock validation and retry protection. An admin can hand an in-progress rescue case to a relief team; the former team retains its private task history.
+
+**Week 4:** **My updates** provides private notifications, an unread badge and read controls. Admins request clarification on a report, citizens submit a retained reply, and the case timeline preserves both alongside the original report. Search and status filters cover the complete lifecycle. Only an admin can close a resolved incident, after linked relief and required clarification questions are complete.
+
+See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). These features use the existing FastAPI/HTMX application and add the small shared contracts required by Athul's screens. Shelter search, chatbot and Malayalam AI translation remain outside this change. Curated Malayalam place aliases remain available in the geography tool.
 
 ## Stop and verify
 
@@ -76,6 +82,7 @@ Stop checks the recorded application's PID, creation time and command line befor
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -m scripts.verify_local
+.\.venv\Scripts\python.exe -m scripts.verify_athul_workspaces
 .\.venv\Scripts\python.exe -m scripts.check_location_agent
 # Optional client-state checks; Node is needed only to run this test.
 node tests/session_client.cjs

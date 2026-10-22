@@ -55,6 +55,10 @@ def create_incident(
         from backend.services.summary_service import save_summary
         save_summary(db, incident, user_id)
 
+        from backend.services.communication_service import notify_incident
+        notify_incident(db, incident, "Report submitted", f"Your report {incident.report_reference} at {incident.location} was submitted.",
+                        event_key=f"incident:{incident.id}:submitted")
+
         db.commit()
 
     except Exception:
@@ -126,6 +130,10 @@ def review_incident(
         )
     )
 
+    from backend.services.communication_service import notify_incident
+    notify_incident(db, incident, "Report status updated", f"Report status: {status.replace('_', ' ').lower()}.",
+                    event_key=f"incident:{incident.id}:review:{status}")
+
     db.commit()
     db.refresh(incident)
     return incident
@@ -179,6 +187,12 @@ def assign_incident_team(
                 note=assignment_note or f"Team {team.name} assigned",
             )
         )
+
+        from backend.services.operations_service import capture_assignment
+        from backend.services.communication_service import notify_incident
+        task = capture_assignment(db, incident, team, assignment_note)
+        notify_incident(db, incident, "Response team assigned", f"{team.name} was assigned to the report.",
+                        event_key=f"task:{task.id}:assigned")
 
         db.commit()
         db.refresh(incident)
