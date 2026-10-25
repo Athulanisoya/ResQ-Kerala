@@ -9,8 +9,8 @@ def main():
     try:
         with engine.connect() as connection:
             database, port = connection.execute(text("SELECT current_database(), inet_server_port()")).one()
-            assert database == "resq_week1" and port == 5443
-        with httpx.Client(base_url="http://127.0.0.1:8013", timeout=10, follow_redirects=True) as client:
+            assert database == "resq_kerala" and port == 5432
+        with httpx.Client(base_url="http://127.0.0.1:8000", timeout=10, follow_redirects=True) as client:
             health = client.get("/health")
             assert health.status_code == 200 and health.json()["database"] == "connected"
             assert client.get("/").status_code == 200

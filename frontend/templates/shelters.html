@@ -1,0 +1,77 @@
+<section class="page-section arya-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">WEEK 3 · ARYA</p>
+      <h1>Shelter Search</h1>
+      <p>Search the current shelter records and inspect available capacity.</p>
+    </div>
+  </header>
+
+  <div class="panel arya-panel">
+    <form method="get" action="/shelters" class="arya-search-form">
+      <div>
+        <label for="q">District, locality or shelter name</label>
+        <input
+          id="q"
+          name="q"
+          type="text"
+          maxlength="160"
+          value="{{ query or '' }}"
+          placeholder="Example: Alappuzha"
+        >
+      </div>
+
+      <label class="arya-checkbox">
+        <input
+          type="checkbox"
+          name="available_only"
+          value="true"
+          {% if available_only %}checked{% endif %}
+        >
+        Show only open shelters with space
+      </label>
+
+      <button type="submit" class="button button-primary">Search</button>
+    </form>
+  </div>
+
+  {% if error %}
+    <div class="notice notice-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <div class="arya-shelter-grid">
+    {% for shelter in shelters %}
+      <article class="panel arya-shelter-card">
+        <div class="arya-answer-heading">
+          <h2>{{ shelter.name }}</h2>
+          <span class="status-pill">{{ shelter.status }}</span>
+        </div>
+
+        <p><strong>District:</strong> {{ shelter.district }}</p>
+        <p><strong>Locality:</strong> {{ shelter.locality }}</p>
+        <p><strong>Address:</strong> {{ shelter.address }}</p>
+        <p><strong>Capacity:</strong> {{ shelter.capacity }}</p>
+        <p><strong>Occupied:</strong> {{ shelter.occupied }}</p>
+        <p><strong>Available spaces:</strong> {{ shelter.available_capacity }}</p>
+
+        {% if shelter.contact %}
+          <p><strong>Contact:</strong> {{ shelter.contact }}</p>
+        {% endif %}
+
+        <p class="arya-data-source">
+          Data source: {{ shelter.source_name }}
+        </p>
+      </article>
+    {% else %}
+      {% if not error %}
+        <div class="panel">
+          <h2>No matching shelter records</h2>
+          <p>
+            No records matched this search. The database may be incomplete
+            or out of date; this does not prove that no shelter exists.
+          </p>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>

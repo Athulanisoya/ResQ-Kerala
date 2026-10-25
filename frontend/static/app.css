@@ -100,9 +100,9 @@ h3 { font-size: 15px; font-weight: 650; }
 .orbit-two { inset: 34px; }
 .orbit-three { inset: 69px; }
 .orbit-four { inset: 103px; }
-.art-center { position: absolute; inset: 130px; display: grid; place-items: center; border-radius: 50%; background: #d5e9ad; color: var(--forest); box-shadow: 0 0 0 14px #95b3900c; }
+.art-center { position: ; inset: 130px; display: grid; place-items: center; border-radius: 50%; background: #d5e9ad; color: var(--forest); box-shadow: 0 0 0 14px #95b3900c; }
 .art-center .icon { width: 39px; height: 39px; stroke-width: 1.3; }
-.art-dot { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: #c8dcb0; box-shadow: 0 0 0 6px #5b805c40; }
+.art-dot { position: ; width: 11px; height: 11px; border-radius: 50%; background: #c8dcb0; box-shadow: 0 0 0 6px #5b805c40; }
 .dot-one { left: 60px; top: 91px; }
 .dot-two { right: 86px; bottom: 90px; width: 7px; height: 7px; background: #809c72; }
 .dot-three { right: 21px; top: 111px; width: 6px; height: 6px; background: #809c72; }
