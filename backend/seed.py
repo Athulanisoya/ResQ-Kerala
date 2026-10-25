@@ -5,7 +5,7 @@ import secrets
 from sqlalchemy import select
 
 from .config import WORKSPACE_ROOT
-from .database.connection import SessionLocal, initialize_database
+from .database.connection import SessionLocal,initialize_database
 from .models import Role, Team, User
 from .utils.security import hash_password
 
