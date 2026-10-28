@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import uuid4
+from backend.models.notification import Notification
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -220,3 +221,161 @@ def assign_incident_team(
 def assign_team(db: Session, incident_id: int, team_id: int):
     """Compatibility entry point for the existing admin API and validation tools."""
     return assign_incident_team(db, incident_id, team_id)
+
+def request_clarification(
+    db: Session,
+    incident_id: int,
+    admin_id: int,
+    message: str,
+):
+    """Request additional information from the reporting citizen."""
+    try:
+        incident = db.scalar(
+            select(Incident)
+            .where(Incident.id == incident_id)
+            .with_for_update()
+        )
+
+        if incident is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
+
+        if incident.status in {"CLOSED", "RESOLVED"}:
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot request clarification for a closed incident.",
+            )
+
+        incident.status = "AWAITING_CLARIFICATION"
+
+        db.add(
+            IncidentStatusHistory(
+                incident_id=incident.id,
+                status="AWAITING_CLARIFICATION",
+                note=f"Clarification requested by admin {admin_id}: {message}",
+            )
+        )
+
+        db.add(
+            Notification(
+                user_id=incident.user_id,
+                incident_id=incident.id,
+                notification_type="CLARIFICATION_REQUEST",
+                message=message,
+            )
+        )
+
+        db.commit()
+        db.refresh(incident)
+        return incident
+
+    except Exception:
+        db.rollback()
+        raise
+
+
+def respond_to_clarification(
+    db: Session,
+    incident_id: int,
+    user_id: int,
+    message: str,
+):
+    """Record the reporting citizen's clarification response."""
+    try:
+        incident = db.scalar(
+            select(Incident)
+            .where(Incident.id == incident_id)
+            .with_for_update()
+        )
+
+        if incident is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
+
+        if incident.user_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the reporting citizen can respond.",
+            )
+
+        if incident.status != "AWAITING_CLARIFICATION":
+            raise HTTPException(
+                status_code=409,
+                detail="This incident is not awaiting clarification.",
+            )
+
+        incident.status = "UNDER_REVIEW"
+
+        db.add(
+            IncidentStatusHistory(
+                incident_id=incident.id,
+                status="UNDER_REVIEW",
+                note=f"Citizen clarification response: {message}",
+            )
+        )
+
+        db.add(
+            Notification(
+                user_id=user_id,
+                incident_id=incident.id,
+                notification_type="CLARIFICATION_RESPONSE",
+                message="Your clarification response has been recorded.",
+            )
+        )
+
+        db.commit()
+        db.refresh(incident)
+        return incident
+
+    except Exception:
+        db.rollback()
+        raise
+
+
+def close_incident(
+    db: Session,
+    incident_id: int,
+    admin_id: int,
+    reason: str,
+):
+    """Close an incident and record the closure reason."""
+    try:
+        incident = db.scalar(
+            select(Incident)
+            .where(Incident.id == incident_id)
+            .with_for_update()
+        )
+
+        if incident is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
+
+        if incident.status in {"CLOSED", "RESOLVED"}:
+            raise HTTPException(
+                status_code=409,
+                detail="This incident is already closed.",
+            )
+
+        incident.status = "CLOSED"
+
+        db.add(
+            IncidentStatusHistory(
+                incident_id=incident.id,
+                status="CLOSED",
+                note=f"Case closed by admin {admin_id}: {reason}",
+            )
+        )
+
+        db.add(
+            Notification(
+                user_id=incident.user_id,
+                incident_id=incident.id,
+                notification_type="CASE_CLOSED",
+                message=f"Your incident has been closed. Reason: {reason}",
+            )
+        )
+
+        db.commit()
+        db.refresh(incident)
+        return incident
+
+    except Exception:
+        db.rollback()
+        raise

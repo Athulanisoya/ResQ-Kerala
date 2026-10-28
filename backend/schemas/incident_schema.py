@@ -108,3 +108,47 @@ class IncidentHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ClarificationRequest(BaseModel):
+    """Request additional information about an incident."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    message: str = Field(
+        ...,
+        min_length=5,
+        max_length=2000,
+    )
+
+
+class ClarificationResponse(BaseModel):
+    """Citizen's response to a clarification request."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=5000,
+    )
+
+
+class CaseClosureRequest(BaseModel):
+    """Reason for closing an incident."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    reason: str = Field(
+        ...,
+        min_length=5,
+        max_length=2000,
+    )

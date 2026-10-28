@@ -8,6 +8,9 @@ from backend.schemas.incident_schema import (
     IncidentResponse,
     IncidentHistoryResponse,
     IncidentStatusUpdate,
+    ClarificationRequest,
+    ClarificationResponse,
+    CaseClosureRequest,
 )
 from backend.schemas.team_schema import AssignTeamRequest
 from backend.services.incident_service import (
@@ -18,6 +21,9 @@ from backend.services.incident_service import (
     review_incident,
     assign_incident_team,
     get_latest_report_analysis,
+    request_clarification,
+respond_to_clarification,
+close_incident,
 )
 from backend.utils.permissions import get_current_user, require_roles
 from backend.utils.validators import validate_incident_owner
@@ -183,3 +189,58 @@ def assign_team_to_incident(
         )
 
     return incident
+@router.post("/{incident_id}/clarification")
+def request_incident_clarification(
+    incident_id: int,
+    data: ClarificationRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.ADMIN)),
+):
+    incident = request_clarification(
+        db=db,
+        incident_id=incident_id,
+        admin_id=user.id,
+        message=data.message,
+    )
+    return {
+        "message": "Clarification requested successfully",
+        "incident": incident,
+    }
+
+
+@router.post("/{incident_id}/clarification/respond")
+def respond_incident_clarification(
+    incident_id: int,
+    data: ClarificationResponse,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.CITIZEN)),
+):
+    incident = respond_to_clarification(
+        db=db,
+        incident_id=incident_id,
+        user_id=user.id,
+        message=data.message,
+    )
+    return {
+        "message": "Clarification response recorded successfully",
+        "incident": incident,
+    }
+
+
+@router.post("/{incident_id}/close")
+def close_incident_api(
+    incident_id: int,
+    data: CaseClosureRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.ADMIN)),
+):
+    incident = close_incident(
+        db=db,
+        incident_id=incident_id,
+        admin_id=user.id,
+        reason=data.reason,
+    )
+    return {
+        "message": "Incident closed successfully",
+        "incident": incident,
+    }
