@@ -45,6 +45,101 @@ def search_approved_documents_tool(ctx: RunContextWrapper[AryaAgentContext],quer
     result = {"count": len(passages),"passages": passages}
     context.tool_events.append({"tool": "search_approved_documents_tool","result": result,})
     return result
+@function_tool(failure_error_function=None)
+def search_emergency_contacts_tool(
+    ctx: RunContextWrapper[AryaAgentContext],
+    query: str,
+) -> dict:
+    """Search verified emergency contact numbers for Kerala."""
+
+    contacts = [
+        {
+            "service": "General Emergency — ERSS",
+            "number": "112",
+            "source_url": "https://112.gov.in/",
+        },
+        {
+            "service": "Kerala State Emergency Operations Centre",
+            "number": "1070 / 1079 / 0471-2778800",
+            "source_url": (
+                "https://sdma.kerala.gov.in/wp-content/"
+                "uploads/2026/06/Directory-wpn.pdf"
+            ),
+        },
+        {
+            "service": "District Emergency Operations Centre",
+            "number": "1077",
+            "source_url": (
+                "https://sdma.kerala.gov.in/wp-content/"
+                "uploads/2026/06/Directory-wpn.pdf"
+            ),
+        },
+        {
+            "service": "Fire and Rescue",
+            "number": "101",
+            "source_url": (
+                "https://sdma.kerala.gov.in/wp-content/"
+                "uploads/2026/06/Directory-wpn.pdf"
+            ),
+        },
+        {
+            "service": "Ambulance",
+            "number": "108",
+            "source_url": (
+                "https://sdma.kerala.gov.in/wp-content/"
+                "uploads/2026/06/Directory-wpn.pdf"
+            ),
+        },
+        {
+            "service": "Child Helpline",
+            "number": "1098",
+            "source_url": (
+                "https://sdma.kerala.gov.in/wp-content/"
+                "uploads/2026/06/Directory-wpn.pdf"
+            ),
+        },
+        {
+            "service": "Women Helpline",
+            "number": "181",
+            "source_url": (
+                "https://sdma.kerala.gov.in/wp-content/"
+                "uploads/2026/06/Directory-wpn.pdf"
+            ),
+        },
+    ]
+
+    # Return all contacts for general emergency-number questions.
+    query_lower = query.lower()
+
+    if any(word in query_lower for word in [
+        "all", "emergency", "contact", "number",
+        "helpline", "flood", "disaster", "സഹായം",
+        "നമ്പർ", "അടിയന്തര",
+    ]):
+        matches = contacts
+    else:
+        matches = [
+            contact for contact in contacts
+            if any(
+                word in (
+                    contact["service"] + " " + contact["number"]
+                ).lower()
+                for word in query_lower.split()
+            )
+        ]
+
+    result = {
+        "count": len(matches),
+        "contacts": matches,
+        "source": "KSDMA Disaster Management Directory and official ERSS website",
+    }
+
+    ctx.context.tool_events.append({
+        "tool": "search_emergency_contacts_tool",
+        "result": result,
+    })
+
+    return result
 def build_arya_agent(model: Model) -> Agent[AryaAgentContext]:
     return Agent(
         name="ResQ Kerala Shelter and Safety Assistant",
@@ -72,11 +167,52 @@ def build_arya_agent(model: Model) -> Agent[AryaAgentContext]:
             "For immediate danger, tell the user to contact the locally "
             "designated emergency service; do not claim that this chatbot "
             "has dispatched help."
+            "9. For emergency phone numbers, helplines, or emergency contacts, "
+            "call search_emergency_contacts_tool. Return only the numbers and "
+            "services supplied by that tool. Include the official source URL. "
+            "Never invent a contact number.\n"
         ),
         model=model,
-        tools=[search_shelters_tool,search_approved_documents_tool],
+        tools=[search_shelters_tool,search_approved_documents_tool,search_emergency_contacts_tool],
         model_settings=ModelSettings(tool_choice="auto",parallel_tool_calls=False,max_tokens=1400),)
 def _local_fallback(context: AryaAgentContext) -> dict:
+    
+
+    # Preserve emergency contacts if the AI model times out.
+    for event in reversed(context.tool_events):
+        if event.get("tool") != "search_emergency_contacts_tool":
+            continue
+
+        contacts = event.get("result", {}).get("contacts", [])
+
+        if contacts:
+            answer_lines = [
+                "Emergency contacts retrieved by ResQ-Kerala:",
+                "",
+            ]
+
+            for contact in contacts:
+                answer_lines.append(
+                    f"- {contact['service']}: {contact['number']}"
+                )
+                answer_lines.append(
+                    f"  Source: {contact['source_url']}"
+                )
+
+            return {
+                "answer": "\n".join(answer_lines),
+                "mode": "local_fallback",
+                "model": None,
+                "sources": [],
+                "tool_events": context.tool_events,
+                "warning": (
+                    "The AI model timed out. Emergency contacts "
+                    "were returned directly from the contact tool."
+                ),
+            }
+
+    # Keep your existing fallback code below this line.
+    question = context.question.casefold()
     question = context.question.casefold()
     shelter_terms = (
         "shelter", "shelters", "capacity", "accommodation",
