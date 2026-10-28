@@ -42,7 +42,9 @@ def workspace(monkeypatch):
                 return httpx.Response(422, json={"detail": "The alert expiry must be after its start."})
             return httpx.Response(201 if method == "POST" and path == "/api/alerts" else 200, json=alert)
         if path == "/api/agent/status":
-            return httpx.Response(200, json={"configured": state["configured"], "model": "gemini-3.1-flash-live-preview"})
+            return httpx.Response(200, json={"configured": state["configured"], "model": "gemma4:e4b-it-q4_K_M",
+                                             "provider": "ollama", "reachable": state["configured"],
+                                             "model_available": state["configured"], "reason": state.get("agent_reason")})
         if path == "/api/incidents/7/summary":
             return httpx.Response(404, json={"detail": "No generated summary is available."})
         if path == "/api/admin/incidents/7/analysis":
@@ -147,16 +149,20 @@ def test_alert_form_ist_conversion_edit_values_and_validation(workspace):
     assert submit(client, "/ui/alerts/3/expire").headers["HX-Redirect"] == "/alerts?notice=expired"
 
 
-def test_admin_location_card_modes_freshness_and_tool_evidence(workspace):
+@pytest.mark.parametrize("model, label", [("gemma4:e4b-it-q4_K_M", "Gemma 4 via Ollama"),
+                                         ("gemini-3.1-flash-live-preview", "Gemini agent")])
+def test_admin_location_card_modes_freshness_and_tool_evidence(workspace, model, label):
     client, calls, state = workspace
     state["configured"] = False
     detail = client.get("/reports/7")
     assert 'id="location-analysis"' in detail.text
     assert 'value="agent" class="button button-primary" disabled' in detail.text
     assert "Location lookup is available now" in detail.text
+    assert "Run Gemma 4 agent" in detail.text
+    assert "API key" not in detail.text
     state["configured"] = True
     state["analysis"] = {
-        "id": 2, "incident_id": 7, "mode": "agent", "model": "gemini-3.1-flash-live-preview", "created_at": "2026-10-15T05:00:00Z",
+        "id": 2, "incident_id": 7, "mode": "agent", "model": model, "created_at": "2026-10-15T05:00:00Z",
         "extraction": {"status": "UNCERTAIN", "place": None, "reason": "Two places need review.",
                        "candidates": [{"name": "Chengannur", "district": "Alappuzha"}]},
         "alert_match": {"status": "UNCERTAIN", "reason": "Confirm the location.", "alerts": [], "checked_at": "2026-10-15T05:00:00Z"},
@@ -166,7 +172,7 @@ def test_admin_location_card_modes_freshness_and_tool_evidence(workspace):
     result = submit(client, "/ui/reports/7/location-analysis", mode="agent")
     assert result.status_code == 200
     assert "<html" not in result.text.lower()
-    assert "Gemini agent" in result.text
+    assert label in result.text
     assert "Needs review" in result.text
     assert "Possible locations" in result.text
     assert "Agent actions (1)" in result.text
@@ -176,6 +182,17 @@ def test_admin_location_card_modes_freshness_and_tool_evidence(workspace):
     client.headers["Authorization"] = "Bearer citizen"
     assert 'id="location-analysis"' not in client.get("/reports/7").text
     assert submit(client, "/ui/reports/7/location-analysis", mode="agent").status_code == 403
+
+
+def test_admin_location_card_explains_ollama_availability_and_escapes_server_reason(workspace):
+    client, _, state = workspace
+    state["configured"] = False
+    state["agent_reason"] = "Start Ollama to load <configured-model>."
+    page = client.get("/reports/7")
+    assert "Gemma 4 via Ollama is unavailable" in page.text
+    assert "Start Ollama to load &lt;configured-model&gt;" in page.text
+    assert "<configured-model>" not in page.text
+    assert 'value="agent" class="button button-primary" disabled' in page.text
 
 
 def test_admin_assessment_and_investigation_ui_complete_workflow(workspace):

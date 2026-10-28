@@ -52,15 +52,19 @@ User team memberships reference `response_teams.id` with a database foreign key.
 5. Enter an investigator's name and select **Start investigation**. Save findings while In progress, use **Reassign investigator** if needed, then choose Completed and save again. Completed investigation findings remain available for review and cannot be edited.
 6. Expire the demo alert and select **Analyze location** again to demonstrate `NO_MATCH`. An unknown or ambiguous location produces `UNCERTAIN`. No matching alert does not establish that the report is false or the area is safe.
 
-Admins can also select **Run Gemini agent** after configuring a Gemini API key. The optional agent uses the OpenAI Agents SDK with the configured Gemini model (`gemini-3.1-flash-live-preview` by default) and controlled location extraction/active-alert tools. Deterministic geography and the severity classifier work without that key. Missing provider configuration or failed agent runs produce a labelled local fallback.
+Admins can also select **Run Gemma 4 agent** when local Ollama is running and the configured model is installed. The optional agent uses the OpenAI Agents SDK with **Gemma 4 via Ollama** and the existing location extraction and active-alert tools. Report text stays on this computer for model inference; no Gemini or OpenAI API key is required. Deterministic geography and the severity classifier remain available independently. An unavailable model or failed agent run produces a labelled local fallback.
 
-To enter a Gemini key locally with hidden input:
+Install [Ollama](https://ollama.com/download), start it, and configure the local model:
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.configure_gemini
+ollama pull gemma4:e4b-it-q4_K_M
+.\.venv\Scripts\python.exe -m scripts.configure_ollama
+.\scripts\start.ps1
 ```
 
-Setup reruns preserve private Gemini options, custom configuration and comments. The app reads the saved key on the next agent request. `GEMINI_API_KEY` or `GEMINI_API_KEY_FILE` can also be supplied through local configuration. See [Athul's location and agent implementation](docs/week2-athul.md) for technical details; its original branch-specific Linux launch instructions are historical.
+The configuration command checks Ollama and the installed model before saving `OLLAMA_BASE_URL` and `OLLAMA_MODEL` in the private `.env`; it preserves database credentials, custom options and comments. The default server is `http://127.0.0.1:11434` and the default model is `gemma4:e4b-it-q4_K_M`. Use `--model` to select an installed local model or `--base-url` for another loopback Ollama port. Restart the application after changing configuration; if it is already running, use `.\scripts\stop.ps1` followed by `.\scripts\start.ps1`. The admin location card checks actual server/model availability. The former `configure_gemini` command now delegates to this keyless setup. Existing saved Gemini analyses retain their original model label.
+
+Gemma 4 must fit the computer's available memory. The setup command verifies an existing installation and does not download models. See [Ollama's Gemma 4 model page](https://ollama.com/library/gemma4) for model variants, and [Athul's location and agent implementation notes](docs/week2-athul.md) for the tools, model transport and API contracts.
 
 ## Athul's Week 3 and Week 4
 
@@ -84,6 +88,8 @@ Stop checks the recorded application's PID, creation time and command line befor
 .\.venv\Scripts\python.exe -m scripts.verify_local
 .\.venv\Scripts\python.exe -m scripts.verify_athul_workspaces
 .\.venv\Scripts\python.exe -m scripts.check_location_agent
+# Optional real Gemma 4 run; requires local Ollama and the configured model.
+.\.venv\Scripts\python.exe -m scripts.check_location_agent --live
 # Optional client-state checks; Node is needed only to run this test.
 node tests/session_client.cjs
 ```

@@ -54,4 +54,4 @@ node tests/session_client.cjs
 .\.venv\Scripts\python.exe -m scripts.verify_athul_workspaces
 ```
 
-Optional PostgreSQL tests use `RESQ_TEST_POSTGRES_URL` privately and create disposable schemas. Live workspace checks sign in and revoke the generated test sessions without changing incident, inventory or relief records. Local extractive summaries, geography and severity need no provider key. The optional pre-existing Gemini mode requires private configuration and is not evidence of a live provider run.
+Optional PostgreSQL tests use `RESQ_TEST_POSTGRES_URL` privately and create disposable schemas. Live workspace checks sign in and revoke the generated test sessions without changing incident, inventory or relief records. Local extractive summaries, geography and severity need no provider key. The location agent now uses local Gemma 4 through Ollama; see [the provider migration and current verification](OLLAMA-MIGRATION.md) for setup and the successful live tool/form checks.

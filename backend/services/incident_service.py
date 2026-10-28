@@ -45,7 +45,7 @@ def create_incident(
             )
         )
 
-        # Athul's local checks run in the report transaction; Gemini is an
+        # Athul's local checks run in the report transaction; Ollama is an
         # explicit admin action and never delays citizen submission.
         from backend.services.location_analysis_service import analyze_new_incident
         analyze_new_incident(db, incident)
