@@ -6,3 +6,7 @@ from .location_analysis import LocationAnalysis
 from .alert import Alert
 from .incident_summary import IncidentSummary
 __all__ = ["Role", "TokenSession", "User", "Team", "Incident", "IncidentStatusHistory","IncidentAnalysis","InvestigationReport","LocationAnalysis","Alert", "IncidentSummary"]
+
+from .relief import ReliefRequest, Inventory, Distribution
+
+from .shelter import Shelter, ShelterUpdate

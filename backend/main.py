@@ -12,6 +12,7 @@ from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
 from .routers import admin, alerts, auth, incidents, investigations, location_analysis, severity, summaries, teams, users, workspaces
 
+from .routers import relief, shelters
 
 settings = get_settings()
 
@@ -73,3 +74,6 @@ app.include_router(teams.router)
 app.include_router(severity.router)
 app.include_router(investigations.router)
 app.include_router(summaries.router)
+
+app.include_router(relief.router)
+app.include_router(shelters.router)

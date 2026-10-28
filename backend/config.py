@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     database_url: str
     jwt_secret: SecretStr
     jwt_expire_minutes: int = Field(default=30, ge=5, le=1440)
-    cors_origins: str = "http://localhost:5175,http://127.0.0.1:5175"
+    cors_origins: str = "http://127.0.0.1:8013,http://localhost:8013"
     allow_sqlite_for_tests: bool = False
     app_version: str = "2.0.0-integrated"
     database_schema: str = Field(default="resq_week1", pattern=r"^[a-z][a-z0-9_]{0,62}$")

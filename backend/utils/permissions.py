@@ -50,3 +50,83 @@ def require_roles(*roles: Role):
             raise HTTPException(status_code=403, detail="You do not have permission for this action.")
         return user
     return permission
+
+def require_incident_access(
+    db,
+    incident_id,
+    user,
+    lock=False,
+):
+    from sqlalchemy import select
+
+    from backend.models import Incident
+
+    query = select(Incident).where(
+        Incident.id == incident_id
+    )
+
+    if lock:
+        query = query.with_for_update()
+
+    incident = db.scalar(query)
+
+    if incident is None:
+        raise HTTPException(
+            404,
+            "Incident not found",
+        )
+
+    owner = (
+        user.role == Role.CITIZEN
+        and incident.user_id == user.id
+    )
+
+    assigned = (
+        user.role == Role.RESPONSE_TEAM
+        and user.team_id is not None
+        and incident.assigned_team_id == user.team_id
+    )
+
+    if not (
+        user.role == Role.ADMIN
+        or owner
+        or assigned
+    ):
+        raise HTTPException(
+            403,
+            "This incident is outside your access",
+        )
+
+    return incident
+
+
+def require_assigned_service_team(
+    db,
+    incident,
+    user,
+    team_types,
+):
+    from backend.models import Team
+
+    if (
+        user.role != Role.RESPONSE_TEAM
+        or user.team_id is None
+        or incident.assigned_team_id != user.team_id
+    ):
+        raise HTTPException(
+            403,
+            "Only the assigned response team can perform this action",
+        )
+
+    team = db.get(Team, user.team_id)
+
+    if (
+        team is None
+        or team.team_type.casefold() not in team_types
+    ):
+        raise HTTPException(
+            403,
+            "This action needs the appropriate service team type",
+        )
+
+    return team

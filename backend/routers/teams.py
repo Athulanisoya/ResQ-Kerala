@@ -23,3 +23,22 @@ def assigned_reports(db: Session = Depends(get_db),
         return []
     return (db.query(Incident).filter(Incident.assigned_team_id == user.team_id)
             .order_by(Incident.updated_at.desc(), Incident.id.desc()).all())
+
+@router.post(
+    "/incidents/{incident_id}/accept",
+    response_model=IncidentResponse,
+)
+def accept_assignment(
+    incident_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(
+        require_roles(Role.RESPONSE_TEAM)
+    ),
+):
+    from backend.services.response_service import accept_task
+
+    return accept_task(
+        db,
+        incident_id,
+        user,
+    )

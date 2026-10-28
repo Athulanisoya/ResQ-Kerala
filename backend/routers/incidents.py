@@ -21,6 +21,15 @@ from backend.services.incident_service import (
 from backend.utils.permissions import get_current_user, require_roles
 from backend.utils.validators import validate_incident_owner
 
+from backend.schemas.relief_schema import (
+    ProgressInput,
+    HandoffInput,
+)
+
+from backend.services.response_service import (
+    update_progress,
+    handoff_to_relief,
+)
 
 router = APIRouter(prefix="/api/incidents", tags=["Incidents"])
 
@@ -158,3 +167,42 @@ def assign_team_to_incident(
         )
 
     return incident
+
+@router.patch(
+    "/{incident_id}/progress",
+    response_model=IncidentResponse,
+)
+def service_progress(
+    incident_id: int,
+    data: ProgressInput,
+    db: Session = Depends(get_db),
+    user: User = Depends(
+        require_roles(Role.RESPONSE_TEAM)
+    ),
+):
+    return update_progress(
+        db,
+        incident_id,
+        user,
+        data,
+    )
+
+
+@router.post(
+    "/{incident_id}/relief-handoff",
+    response_model=IncidentResponse,
+)
+def relief_handoff(
+    incident_id: int,
+    data: HandoffInput,
+    db: Session = Depends(get_db),
+    user: User = Depends(
+        require_roles(Role.ADMIN)
+    ),
+):
+    return handoff_to_relief(
+        db,
+        incident_id,
+        user,
+        data,
+    )
