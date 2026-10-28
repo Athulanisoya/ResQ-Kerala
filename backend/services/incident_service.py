@@ -4,9 +4,10 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from backend.models.incident import Incident, IncidentStatusHistory
+from backend.models.report_analysis import ReportAnalysis
 from backend.models.team import Team
+from backend.ai.summarizer import summarize_report
 
 
 def generate_report_reference(db: Session):
@@ -34,9 +35,25 @@ def create_incident(
     )
 
     try:
+        # Save the incident temporarily to obtain its database ID.
         db.add(incident)
         db.flush()
 
+        # Retain the merged summary snapshot contract using local extraction.
+        # Submission never depends on an API key or a model-server request.
+        analysis_result = summarize_report(incident)
+
+        # Save the analysis separately from the original incident.
+        analysis = ReportAnalysis(
+            incident_id=incident.id,
+            summary=analysis_result["summary"],
+            summary_is_provisional=analysis_result["is_provisional"],
+            requires_manual_review=analysis_result["requires_manual_review"],
+        )
+
+        db.add(analysis)
+
+        # Preserve the existing incident status history workflow.
         db.add(
             IncidentStatusHistory(
                 incident_id=incident.id,
@@ -80,6 +97,18 @@ def get_my_incidents(db: Session, user_id: int):
 
 def get_incident_by_id(db: Session, incident_id: int):
     return db.get(Incident, incident_id)
+
+
+def get_latest_report_analysis(db: Session, incident_id: int):
+    return db.scalar(
+        select(ReportAnalysis)
+        .where(ReportAnalysis.incident_id == incident_id)
+        .order_by(
+            ReportAnalysis.created_at.desc(),
+            ReportAnalysis.id.desc(),
+        )
+        .limit(1)
+    )
 
 
 def get_incident_history(db: Session, incident_id: int):

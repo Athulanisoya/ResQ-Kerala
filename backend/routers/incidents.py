@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from backend.database.connection import get_db
 from backend.models import Role, User
 from backend.schemas.incident_schema import (
@@ -17,6 +16,7 @@ from backend.services.incident_service import (
     get_incident_history,
     review_incident,
     assign_incident_team,
+    get_latest_report_analysis,
 )
 from backend.utils.permissions import get_current_user, require_roles
 from backend.utils.validators import validate_incident_owner
@@ -114,6 +114,30 @@ def incident_status(
     return {
         "incident_id": incident.id,
         "status": incident.status,
+    }
+@router.get("/{incident_id}/analysis")
+def incident_analysis(
+    incident_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    incident = accessible_incident(db, incident_id, user)
+
+    analysis = get_latest_report_analysis(db, incident.id)
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found for this incident",
+        )
+
+    return {
+        "id": analysis.id,
+        "incident_id": analysis.incident_id,
+        "summary": analysis.summary,
+        "summary_is_provisional": analysis.summary_is_provisional,
+        "requires_manual_review": analysis.requires_manual_review,
+        "created_at": analysis.created_at,
     }
 
 

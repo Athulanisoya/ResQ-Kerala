@@ -54,6 +54,8 @@ User team memberships reference `response_teams.id` with a database foreign key.
 
 Admins can also select **Run Gemma 4 agent** when local Ollama is running and the configured model is installed. The optional agent uses the OpenAI Agents SDK with **Gemma 4 via Ollama** and the existing location extraction and active-alert tools. Report text stays on this computer for model inference; no Gemini or OpenAI API key is required. Deterministic geography and the severity classifier remain available independently. An unavailable model or failed agent run produces a labelled local fallback.
 
+The merged summary-snapshot endpoint is `GET /api/incidents/{id}/analysis`, available to the report owner, admins and the assigned team. New submissions also save a separate `report_analysis` snapshot with provisional/manual-review flags using the local extractor. This preserves the incoming branch's API without an external model request during submission. The admin's reviewed assessment remains at `/api/admin/incidents/{id}/analysis`. See [the Week 4 branch integration notes](docs/ATHUL-WEEK4-PUBLICATION.md).
+
 Install [Ollama](https://ollama.com/download), start it, and configure the local model:
 
 ```powershell

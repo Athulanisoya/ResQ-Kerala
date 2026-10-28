@@ -5,27 +5,43 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import CreateSchema
 
+from .migrations import (
+    ensure_user_team_foreign_key,
+    migrate_incident_summaries,
+)
 from ..config import get_settings
-from .migrations import ensure_user_team_foreign_key
 
 
 settings = get_settings()
 
 
 class Base(DeclarativeBase):
-    metadata = MetaData(schema=None if settings.database_url.startswith("sqlite") else settings.database_schema)
+    metadata = MetaData(
+        schema=(
+            None
+            if settings.database_url.startswith("sqlite")
+            else settings.database_schema
+        )
+    )
 
 
-settings = get_settings()
 engine_options: dict = {"pool_pre_ping": True}
+
 if settings.database_url.startswith("sqlite"):
     engine_options["connect_args"] = {"check_same_thread": False}
-    if settings.database_url in {"sqlite://", "sqlite:///:memory:", "sqlite+pysqlite:///:memory:"}:
+
+    if settings.database_url in {
+        "sqlite://",
+        "sqlite:///:memory:",
+        "sqlite+pysqlite:///:memory:",
+    }:
         engine_options["poolclass"] = StaticPool
 
 engine = create_engine(settings.database_url, **engine_options)
 
+
 if engine.dialect.name == "sqlite":
+
     @event.listens_for(engine, "connect")
     def enable_sqlite_foreign_keys(connection, _connection_record):
         cursor = connection.cursor()
@@ -33,7 +49,11 @@ if engine.dialect.name == "sqlite":
         cursor.close()
 
 
-SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    expire_on_commit=False,
+)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -44,8 +64,25 @@ def get_db() -> Generator[Session, None, None]:
 def initialize_database():
     if engine.dialect.name == "postgresql":
         with engine.begin() as connection:
-            connection.execute(CreateSchema(settings.database_schema, if_not_exists=True))
+            connection.execute(
+                CreateSchema(
+                    settings.database_schema,
+                    if_not_exists=True,
+                )
+            )
+
+    # Create missing tables. Existing tables remain unchanged.
     Base.metadata.create_all(engine)
-    if engine.dialect.name == "postgresql":
-        with engine.begin() as connection:
-            ensure_user_team_foreign_key(connection, settings.database_schema)
+
+    # Apply data-preserving schema upgrades.
+    with engine.begin() as connection:
+        migrate_incident_summaries(
+            connection,
+            settings.database_schema,
+        )
+
+        if engine.dialect.name == "postgresql":
+            ensure_user_team_foreign_key(
+                connection,
+                settings.database_schema,
+            )
