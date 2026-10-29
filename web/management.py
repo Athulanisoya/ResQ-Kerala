@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 router = APIRouter(include_in_schema=False)
 def web(): return import_module("web.app")
 
-async def management_page(request, error=None, status_code=200):
+async def management_page(request, error=None, status_code=200, notice=None, new_account_values=None):
     w = web()
     user = await w.current_user(request)
     if not user: return w.redirect(request, "/login")
@@ -17,10 +17,10 @@ async def management_page(request, error=None, status_code=200):
         if response.status_code != 200:
             return w.render(request, "management.html", user=user, page_title="Administration", active_nav="management",
                             accounts=[], managed_teams=[], report={}, error=error or w.error_message(response),
-                            status_code=response.status_code)
+                            status_code=response.status_code, notice=notice, new_account_values=new_account_values or {})
     return w.render(request, "management.html", user=user, page_title="Administration", active_nav="management",
                     accounts=results[0].json(), managed_teams=results[1].json(), report=results[2].json(),
-                    error=error, status_code=status_code)
+                    error=error, status_code=status_code, notice=notice, new_account_values=new_account_values or {})
 
 @router.get("/management")
 async def index(request: Request):
@@ -46,6 +46,26 @@ async def update_user(request: Request, user_id: int):
         return await management_page(request, error="Choose a valid team.", status_code=422)
     return await _action(request, "PATCH", f"/api/management/users/{user_id}", {
         "role": form.get("role", ""), "active": form.get("active") == "yes", "team_id": team_id})
+
+@router.post("/ui/management/team-accounts")
+async def create_team_account(request: Request):
+    w = web()
+    user = await w.current_user(request)
+    if not user: return w.redirect(request, "/login")
+    if user["role"] != "admin": return HTMLResponse("Only administrators may create team accounts.", status_code=403)
+    form = request.state.form
+    # Re-render only non-sensitive values. Passwords never appear in page HTML.
+    values = {key: form.get(key, "") for key in ("full_name", "email", "team_id")}
+    if form.get("password") != form.get("confirm_password"):
+        return await management_page(request, error="The passwords do not match.", status_code=422, new_account_values=values)
+    response = await w.api_call(request, "POST", "/api/management/team-accounts", {
+        **values, "password": form.get("password", ""),
+    })
+    if response.status_code == 201:
+        result = await management_page(request, notice="Team account created. The team member can now sign in with the email and password you set.")
+        result.headers["HX-Push-Url"] = "/management"
+        return result
+    return await management_page(request, error=w.error_message(response), status_code=response.status_code, new_account_values=values)
 
 @router.post("/ui/management/teams")
 async def create_team(request: Request):

@@ -1,42 +1,18 @@
-<section class="page-section arya-page">
-  <header class="page-header">
-    <div>
-      <p class="eyebrow">WEEK 3 · ARYA</p>
-      <h1>Shelter Search</h1>
-      <p>Search the current shelter records and inspect available capacity.</p>
-    </div>
+<section class="shelters-workspace">
+  <header class="page-heading">
+    <div><span class="section-kicker">SHELTER AVAILABILITY</span><h1>Shelters</h1><p>Capacity and available spaces refresh automatically every 3 seconds.</p></div>
+    {% if user.role == 'admin' %}<a class="button button-primary" href="#add-shelter">Add shelter</a>{% endif %}
   </header>
-
-  <div class="panel arya-panel">
-    <form method="get" action="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true" class="arya-search-form">
-      <div>
-        <label for="q">District, locality or shelter name</label>
-        <input
-          id="q"
-          name="q"
-          type="text"
-          maxlength="160"
-          value="{{ query or '' }}"
-          placeholder="Example: Alappuzha"
-        >
-      </div>
-
-      <label class="arya-checkbox">
-        <input
-          type="checkbox"
-          name="available_only"
-          value="true"
-          {% if available_only %}checked{% endif %}
-        >
-        Show only open shelters with space
-      </label>
-
-      <label>Latitude for nearby search (optional) <input name="latitude" type="number" min="-90" max="90" step="any" value="{{ latitude or '' }}"></label>
-      <label>Longitude for nearby search (optional) <input name="longitude" type="number" min="-180" max="180" step="any" value="{{ longitude or '' }}"></label>
-      <p>Nearby search uses the coordinates you enter and lists only shelters with coordinates; it does not infer your location.</p>
+  <section class="card operations-section" aria-label="Search shelters">
+    <form method="get" action="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true" class="compact-form shelter-search-form">
+      <div class="field"><label for="q">District, locality or shelter name</label><input id="q" name="q" type="text" maxlength="160" value="{{ query or '' }}" placeholder="For example, Alappuzha"></div>
+      <div class="field"><label for="search-latitude">Latitude (optional)</label><input id="search-latitude" name="latitude" type="number" min="-90" max="90" step="any" value="{{ latitude or '' }}"></div>
+      <div class="field"><label for="search-longitude">Longitude (optional)</label><input id="search-longitude" name="longitude" type="number" min="-180" max="180" step="any" value="{{ longitude or '' }}"></div>
+      <label class="shelter-filter"><input type="checkbox" name="available_only" value="true" {% if available_only %}checked{% endif %}> Show only open shelters with space</label>
+      <p class="field-hint">Nearby search uses the coordinates you enter and lists shelters with recorded coordinates.</p>
       <button type="submit" class="button button-primary">Search</button>
     </form>
-  </div>
+  </section>
 
   {% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
   {% if error %}
@@ -44,70 +20,29 @@
   {% endif %}
 
   {% if user.role == 'admin' %}
-  <details class="panel"><summary>Add a shelter</summary>
-    {% if teams %}<form method="post" action="/ui/shelters" hx-post="/ui/shelters" hx-target="#main-content">
+  {% set shelter_values = creation_values|default({}) %}
+  <section id="add-shelter" class="card operations-section" aria-labelledby="add-shelter-heading">
+    <div class="card-heading"><div><h2 id="add-shelter-heading">Add a shelter</h2><p>Record a shelter now and optionally designate a shelter team.</p></div></div>
+    <form method="post" action="/ui/shelters" hx-post="/ui/shelters" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form shelter-create-form">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-      <label>Name <input name="name" minlength="3" maxlength="100" required></label>
-      <label>Location <input name="location" minlength="2" maxlength="255" required></label>
-      <label>Shelter team <select name="team_id" required>{% for team in teams %}<option value="{{ team.id }}">{{ team.name }}</option>{% endfor %}</select></label>
-      <label>Capacity <input type="number" name="capacity" min="1" max="1000000" required></label>
-      <label>Occupied <input type="number" name="occupied" min="0" max="1000000" value="0" required></label>
-      <label>Facilities <input name="facilities" maxlength="1000"></label>
-      <label>Latitude (optional) <input type="number" name="latitude" min="-90" max="90" step="any"></label>
-      <label>Longitude (optional) <input type="number" name="longitude" min="-180" max="180" step="any"></label>
-      <button type="submit">Add shelter</button>
-    </form>{% else %}<p>An existing Shelter response team is required before adding a managed shelter.</p>{% endif %}
-  </details>{% endif %}
-  <div class="arya-shelter-grid">
-    {% for shelter in shelters %}
-      <article class="panel arya-shelter-card">
-        <div class="arya-answer-heading">
-          <h2>{{ shelter.name }}</h2>
-          <span class="status-pill">{{ shelter.status }}</span>
-        </div>
-
-        {% if shelter.distance_km is defined %}<p><strong>Distance:</strong> {{ shelter.distance_km }} km</p>{% endif %}
-        {% if shelter.location %}<p><strong>Location:</strong> {{ shelter.location }}</p>{% endif %}
-        {% if shelter.district %}<p><strong>District:</strong> {{ shelter.district }}</p>{% endif %}
-        {% if shelter.locality %}<p><strong>Locality:</strong> {{ shelter.locality }}</p>{% endif %}
-        {% if shelter.address %}<p><strong>Address:</strong> {{ shelter.address }}</p>{% endif %}
-        {% if shelter.facilities %}<p><strong>Facilities:</strong> {{ shelter.facilities }}</p>{% endif %}
-        <p><strong>Capacity:</strong> {{ shelter.capacity }}</p>
-        <p><strong>Occupied:</strong> {{ shelter.occupied }}</p>
-        <p><strong>Available spaces:</strong> {{ shelter.available_capacity }}</p>
-
-        {% if shelter.contact %}
-          <p><strong>Contact:</strong> {{ shelter.contact }}</p>
-        {% endif %}
-
-        <p class="arya-data-source">
-          Data source: {{ shelter.source_name or "not provided" }}
-        </p>
-        {% if user.role == 'admin' or (user.role == 'response_team' and user.team_id and user.team_id == shelter.team_id) %}
-        <details><summary>Update shelter</summary>
-          <form method="post" action="/ui/shelters/{{ shelter.id }}/update" hx-post="/ui/shelters/{{ shelter.id }}/update" hx-target="#main-content">
-            <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="expected_version" value="{{ shelter.version }}">
-            <label>Capacity <input name="capacity" type="number" min="1" max="1000000" value="{{ shelter.capacity }}" required></label>
-            <label>Occupied <input name="occupied" type="number" min="0" max="1000000" value="{{ shelter.occupied }}" required></label>
-            <label>Facilities <input name="facilities" maxlength="1000" value="{{ shelter.facilities or '' }}"></label>
-            <label>Latitude <input name="latitude" type="number" min="-90" max="90" step="any" value="{{ shelter.latitude if shelter.latitude is not none else '' }}"></label>
-            <label>Longitude <input name="longitude" type="number" min="-180" max="180" step="any" value="{{ shelter.longitude if shelter.longitude is not none else '' }}"></label>
-            <label>Status <select name="status"><option value="OPEN" {% if shelter.status != 'CLOSED' %}selected{% endif %}>Open when space is available</option><option value="CLOSED" {% if shelter.status == 'CLOSED' %}selected{% endif %}>Closed</option></select></label>
-            <label>Update note <input name="note" minlength="3" maxlength="1000" required></label>
-            <button type="submit">Save update</button>
-          </form>
-        </details>{% endif %}
-      </article>
-    {% else %}
-      {% if not error %}
-        <div class="panel">
-          <h2>No matching shelter records</h2>
-          <p>
-            No records matched this search. The database may be incomplete
-            or out of date; this does not prove that no shelter exists.
-          </p>
-        </div>
-      {% endif %}
-    {% endfor %}
+      <div class="field"><label for="shelter-name">Shelter name</label><input id="shelter-name" name="name" minlength="3" maxlength="100" value="{{ shelter_values.get('name', '') }}" required></div>
+      <div class="field"><label for="shelter-location">Location</label><input id="shelter-location" name="location" minlength="2" maxlength="255" value="{{ shelter_values.get('location', '') }}" required placeholder="Building, street or locality"></div>
+      <div class="field"><label for="shelter-district">District <span class="optional">Optional</span></label><input id="shelter-district" name="district" minlength="2" maxlength="100" value="{{ shelter_values.get('district', '') }}"></div>
+      <div class="field"><label for="shelter-locality">Locality <span class="optional">Optional</span></label><input id="shelter-locality" name="locality" minlength="2" maxlength="120" value="{{ shelter_values.get('locality', '') }}"></div>
+      <div class="field"><label for="shelter-address">Address <span class="optional">Optional</span></label><input id="shelter-address" name="address" minlength="3" maxlength="300" value="{{ shelter_values.get('address', '') }}"></div>
+      <div class="field"><label for="shelter-team">Shelter team <span class="optional">Optional</span></label><select id="shelter-team" name="team_id"><option value="">Unassigned — administrators manage this shelter</option>{% for team in teams %}<option value="{{ team.id }}" {{ 'selected' if shelter_values.get('team_id')|string == team.id|string }}>{{ team.name }}</option>{% endfor %}</select><p class="field-hint">{% if teams %}A designated shelter team can update occupancy and capacity.{% else %}You can add this shelter without a team. Create a Shelter team in Administration to designate one on a new shelter.{% endif %}</p></div>
+      <div class="field"><label for="shelter-capacity">Capacity</label><input id="shelter-capacity" type="number" name="capacity" min="1" max="1000000" value="{{ shelter_values.get('capacity', '') }}" required></div>
+      <div class="field"><label for="shelter-occupied">Occupied</label><input id="shelter-occupied" type="number" name="occupied" min="0" max="1000000" value="{{ shelter_values.get('occupied', '0') }}" required></div>
+      <div class="field"><label for="shelter-facilities">Facilities <span class="optional">Optional</span></label><input id="shelter-facilities" name="facilities" maxlength="1000" value="{{ shelter_values.get('facilities', '') }}"></div>
+      <div class="field"><label for="shelter-contact">Contact <span class="optional">Optional</span></label><input id="shelter-contact" name="contact" maxlength="60" value="{{ shelter_values.get('contact', '') }}"></div>
+      <div class="field"><label for="shelter-source">Source <span class="optional">Optional</span></label><input id="shelter-source" name="source_name" minlength="2" maxlength="200" value="{{ shelter_values.get('source_name', '') }}"></div>
+      <div class="field"><label for="shelter-latitude">Latitude <span class="optional">Optional</span></label><input id="shelter-latitude" type="number" name="latitude" min="-90" max="90" step="any" value="{{ shelter_values.get('latitude', '') }}"></div>
+      <div class="field"><label for="shelter-longitude">Longitude <span class="optional">Optional</span></label><input id="shelter-longitude" type="number" name="longitude" min="-180" max="180" step="any" value="{{ shelter_values.get('longitude', '') }}"></div>
+      <button class="button button-primary" type="submit"><span class="button-label">Add shelter</span><span class="button-loading">Adding shelter…</span></button>
+    </form>
+  </section>{% endif %}
+  <div id="shelter-editor" aria-live="polite"></div>
+  <div id="shelter-live" hx-get="/ui/shelters/live?{{ live_query }}" hx-trigger="every 3s [document.visibilityState === 'visible'], resq:shelters-changed from:body" hx-target="this" hx-swap="innerHTML" aria-label="Live shelter availability">
+    {% include 'partials/shelter_results.html' %}
   </div>
 </section>

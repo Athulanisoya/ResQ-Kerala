@@ -2,6 +2,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import json
+import math
 import secrets
 from pathlib import Path
 from urllib.parse import urlencode
@@ -634,6 +635,8 @@ async def shelters_page(
     longitude: str = "",
     notice: str | None = None,
     error: str | None = None,
+    creation_values: dict | None = None,
+    status_code: int = 200,
 ):
     user = await current_user(request)
 
@@ -649,7 +652,9 @@ async def shelters_page(
         if not latitude or not longitude:
             return render(request, "shelters.html", page_title="Shelter Search", active_nav="shelters",
                           user=user, shelters=[], query=q, available_only=available_only,
-                          error="Provide both latitude and longitude for nearby search.")
+                          latitude=latitude, longitude=longitude, creation_values=creation_values or {},
+                          live_query=urlencode({**params, "latitude": latitude, "longitude": longitude}),
+                          status_code=422, error="Provide both latitude and longitude for nearby search.")
         params.update(latitude=latitude, longitude=longitude)
     response = await api_call(
         request,
@@ -667,6 +672,8 @@ async def shelters_page(
             user=user,
             query=q,
             available_only=available_only,
+            latitude=latitude, longitude=longitude, live_query=urlencode(params),
+            creation_values=creation_values or {},
             shelters=[],
             error=error_message(response),
         )
@@ -675,11 +682,15 @@ async def shelters_page(
     if user.get("role") == "admin":
         team_response = await api_call(request, "GET", "/api/teams")
         if team_response.status_code == 200:
-            teams = [team for team in team_response.json() if team.get("team_type", "").casefold() == "shelter"]
+            teams = [team for team in team_response.json() if team.get("team_type", "").casefold() == "shelter"
+                     and team.get("status") != "OFFLINE"]
     return render(
         request,
         "shelters.html",
         teams=teams,
+        live_query=urlencode(params),
+        creation_values=creation_values or {},
+        status_code=status_code,
         notice=notice,
         error=error,
         page_title="Shelter Search",
@@ -699,19 +710,25 @@ async def create_shelter_page(request: Request):
         return redirect(request, "/login")
     if user.get("role") != "admin":
         return HTMLResponse("Only an administrator can create a shelter.", status_code=403)
-    form = request.state.form
+    form = dict(request.state.form)
     try:
         payload = {"name": str(form.get("name", "")), "location": str(form.get("location", "")),
-                   "team_id": int(form.get("team_id", "")), "capacity": int(form.get("capacity", "")),
+                   "team_id": int(form["team_id"]) if form.get("team_id") else None, "capacity": int(form.get("capacity", "")),
                    "occupied": int(form.get("occupied", "0")), "facilities": str(form.get("facilities", "")).strip() or None}
+        for field in ("district", "locality", "address", "contact", "source_name"):
+            payload[field] = str(form.get(field, "")).strip() or None
         for field in ("latitude", "longitude"):
             value = str(form.get(field, "")).strip()
             payload[field] = float(value) if value else None
+            if payload[field] is not None and not math.isfinite(payload[field]):
+                raise ValueError("Coordinates must be finite")
     except (ValueError, TypeError):
-        return await shelters_page(request, error="Enter valid numbers for team, capacity, occupancy and coordinates.")
+        return await shelters_page(request, error="Enter valid numbers for team, capacity, occupancy and coordinates.",
+                                   creation_values=form, status_code=422)
     response = await api_call(request, "POST", "/api/shelters", payload)
     if response.status_code != 201:
-        return await shelters_page(request, error=error_message(response))
+        return await shelters_page(request, error=error_message(response), creation_values=form,
+                                   status_code=response.status_code)
     return await shelters_page(request, notice="Shelter created.")
 
 
@@ -728,6 +745,8 @@ async def update_shelter_page(request: Request, shelter_id: int):
         for field in ("latitude", "longitude"):
             value = str(form.get(field, "")).strip()
             payload[field] = float(value) if value else None
+            if payload[field] is not None and not math.isfinite(payload[field]):
+                raise ValueError("Coordinates must be finite")
     except (ValueError, TypeError):
         return await shelters_page(request, error="Enter valid capacity and occupancy values.")
     response = await api_call(request, "PATCH", f"/api/shelters/{shelter_id}", payload)
@@ -809,5 +828,7 @@ from web.dashboard_info import router as dashboard_info_ui
 app.include_router(week4_ui)
 app.include_router(duplicates_ui)
 app.include_router(dashboard_info_ui)
+from web.shelter_live import router as shelter_live_ui
+app.include_router(shelter_live_ui)
 app.add_middleware(AttachmentRequestLimit)
 app.mount("/", api)

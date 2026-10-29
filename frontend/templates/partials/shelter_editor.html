@@ -1,0 +1,15 @@
+<section class="card operations-section" aria-labelledby="shelter-editor-heading">
+<div class="card-heading"><div><h2 id="shelter-editor-heading">Update {{ shelter.name }}</h2><p>Changes appear automatically for people viewing shelters.</p></div></div>
+{% if error %}<div class="operation-history-item alert-error" role="alert">{{ error }}{% if conflict %} Your changes have not been saved. <button type="button" class="button button-secondary" hx-get="/ui/shelters/{{ shelter.id }}/editor" hx-target="#shelter-editor">Reload latest values</button>{% endif %}</div>{% endif %}
+{% if notice %}<div class="operation-history-item" role="status">{{ notice }}</div>{% endif %}
+<form class="compact-form shelter-edit-form" method="post" action="/ui/shelters/{{ shelter.id }}/capacity" hx-post="/ui/shelters/{{ shelter.id }}/capacity" hx-target="#shelter-editor" hx-disabled-elt="find button[type='submit']">
+<input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="expected_version" value="{{ values.get('expected_version', shelter.version) }}">
+<div class="field"><label for="edit-capacity">Capacity</label><input id="edit-capacity" name="capacity" type="number" min="1" max="1000000" value="{{ values.get('capacity', shelter.capacity) }}" required></div>
+<div class="field"><label for="edit-occupied">Occupied</label><input id="edit-occupied" name="occupied" type="number" min="0" max="1000000" value="{{ values.get('occupied', shelter.occupied) }}" required></div>
+<div class="field"><label for="edit-facilities">Facilities</label><input id="edit-facilities" name="facilities" maxlength="1000" value="{{ values.get('facilities', shelter.facilities or '') }}"></div>
+<div class="field"><label for="edit-status">Status</label><select id="edit-status" name="status"><option value="OPEN" {{ 'selected' if values.get('status', shelter.status) != 'CLOSED' }}>Open when space is available</option><option value="CLOSED" {{ 'selected' if values.get('status', shelter.status) == 'CLOSED' }}>Closed</option></select></div>
+<div class="field"><label for="edit-latitude">Latitude (optional)</label><input id="edit-latitude" name="latitude" type="number" min="-90" max="90" step="any" value="{{ values.get('latitude', shelter.latitude if shelter.latitude is not none else '') }}"></div>
+<div class="field"><label for="edit-longitude">Longitude (optional)</label><input id="edit-longitude" name="longitude" type="number" min="-180" max="180" step="any" value="{{ values.get('longitude', shelter.longitude if shelter.longitude is not none else '') }}"></div>
+<div class="field shelter-edit-note"><label for="edit-note">Update note</label><input id="edit-note" name="note" minlength="3" maxlength="1000" required value="{{ values.get('note', '') }}" placeholder="For example, arrivals recorded at reception"></div>
+<button class="button button-primary" type="submit">Save capacity update</button>
+</form></section>

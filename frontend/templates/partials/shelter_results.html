@@ -1,0 +1,23 @@
+{% if live_error %}<div class="alert alert-error" role="status">{{ live_error }} Live availability will retry automatically.</div>{% else %}
+<p class="shelter-live-status">Live availability <span aria-hidden="true">·</span> refreshes every 3 seconds{% if refreshed_at %} <span>Last refreshed {{ refreshed_at }} IST</span>{% endif %}</p>
+<div class="shelter-results-grid">
+{% for shelter in shelters %}
+<article class="card shelter-result" id="shelter-{{ shelter.id }}" data-shelter-id="{{ shelter.id }}" aria-labelledby="shelter-name-{{ shelter.id }}">
+  <div class="card-heading"><h2 id="shelter-name-{{ shelter.id }}">{{ shelter.name }}</h2><span class="status">{{ shelter.status|title }}</span></div>
+  <div class="shelter-result-body">
+    {% if shelter.location %}<p>{{ shelter.location }}</p>{% endif %}
+    {% if shelter.address %}<p>{{ shelter.address }}</p>{% endif %}
+    {% if shelter.locality or shelter.district %}<p>{{ shelter.locality or '' }}{{ ', ' if shelter.locality and shelter.district else '' }}{{ shelter.district or '' }}</p>{% endif %}
+    {% if shelter.distance_km is defined %}<p class="field-hint">{{ shelter.distance_km }} km from your search coordinates</p>{% endif %}
+    <dl class="shelter-counts"><div><dt>Capacity</dt><dd data-capacity>{{ shelter.capacity }}</dd></div><div><dt>Occupied</dt><dd data-occupied>{{ shelter.occupied }}</dd></div><div><dt>Available spaces</dt><dd data-available>{{ shelter.available_capacity }}</dd></div></dl>
+    {% if shelter.facilities %}<p><strong>Facilities:</strong> {{ shelter.facilities }}</p>{% endif %}
+    {% if shelter.contact %}<p><strong>Contact:</strong> {{ shelter.contact }}</p>{% endif %}
+    <p class="field-hint">Source: {{ shelter.source_name or 'Not provided' }}</p>
+    {% if user.role == 'admin' or (user.role == 'response_team' and user.team_id and user.team_id == shelter.team_id) %}
+    <button type="button" class="button button-secondary" hx-get="/ui/shelters/{{ shelter.id }}/editor" hx-target="#shelter-editor" hx-swap="innerHTML show:#shelter-editor:top">Update capacity</button>
+    {% endif %}
+  </div>
+</article>
+{% else %}<div class="card shelter-result"><div class="shelter-result-body"><h2>No matching shelter records</h2><p>No records matched this search. The records may be incomplete; this does not prove that no shelter exists.</p></div></div>{% endfor %}
+</div>
+{% endif %}

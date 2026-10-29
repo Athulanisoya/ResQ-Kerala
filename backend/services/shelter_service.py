@@ -137,16 +137,10 @@ def save_snapshot(db, row, user, note):
 
 
 def create_managed_shelter(db, user, data):
-    team = db.get(Team, data.team_id)
-
-    if (
-        team is None
-        or team.team_type.casefold() != "shelter"
-    ):
-        raise HTTPException(
-            409,
-            "Select an existing Shelter team",
-        )
+    if data.team_id is not None:
+        team = db.scalar(select(Team).where(Team.id == data.team_id).with_for_update())
+        if team is None or team.team_type.casefold() != "shelter" or team.status == "OFFLINE":
+            raise HTTPException(409, "Select an active Shelter team, or leave the shelter unassigned")
 
     row = Shelter(**data.model_dump())
     if row.occupied >= row.capacity:

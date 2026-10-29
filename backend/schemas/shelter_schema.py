@@ -72,6 +72,11 @@ class ShelterCounts(ServiceInput):
 
 
 class ManagedShelterCreate(ShelterCounts):
+    district: str | None = Field(default=None, min_length=2, max_length=100)
+    locality: str | None = Field(default=None, min_length=2, max_length=120)
+    address: str | None = Field(default=None, min_length=3, max_length=300)
+    contact: str | None = Field(default=None, max_length=60)
+    source_name: str | None = Field(default=None, min_length=2, max_length=200)
     facilities: str | None = Field(default=None, max_length=1000)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
@@ -92,7 +97,7 @@ class ManagedShelterCreate(ShelterCounts):
         max_length=255,
     )
 
-    team_id: int = Field(gt=0)
+    team_id: int | None = Field(default=None, gt=0)
 
 
 class ShelterPatch(ShelterCounts):

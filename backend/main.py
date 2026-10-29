@@ -3,6 +3,7 @@ from backend.utils.attachment_limits import AttachmentRequestLimit
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -48,6 +49,15 @@ async def response_headers(request: Request, call_next):
 async def database_error(_request: Request, _error: SQLAlchemyError):
     # Connection strings and driver diagnostics can contain credentials.
     return JSONResponse(status_code=503, content={"detail": "The database is temporarily unavailable. Please try again."})
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(_request: Request, error: RequestValidationError):
+    # Validation errors normally echo their input, including supplied secrets.
+    # Keep field locations and useful messages without repeating request data.
+    detail = [{key: item[key] for key in ("type", "loc", "msg") if key in item}
+              for item in error.errors()]
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 @app.get("/health", tags=["System"])

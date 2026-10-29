@@ -5,6 +5,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
 from backend.models import Incident, Role, Team, TokenSession, User
@@ -15,6 +16,8 @@ from backend.models.operations import ReliefRequest as OperationsRequest
 from backend.models.relief import ReliefRequest as VidyaRequest
 from backend.models.shelter import Shelter
 from backend.utils.permissions import require_roles
+from backend.schemas.auth import RegisterRequest
+from backend.utils.security import hash_password
 
 router = APIRouter(prefix="/api/management", tags=["Administration"])
 admin = require_roles(Role.ADMIN)
@@ -31,6 +34,9 @@ class UserChange(BaseModel):
         if self.role != Role.RESPONSE_TEAM and self.team_id is not None:
             raise ValueError("Only response team accounts can have a team")
         return self
+
+class TeamAccountCreate(RegisterRequest):
+    team_id: int = Field(gt=0)
 
 class TeamCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -66,6 +72,31 @@ def _lock_admins(db, actor):
 @router.get("/users")
 def users(db: Session = Depends(get_db), actor: User = Depends(admin)):
     return [_user(row) for row in db.scalars(select(User).order_by(User.id))]
+
+@router.post("/team-accounts", status_code=201)
+def create_team_account(data: TeamAccountCreate, db: Session = Depends(get_db), actor: User = Depends(admin)):
+    """Provision a team login without changing the administrator's session."""
+    _lock_admins(db, actor)
+    team = db.scalar(select(Team).where(Team.id == data.team_id).with_for_update())
+    if team is None:
+        raise HTTPException(404, "Team not found")
+    if team.status == "OFFLINE":
+        raise HTTPException(409, "Choose an active team for this account")
+    email = str(data.email).lower()
+    if db.scalar(select(User.id).where(func.lower(User.email) == email).limit(1)) is not None:
+        raise HTTPException(409, "An account already exists for this email.")
+    account = User(full_name=data.full_name, email=email,
+                   password_hash=hash_password(data.password), role=Role.RESPONSE_TEAM,
+                   team_id=team.id, active=True)
+    try:
+        db.add(account)
+        db.flush()
+        _record(db, actor, "user", account, "create", _user(account))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "An account already exists for this email.") from None
+    return _user(account)
 
 @router.patch("/users/{user_id}")
 def change_user(user_id: int, data: UserChange, db: Session = Depends(get_db), actor: User = Depends(admin)):

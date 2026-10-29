@@ -558,6 +558,28 @@ h3 { font-size: 15px; font-weight: 650; }
 .community-pledge-form > p, .community-pledge-form > button { grid-column: 1 / -1; }
 .community-pledge-form > button { justify-self: start; }
 @media (max-width: 650px) { .community-pledge-form { grid-template-columns: minmax(0, 1fr); } }
+.shelter-create-form, .shelter-edit-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
+.shelter-create-form .field, .shelter-edit-form .field, .shelter-search-form .field { margin: 0; min-width: 0; }
+.shelter-create-form > button, .shelter-edit-form > button, .shelter-search-form > button { justify-self: start; }
+.shelter-edit-note { grid-column: 1 / -1; }
+.shelter-search-form { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; }
+.shelter-search-form > p, .shelter-filter { grid-column: 1 / -1; }
+.shelter-filter { display: flex; align-items: center; gap: 9px; color: var(--body); font-size: 12px; }
+.shelter-filter input { width: 17px; height: 17px; }
+.shelter-live-status { display: flex; flex-wrap: wrap; gap: 6px; margin: 20px 0 14px; font-size: 12px; color: var(--teal); }
+.shelter-results-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.shelter-result { min-width: 0; overflow-wrap: anywhere; }
+.shelter-result .card-heading { align-items: flex-start; }
+.shelter-result-body { padding: 20px 24px; }
+.shelter-result-body > p { margin-bottom: 10px; color: var(--body); font-size: 12px; }
+.shelter-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+.shelter-counts dt { color: var(--muted); font-size: 10px; }
+.shelter-counts dd { margin: 5px 0 0; font-size: 24px; font-weight: 650; }
+@media (max-width: 1000px) { .shelter-results-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 650px) {
+  .shelter-create-form, .shelter-edit-form, .shelter-search-form { grid-template-columns: minmax(0, 1fr); }
+  .shelter-result-body { padding: 18px; }
+}
 .status-track { overflow-x: auto; }
 .track-stage { flex: 1 0 92px; }
 .status-task_accepted, .status-en_route, .status-in_progress { color: #315c89; background: #edf3fb; }

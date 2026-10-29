@@ -83,6 +83,8 @@ See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). Thes
 
 ## Additional integrated services
 
+Administrators can use **Shelters → Add shelter** with optional designation to an active Shelter team, and **Administration → Create team account** to provision a team member's login. Shelter listings refresh capacity, occupancy and available spaces every three seconds while the page is visible. Updates are available to administrators and the designated Shelter team; concurrent edits require reloading the latest values. Refreshes leave the separate capacity editor and creation form intact.
+
 The HTMX workspace includes shelter search and management, a safety assistant, investigation team assignments, duplicate-report review, community updates, donation pledges, private report attachments, and administrative user/team controls and reports. Donations are pledges that an administrator can reconcile; the application does not process online payments. Password recovery requires SMTP and sender configuration. See [citizen services](docs/CITIZEN-SERVICES.md) for setup and limits.
 
 Administrators can run and review a revisioned integrated AI analysis. The optional local model can create translation and summary drafts and run the seven-tool workflow. Results require human review; missing or unsupported inputs are not evidence of safety. See [AI workflow](docs/AI-WORKFLOW.md). The experimental severity model can be retrained from a separately supplied labelled CSV using `python -m scripts.train_severity --dataset PATH --output-dir OUTPUT_DIRECTORY`; the command records a held-out evaluation without changing the running model. A model score is not a calibrated probability or evidence of field readiness.
