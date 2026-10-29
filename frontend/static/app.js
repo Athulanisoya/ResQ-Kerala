@@ -75,7 +75,13 @@
     const root = document.getElementById('app-root');
     if (root) document.body.className = root.dataset.authenticated === 'true' ? 'workspace' : 'auth-page';
     const path = window.location.pathname;
-    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports' : path === '/alerts' ? 'alerts' : path === '/account' ? 'account' : path === '/permissions' ? 'permissions' : path === '/updates' ? 'updates' : path === '/operations' ? 'operations' : path === '/assignments-history' ? 'history' : 'dashboard';
+    const navRoutes = {
+      '/dashboard': 'dashboard', '/shelters': 'shelters', '/assistant': 'assistant',
+      '/community': 'community', '/operations': 'operations', '/investigations': 'investigations',
+      '/assignments-history': 'history', '/updates': 'updates', '/alerts': 'alerts',
+      '/account': 'account', '/management': 'management', '/permissions': 'permissions',
+    };
+    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports' : navRoutes[path];
     document.querySelectorAll('[data-nav]').forEach(link => {
       const selected = link.dataset.nav === active;
       link.classList.toggle('active', selected);

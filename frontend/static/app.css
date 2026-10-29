@@ -40,27 +40,28 @@ h3 { font-size: 15px; font-weight: 650; }
 @keyframes progress { 0% { transform: scaleX(.05); } 50% { transform: scaleX(.75); } 100% { transform: scaleX(1); } }
 .sidebar { position: fixed; inset: 0 auto 0 0; width: 244px; z-index: 20; background: var(--forest); color: #b8ccc2; display: flex; flex-direction: column; padding: 31px 20px 19px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: #f5f8ef; font-size: 22px; font-weight: 680; letter-spacing: -.8px; white-space: nowrap; }
-.sidebar > .brand { padding: 0 8px; }
+.sidebar > .brand { padding: 0 8px; flex-shrink: 0; }
 .brand-light { font-weight: 400; }
 .brand-mark { display: grid; place-items: center; width: 39px; height: 42px; color: var(--lime); }
-.sidebar-section { margin: 49px 0 15px 15px; color: #92afa1; font-size: 9px; font-weight: 650; letter-spacing: 1.8px; }
-.main-nav { display: grid; gap: 7px; }
-.nav-item { display: flex; align-items: center; gap: 13px; border-radius: 8px; padding: 13px 15px; font-size: 13px; font-weight: 550; transition: background .15s, color .15s; }
+.sidebar-section { margin: 28px 0 15px 15px; color: #92afa1; font-size: 9px; font-weight: 650; letter-spacing: 1.8px; flex-shrink: 0; }
+.main-nav { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 7px; overflow-y: auto; scrollbar-width: thin; padding: 3px 3px 12px; }
+.nav-item { display: flex; align-items: center; flex-shrink: 0; gap: 13px; border-radius: 8px; padding: 13px 15px; font-size: 13px; font-weight: 550; transition: background .15s, color .15s; }
 .nav-item .icon { width: 18px; height: 18px; opacity: .9; }
 .nav-item:hover { color: #f2f6e8; background: #ffffff09; }
 .nav-item.active { background: #d5e9ad; color: var(--forest); }
-.sidebar-note { margin: auto 15px 37px; padding-top: 65px; }
+.sidebar-note { display: none; }
 .sidebar-note > .icon { width: 25px; height: 25px; color: #b4d6bc; margin-bottom: 16px; }
 .sidebar-note p { font-size: 15px; line-height: 1.6; color: #d3e1d6; letter-spacing: -.15px; }
 .sidebar-note > span { display: block; margin-top: 20px; font-size: 8px; letter-spacing: 1.9px; color: #8aa997; }
-.account-block { display: flex; align-items: center; gap: 10px; border-top: 1px solid #ffffff1c; padding: 21px 5px 0; }
+.account-block { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; flex-shrink: 0; border-top: 1px solid #ffffff1c; margin-top: 12px; padding: 16px 5px 0; }
+.account-block form { grid-column: 1 / -1; margin: 0; }
 .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #3b5a4c; color: #e7ecd5; font-size: 13px; font-weight: 600; flex-shrink: 0; }
 .account-copy { min-width: 0; flex: 1; line-height: 1.4; }
 .account-copy strong { display: block; color: #e3ece2; font-size: 11px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-copy span { font-size: 10px; color: #9ab6a8; }
-.logout-button { display: flex; background: none; border: 0; color: #a3bcad; padding: 5px; }
+.logout-button { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 44px; background: #ffffff08; border: 1px solid #ffffff30; color: #e3ece2; padding: 9px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .logout-button .icon { width: 17px; height: 17px; }
-.logout-button:hover { color: #fff; }
+.logout-button:hover { color: #fff; background: #ffffff15; }
 .workspace-body { margin-left: 244px; min-height: 100svh; display: flex; flex-direction: column; }
 .topbar { display: flex; align-items: center; justify-content: space-between; height: 78px; padding: 0 44px; border-bottom: 1px solid var(--line); }
 .topbar-label { font-size: 9px; font-weight: 600; letter-spacing: 1.8px; color: var(--muted); }
@@ -125,7 +126,7 @@ h3 { font-size: 15px; font-weight: 650; }
 .text-link { display: inline-flex; gap: 10px; align-items: center; font-size: 11px; font-weight: 600; color: var(--teal); }
 .text-link .icon { width: 15px; height: 15px; }
 .text-link:hover { color: var(--forest-deep); }
-.table-scroll { overflow-x: auto; }
+.table-scroll { position: relative; overflow-x: auto; }
 .reports-table { border-collapse: collapse; width: 100%; text-align: left; }
 .reports-table th { font-size: 9px; font-weight: 600; letter-spacing: .55px; color: #7e8b7c; background: #fcfdf9; padding: 13px 15px; white-space: nowrap; }
 .reports-table th:first-child, .reports-table td:first-child { padding-left: 24px; }
@@ -351,15 +352,15 @@ h3 { font-size: 15px; font-weight: 650; }
   .sidebar > .brand { padding: 0; font-size: 21px; }
   .brand-mark { width: 33px; height: 33px; }
   .sidebar-section, .sidebar-note { display: none; }
-  .main-nav { display: flex; order: 3; width: 100%; margin-top: 14px; gap: 7px; overflow-x: auto; padding: 0 0 13px; }
+  .main-nav { flex-direction: row; flex: 0 0 100%; order: 3; width: 100%; margin-top: 14px; gap: 7px; overflow-x: auto; overflow-y: hidden; padding: 3px 3px 13px; }
   .nav-item { padding: 10px 13px; font-size: 11px; gap: 8px; flex-shrink: 0; }
   .nav-item .icon { width: 15px; height: 15px; }
-  .account-block { padding: 0; border: 0; margin-left: auto; gap: 8px; }
+  .account-block { display: flex; padding: 0; border: 0; margin: 0 0 0 auto; gap: 8px; }
   .account-copy { max-width: 110px; }
   .account-copy strong { font-size: 10px; }
   .account-copy span { font-size: 9px; }
   .avatar { width: 29px; height: 29px; font-size: 11px; }
-  .logout-button { margin-left: 6px; }
+  .logout-button { width: auto; margin-left: 6px; }
   .workspace-body { margin-left: 0; min-height: calc(100svh - 118px); }
   .topbar { display: none; }
   .main-content { padding: 28px 24px 32px; }
@@ -393,8 +394,9 @@ h3 { font-size: 15px; font-weight: 650; }
 @media (max-width: 500px) {
   .sidebar { padding-left: 17px; padding-right: 17px; }
   .account-copy { display: none; }
+  .account-block > .avatar { display: none; }
   .sidebar .brand { font-size: 20px; }
-  .logout-button { padding: 5px 0 5px 4px; margin-left: 0; }
+  .logout-button { padding: 9px 10px; margin-left: 0; }
   .main-content { padding: 25px 17px 30px; }
   .page-heading { flex-wrap: wrap; gap: 17px; }
   .page-heading h1 { font-size: 28px; letter-spacing: -.9px; }

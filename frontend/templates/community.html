@@ -1,11 +1,88 @@
 {% include 'partials/alerts.html' %}
-<div class="page-heading"><div><span class="section-kicker">COMMUNITY</span><h1>News and donations</h1><p>Read verified updates and offer support to active campaigns.</p></div></div>
-<section class="card operations-section"><div class="card-heading"><h2>Community news</h2></div>
-{% for item in news %}<article class="operation-history-item"><h3>{{ item.title }}</h3><p>{{ item.body }}</p>{% if item.source %}<p class="field-hint">Source: {{ item.source }}</p>{% endif %}<p class="field-hint">{{ item.status|title }}</p>
-{% if user.role == 'admin' and item.status in ['DRAFT','VERIFIED'] %}{% set step = 'verify' if item.status == 'DRAFT' else 'publish' %}<form action="/ui/community/news/{{ item.id }}/{{ step }}" method="post" hx-post="/ui/community/news/{{ item.id }}/{{ step }}" hx-target="#main-content"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button button-secondary" type="submit">{{ 'Verify' if step == 'verify' else 'Publish' }}</button></form>{% endif %}</article>{% else %}<p>No published updates yet.</p>{% endfor %}
-{% if user.role == 'admin' %}<details><summary>Create draft news</summary><form action="/ui/community/news" method="post" hx-post="/ui/community/news" hx-target="#main-content" class="compact-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><div class="field"><label>Title<input name="title" required minlength="3" maxlength="160"></label></div><div class="field"><label>Update<textarea name="body" required minlength="5" maxlength="10000"></textarea></label></div><div class="field"><label>Source <span class="optional">Optional</span><input name="source" maxlength="500"></label></div><button class="button button-primary" type="submit">Save draft</button></form></details>{% endif %}</section>
-<section class="card operations-section"><div class="card-heading"><h2>Donation campaigns</h2></div><p>Offers are pledges. This application does not collect or process payments. An administrator must confirm receipt separately.</p>
-{% for campaign in campaigns %}<article class="operation-history-item"><h3>{{ campaign.title }}</h3><p>{{ campaign.description }}</p><p class="field-hint">{{ campaign.status|title }}</p>
-{% if campaign.status == 'ACTIVE' %}<details><summary>Offer money or supplies</summary><form action="/ui/community/campaigns/{{ campaign.id }}/pledges" method="post" hx-post="/ui/community/campaigns/{{ campaign.id }}/pledges" hx-target="#main-content" class="compact-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ pledge_keys[campaign.id] }}"><div class="field"><label>Offer type<select name="kind"><option value="SUPPLIES">Supplies</option><option value="MONEY">Money pledge</option></select></label></div><div class="field"><label>What will you offer?<input name="description" minlength="2" maxlength="200" required></label></div><div class="field"><label>Quantity or amount<input name="quantity" type="number" min="0.01" max="1000000000" step="0.01" required></label></div><div class="field"><label>Unit <span class="optional">Use INR for money</span><input name="unit" maxlength="40" required></label></div><button class="button button-primary" type="submit">Record pledge</button></form></details>{% if user.role == 'admin' %}<form action="/ui/community/campaigns/{{ campaign.id }}/close" method="post" hx-post="/ui/community/campaigns/{{ campaign.id }}/close" hx-target="#main-content"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button button-secondary" type="submit">Close campaign</button></form>{% endif %}{% endif %}</article>{% else %}<p>No active campaigns.</p>{% endfor %}
-{% if user.role == 'admin' %}<details><summary>Create campaign</summary><form action="/ui/community/campaigns" method="post" hx-post="/ui/community/campaigns" hx-target="#main-content" class="compact-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><div class="field"><label>Title<input name="title" required minlength="3" maxlength="160"></label></div><div class="field"><label>Description<textarea name="description" required minlength="5" maxlength="5000"></textarea></label></div><button class="button button-primary" type="submit">Create campaign</button></form></details>{% endif %}</section>
-<section class="card operations-section"><div class="card-heading"><h2>{{ 'Donation records' if user.role == 'admin' else 'My pledges' }}</h2></div>{% for pledge in pledges %}<article class="operation-history-item"><strong>{{ pledge.description }}</strong><p>{{ pledge.quantity }} {{ pledge.unit }} · {{ pledge.status|title }}</p>{% if pledge.review_note %}<p>{{ pledge.review_note }}</p>{% endif %}{% if user.role == 'admin' and pledge.status == 'PENDING' %}<form action="/ui/community/pledges/{{ pledge.id }}/review" method="post" hx-post="/ui/community/pledges/{{ pledge.id }}/review" hx-target="#main-content" class="compact-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><div class="field"><label>Result<select name="status"><option value="RECEIVED">Received</option><option value="REJECTED">Rejected</option></select></label></div><div class="field"><label>Verification note<input name="note" required minlength="3" maxlength="1000"></label></div><button class="button button-secondary" type="submit">Record review</button></form>{% endif %}</article>{% else %}<p>No pledges recorded.</p>{% endfor %}</section>
+{% set active_campaigns = campaigns|selectattr('status', 'equalto', 'ACTIVE')|list %}
+<div class="page-heading">
+  <div><span class="section-kicker">COMMUNITY</span><h1>News and donations</h1><p>Read verified updates and offer support to active campaigns.</p></div>
+  {% if active_campaigns %}<a class="button button-primary" href="#pledge-{{ active_campaigns[0].id }}">Add donation pledge</a>{% elif user.role == 'admin' %}<a class="button button-primary" href="#create-campaign">Create donation campaign</a>{% endif %}
+</div>
+<section class="card operations-section" aria-labelledby="community-news-heading">
+  <div class="card-heading"><h2 id="community-news-heading">Community news</h2></div>
+  {% for item in news %}
+  <article class="operation-history-item">
+    <h3>{{ item.title }}</h3><p>{{ item.body }}</p>
+    {% if item.source %}<p class="field-hint">Source: {{ item.source }}</p>{% endif %}
+    <p class="field-hint">{{ item.status|title }}</p>
+    {% if user.role == 'admin' and item.status in ['DRAFT','VERIFIED'] %}
+      {% set step = 'verify' if item.status == 'DRAFT' else 'publish' %}
+      <form action="/ui/community/news/{{ item.id }}/{{ step }}" method="post" hx-post="/ui/community/news/{{ item.id }}/{{ step }}" hx-target="#main-content">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button button-secondary" type="submit">{{ 'Verify' if step == 'verify' else 'Publish' }}</button>
+      </form>
+    {% endif %}
+  </article>
+  {% else %}<div class="operation-history-item"><p>No published updates yet.</p></div>{% endfor %}
+  {% if user.role == 'admin' %}
+  <details class="operation-history-item"><summary>Create draft news</summary>
+    <form action="/ui/community/news" method="post" hx-post="/ui/community/news" hx-target="#main-content" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="news-title">Title</label><input id="news-title" name="title" required minlength="3" maxlength="160"></div>
+      <div class="field"><label for="news-body">Update</label><textarea id="news-body" name="body" required minlength="5" maxlength="10000"></textarea></div>
+      <div class="field"><label for="news-source">Source <span class="optional">Optional</span></label><input id="news-source" name="source" maxlength="500"></div>
+      <button class="button button-primary" type="submit">Save draft</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+<section id="donation-campaigns" class="card operations-section" aria-labelledby="donation-campaigns-heading">
+  <div class="card-heading"><h2 id="donation-campaigns-heading">Donation campaigns</h2></div>
+  <div class="operation-history-item"><p>Offers are pledges. This application does not collect or process payments. An administrator must confirm receipt separately.</p></div>
+  {% for campaign in campaigns %}
+  <article class="operation-history-item" aria-labelledby="campaign-{{ campaign.id }}-heading">
+    <h3 id="campaign-{{ campaign.id }}-heading">{{ campaign.title }}</h3><p>{{ campaign.description }}</p><p class="field-hint">{{ campaign.status|title }}</p>
+    {% if campaign.status == 'ACTIVE' %}
+    <form id="pledge-{{ campaign.id }}" aria-labelledby="pledge-{{ campaign.id }}-heading" action="/ui/community/campaigns/{{ campaign.id }}/pledges" method="post" hx-post="/ui/community/campaigns/{{ campaign.id }}/pledges" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form">
+      <h4 id="pledge-{{ campaign.id }}-heading">Add a pledge to {{ campaign.title }}</h4>
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ pledge_keys[campaign.id] }}">
+      <div class="field"><label for="pledge-{{ campaign.id }}-kind">Offer type</label><select id="pledge-{{ campaign.id }}-kind" name="kind"><option value="SUPPLIES">Supplies</option><option value="MONEY">Money pledge</option></select></div>
+      <div class="field"><label for="pledge-{{ campaign.id }}-description">What will you offer?</label><input id="pledge-{{ campaign.id }}-description" name="description" minlength="2" maxlength="200" required></div>
+      <div class="field"><label for="pledge-{{ campaign.id }}-quantity">Quantity or amount</label><input id="pledge-{{ campaign.id }}-quantity" name="quantity" type="number" min="0.01" max="1000000000" step="0.01" required></div>
+      <div class="field"><label for="pledge-{{ campaign.id }}-unit">Unit <span class="optional">Use INR for money</span></label><input id="pledge-{{ campaign.id }}-unit" name="unit" maxlength="40" required></div>
+      <button class="button button-primary" type="submit"><span class="button-label">Add donation pledge</span><span class="button-loading">Saving pledge…</span></button>
+    </form>
+    {% if user.role == 'admin' %}
+    <form action="/ui/community/campaigns/{{ campaign.id }}/close" method="post" hx-post="/ui/community/campaigns/{{ campaign.id }}/close" hx-target="#main-content">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button button-secondary" type="submit">Close campaign</button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </article>
+  {% else %}
+  <div class="operation-history-item"><p>No active donation campaigns are available.</p><p class="field-hint">{{ 'Create a campaign below so people can add money or supplies pledges.' if user.role == 'admin' else 'An administrator needs to open a campaign before you can add a donation pledge.' }}</p></div>
+  {% endfor %}
+  {% if campaigns and not active_campaigns %}<div class="operation-history-item"><p>No campaigns are currently accepting pledges. {{ 'Create an active campaign below to accept new pledges.' if user.role == 'admin' else 'An administrator needs to open a campaign before you can add a donation pledge.' }}</p></div>{% endif %}
+  {% if user.role == 'admin' %}
+  <section id="create-campaign" class="operation-history-item" aria-labelledby="create-campaign-heading">
+    <h3 id="create-campaign-heading">Create donation campaign</h3>
+    <form action="/ui/community/campaigns" method="post" hx-post="/ui/community/campaigns" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="campaign-title">Title</label><input id="campaign-title" name="title" required minlength="3" maxlength="160"></div>
+      <div class="field"><label for="campaign-description">Description</label><textarea id="campaign-description" name="description" required minlength="5" maxlength="5000"></textarea></div>
+      <button class="button button-primary" type="submit"><span class="button-label">Create campaign</span><span class="button-loading">Creating…</span></button>
+    </form>
+  </section>
+  {% endif %}
+</section>
+<section class="card operations-section" aria-labelledby="pledges-heading">
+  <div class="card-heading"><h2 id="pledges-heading">{{ 'Donation records' if user.role == 'admin' else 'My pledges' }}</h2></div>
+  {% for pledge in pledges %}
+  <article class="operation-history-item"><strong>{{ pledge.description }}</strong><p>{{ pledge.quantity }} {{ pledge.unit }} · {{ pledge.status|title }}</p>
+    {% if pledge.review_note %}<p>{{ pledge.review_note }}</p>{% endif %}
+    {% if user.role == 'admin' and pledge.status == 'PENDING' %}
+    <form action="/ui/community/pledges/{{ pledge.id }}/review" method="post" hx-post="/ui/community/pledges/{{ pledge.id }}/review" hx-target="#main-content" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="review-{{ pledge.id }}-status">Result</label><select id="review-{{ pledge.id }}-status" name="status"><option value="RECEIVED">Received</option><option value="REJECTED">Rejected</option></select></div>
+      <div class="field"><label for="review-{{ pledge.id }}-note">Verification note</label><input id="review-{{ pledge.id }}-note" name="note" required minlength="3" maxlength="1000"></div>
+      <button class="button button-secondary" type="submit">Record review</button>
+    </form>
+    {% endif %}
+  </article>
+  {% else %}<div class="operation-history-item"><p>No pledges recorded.</p></div>{% endfor %}
+</section>

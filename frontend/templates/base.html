@@ -42,7 +42,7 @@
     <div class="account-block">
       <span class="avatar">{{ user.full_name[:1]|upper }}</span>
       <div class="account-copy"><strong>{{ user.full_name }}</strong><span>{{ user.role|replace('_', ' ')|title }}</span></div>
-      <form action="/ui/logout" method="post" hx-post="/ui/logout"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="logout-button" type="submit" aria-label="Sign out" title="Sign out">{{ icon('logout') }}</button></form>
+      <form action="/ui/logout" method="post" hx-post="/ui/logout"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="logout-button" type="submit">{{ icon('logout') }}<span>Sign out</span></button></form>
     </div>
   </aside>
   <div class="workspace-body">
