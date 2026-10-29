@@ -1,15 +1,58 @@
-<section class="page-section arya-page">
-  <header class="page-header"><div><p class="eyebrow">COMMUNITY SUPPORT</p><h1>Shelter &amp; Safety Assistant</h1><p>Ask about shelter availability, safety guidance or your report.</p><p class="notice" role="status">Repository safety paraphrases require owner verification. Follow current official guidance and check the linked source.</p></div></header>
-  <div class="panel arya-panel"><h2>Conversations</h2><p><a href="/assistant" hx-get="/assistant" hx-target="#main-content" hx-push-url="true">Start a new conversation</a></p>
-    {% for chat in sessions %}<p><a href="/assistant?session_id={{ chat.id }}" hx-get="/assistant?session_id={{ chat.id }}" hx-target="#main-content" hx-push-url="true" {% if selected_session == chat.id %}aria-current="page"{% endif %}>{{ chat.title }}</a></p>{% else %}<p>No saved conversations yet.</p>{% endfor %}
+{% from 'icons.html' import icon %}
+<section class="chat-workspace" aria-label="Safety assistant workspace">
+  <aside class="chat-history" aria-label="Conversation history">
+    <div class="chat-history-heading"><span>Your conversations</span><a class="chat-new" href="/assistant" hx-get="/assistant" hx-target="#main-content" hx-push-url="true">{{ icon('plus') }}New chat</a></div>
+    <nav class="chat-history-list" aria-label="Saved conversations">
+      {% for chat in sessions %}<a class="chat-history-item {{ 'is-selected' if selected_session == chat.id }}" href="/assistant?session_id={{ chat.id }}" hx-get="/assistant?session_id={{ chat.id }}" hx-target="#main-content" hx-push-url="true" {% if selected_session == chat.id %}aria-current="page"{% endif %}>{{ icon('reports') }}<span>{{ chat.title }}</span></a>{% else %}<p class="chat-history-empty">Your saved chats will appear here.</p>{% endfor %}
+    </nav>
+    <p class="chat-history-note">Private to your account.</p>
+  </aside>
+  <div class="chat-main">
+    <header class="chat-heading"><div><span class="section-kicker">RESQ KERALA</span><h1>Safety assistant</h1></div><span class="chat-heading-status">{{ icon('shield') }}Guidance &amp; report help</span></header>
+    <div class="chat-messages" aria-label="Conversation messages" tabindex="0">
+      {% if error %}<div class="chat-error" role="alert">{{ error }}</div>{% endif %}
+      {% if not messages %}
+      <div class="chat-welcome">
+        <span class="chat-welcome-mark" aria-hidden="true">{{ icon('shield') }}</span>
+        <h2>How can I help you today?</h2>
+        <p>Find shelter information, explore safety guidance, or check your reports.</p>
+        <div class="chat-suggestions" aria-label="Suggested questions">
+          <button type="button" data-chat-prompt="How do I find an available shelter?">{{ icon('pin') }}Find a shelter<span>Explore available spaces</span></button>
+          <button type="button" data-chat-prompt="How can I prepare for flooding?">{{ icon('shield') }}Flood preparation<span>Find safety references</span></button>
+          <button type="button" data-chat-prompt="What is the status of my report?">{{ icon('reports') }}Track my report<span>Check your latest update</span></button>
+        </div>
+      </div>
+      {% endif %}
+      {% for message in messages %}
+      <article class="chat-message chat-message-{{ 'user' if message.role == 'user' else 'assistant' }}" aria-label="{{ 'Your message' if message.role == 'user' else 'Assistant response' }}">
+        <div class="chat-message-avatar" aria-hidden="true">{% if message.role == 'user' %}{{ user.full_name[:1]|upper }}{% else %}{{ icon('shield') }}{% endif %}</div>
+        <div class="chat-message-body">
+          <div class="chat-message-author">{{ 'You' if message.role == 'user' else 'Safety assistant' }}{% if message.role == 'assistant' and message.details and message.details.mode %}<span>{{ 'AI response' if message.details.mode == 'agent' else 'Local guidance' }}</span>{% endif %}</div>
+          <div class="chat-message-content">{{ message.content }}</div>
+          {% if message.details and message.details.warning %}<p class="chat-message-notice" role="status">{{ message.details.warning }}</p>{% endif %}
+          {% if message.details and message.details.sources %}
+          <details class="chat-sources"><summary>{{ message.details.sources|length }} source{{ 's' if message.details.sources|length != 1 }}</summary>
+            <ul>{% for source in message.details.sources %}<li><strong>{{ source.title }}</strong>{% if source.source_name %}<span>{{ source.source_name }}</span>{% endif %}
+              {% if source.approval_status %}<p>Approval status: {{ source.approval_status|replace('_', ' ') }}</p>{% endif %}
+              {% if source.review_required %}<p class="chat-source-review"><strong>Owner verification required.</strong> Check current official guidance before relying on this summary.</p>{% endif %}
+              {% if source.source_url and source.source_url.startswith('https://') %}<a href="{{ source.source_url }}" target="_blank" rel="noopener noreferrer">Open source document {{ icon('arrow') }}</a>{% endif %}</li>{% endfor %}</ul>
+          </details>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <div class="chat-composer-area">
+      <form class="chat-form" data-chat-form method="post" action="/ui/assistant/chat" hx-post="/ui/assistant/chat" hx-target="#main-content" hx-indicator="this" hx-disabled-elt="find button[type='submit']">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">{% if selected_session %}<input type="hidden" name="session_id" value="{{ selected_session }}">{% endif %}
+        <div class="chat-thinking" role="status" aria-live="polite"><span></span>Thinking…</div>
+        <div class="chat-composer">
+          <label class="sr-only" for="question">Message Safety Assistant</label><textarea id="question" data-chat-composer name="question" rows="2" maxlength="2000" minlength="2" required placeholder="Message Safety Assistant…">{{ question or '' }}</textarea>
+          <button class="chat-send" type="submit" aria-label="Send message" title="Send message">{{ icon('arrow') }}</button>
+        </div>
+      </form>
+      <p class="chat-composer-hint">Enter to send · Shift + Enter for a new line</p>
+      <details class="chat-guidance"><summary>Check guidance before acting</summary><p>Follow current official guidance. Repository safety paraphrases require owner verification. Your conversation is saved to your account; model-backed answers may use recent turns. Locally retrieved report details are excluded from later model context. Fallback answers use the latest question. Shelter records may be incomplete or stale. This assistant does not dispatch emergency services.</p></details>
+    </div>
   </div>
-  {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
-  {% for message in messages %}<article class="panel arya-answer"><div class="arya-answer-heading"><h2>{{ 'You' if message.role == 'user' else 'Assistant' }}</h2>{% if message.role == 'assistant' and message.details and message.details.mode %}<span class="status-pill">{{ message.details.mode }}</span>{% endif %}</div><div class="arya-answer-text">{{ message.content }}</div>
-    {% if message.details and message.details.warning %}<p class="notice" role="status">{{ message.details.warning }}</p>{% endif %}
-    {% if message.details and message.details.sources %}<h3>Retrieved document sources</h3><ul class="arya-source-list">{% for source in message.details.sources %}<li><strong>{{ source.title }}</strong>{% if source.source_name %} — {{ source.source_name }}{% endif %}{% if source.approval_status %}<p>Approval status: {{ source.approval_status|replace("_", " ") }}</p>{% endif %}{% if source.review_required %}<p class="notice" role="status"><strong>Owner verification required.</strong> Check current official guidance before relying on this summary.</p>{% endif %}{% if source.source_url and source.source_url.startswith('https://') %}<p><a href="{{ source.source_url }}" target="_blank" rel="noopener noreferrer">Open source document</a></p>{% endif %}</li>{% endfor %}</ul>{% endif %}</article>{% endfor %}
-  <div class="panel arya-panel"><form method="post" action="/ui/assistant/chat" hx-post="/ui/assistant/chat" hx-target="#main-content" class="arya-chat-form">
-    <input type="hidden" name="_csrf" value="{{ csrf_token }}">{% if selected_session %}<input type="hidden" name="session_id" value="{{ selected_session }}">{% endif %}
-    <label for="question">Your question</label><textarea id="question" name="question" rows="4" maxlength="2000" required placeholder="Example: Find available shelters in Alappuzha.">{{ question or '' }}</textarea><button type="submit" class="button button-primary">Ask the assistant</button>
-  </form></div>
-  <p class="arya-disclaimer">Your conversation is saved to your account. Model-backed answers may use recent turns; locally retrieved report details are not sent as conversation context. Fallback answers use the latest question. Shelter records may be incomplete or stale. This assistant does not dispatch emergency services. In immediate danger, contact the appropriate local emergency service.</p>
 </section>

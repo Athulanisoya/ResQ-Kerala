@@ -58,3 +58,35 @@ def test_pledge_retry_is_idempotent_and_key_cannot_change_data(api):
     assert len(api.client.get('/api/community/pledges',headers=citizen).json()) == 1
     assert api.client.post(f'/api/community/campaigns/{campaign}/close', headers=admin).status_code == 200
     assert api.client.post(path,headers=citizen,json=body).json()['id'] == first.json()['id']
+
+
+def test_general_pledge_does_not_require_a_campaign_and_preserves_retries(api):
+    body = {'kind': 'MONEY', 'description': 'General relief contribution', 'quantity': '250',
+            'unit': 'INR', 'idempotency_key': 'general-donation-retry-key-123'}
+    assert api.client.post('/api/community/pledges', json=body).status_code == 401
+    citizen = api.headers('citizen')
+    first = api.client.post('/api/community/pledges', headers=citizen, json=body)
+    assert first.status_code == 201, first.text
+    assert first.json()['campaign_id'] is None
+    retry = api.client.post('/api/community/pledges', headers=citizen, json=body)
+    assert retry.json()['id'] == first.json()['id']
+    assert api.client.post('/api/community/pledges', headers=citizen, json={**body, 'quantity': '300'}).status_code == 409
+    assert len(api.client.get('/api/community/pledges', headers=citizen).json()) == 1
+    review = api.client.post(f"/api/community/pledges/{first.json()['id']}/review", headers=api.headers('admin'),
+                            json={'status': 'RECEIVED', 'note': 'General pledge receipt confirmed'})
+    assert review.status_code == 200
+
+
+def test_universal_pledge_endpoint_validates_selected_campaign(api):
+    campaign = api.client.post('/api/community/campaigns', headers=api.headers('admin'),
+                              json={'title': 'Local campaign', 'description': 'Synthetic support campaign'}).json()['id']
+    body = {'campaign_id': campaign, 'kind': 'SUPPLIES', 'description': 'Bottled water', 'quantity': '5',
+            'unit': 'litres', 'idempotency_key': 'universal-campaign-pledge-123'}
+    result = api.client.post('/api/community/pledges', headers=api.headers('citizen'), json=body)
+    assert result.status_code == 201
+    assert result.json()['campaign_id'] == campaign
+    assert api.client.post('/api/community/pledges', headers=api.headers('citizen'),
+                           json={**body, 'campaign_id': None}).status_code == 409
+    api.client.post(f'/api/community/campaigns/{campaign}/close', headers=api.headers('admin'))
+    assert api.client.post('/api/community/pledges', headers=api.headers('citizen'),
+                           json={**body, 'idempotency_key': 'closed-campaign-general-123'}).status_code == 409

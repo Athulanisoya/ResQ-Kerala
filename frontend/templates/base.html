@@ -10,9 +10,11 @@
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/operations.css">
+  <link rel="stylesheet" href="/static/assistant.css">
   <script src="/static/vendor/htmx.min.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/recovery.js" defer></script>
+  <script src="/static/assistant.js" defer></script>
 </head>
 <body class="{{ 'workspace' if user else 'auth-page' }}" hx-history="false">
   <div id="app-root" data-authenticated="{{ 'true' if user else 'false' }}">

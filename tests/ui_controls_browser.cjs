@@ -63,6 +63,21 @@ async function main() {
     const team = await login('response_team');
     for (const [role, page] of Object.entries(pages)) await assertVisibleLogout(page, role);
 
+    // General support is available before any campaign is created.
+    await citizen.bringToFront();
+    await citizen.setViewportSize({ width: 390, height: 844 });
+    await citizen.getByRole('link', { name: 'Community', exact: true }).click();
+    const general = citizen.locator('form[action="/ui/community/pledges"]');
+    await general.getByRole('button', { name: 'Add donation pledge', exact: true }).waitFor();
+    const generalName = `Synthetic general pledge ${Date.now()}`;
+    await general.getByLabel('Support', { exact: true }).selectOption('');
+    await general.getByLabel('Offer type', { exact: true }).selectOption('SUPPLIES');
+    await general.getByLabel('What will you offer?', { exact: true }).fill(generalName);
+    await general.getByLabel('Quantity or amount', { exact: true }).fill('2');
+    await general.getByLabel('Unit', { exact: false }).fill('packets');
+    await general.getByRole('button', { name: 'Add donation pledge', exact: true }).click();
+    await citizen.getByText(generalName, { exact: true }).waitFor();
+
     await admin.bringToFront();
     await admin.setViewportSize({ width: 1440, height: 900 });
     await admin.getByRole('link', { name: 'Community', exact: true }).click();
@@ -85,13 +100,14 @@ async function main() {
     });
     await card.getByRole('heading', { name: campaignName, exact: true }).waitFor();
     await citizen.locator('[data-nav="community"][aria-current="page"]').waitFor();
-    const pledge = card.locator('form[action$="/pledges"]');
+    const pledge = citizen.locator('form[action="/ui/community/pledges"]');
     assert.equal(await pledge.getByRole('button', { name: 'Add donation pledge', exact: true }).isVisible(), true);
     assert.equal(await pledge.evaluate(element => element.closest('details') === null), true);
+    await pledge.getByLabel('Support', { exact: true }).selectOption({ label: campaignName });
     await pledge.getByLabel('Offer type', { exact: true }).selectOption('MONEY');
     await pledge.getByLabel('What will you offer?', { exact: true }).fill(pledgeName);
     await pledge.getByLabel('Quantity or amount', { exact: true }).fill('100');
-    await pledge.getByLabel('Unit', { exact: false }).fill('INR');
+    assert.equal(await pledge.getByLabel('Unit', { exact: false }).inputValue(), 'INR');
     await pledge.getByRole('button', { name: 'Add donation pledge', exact: true }).click();
     await citizen.getByText(pledgeName, { exact: true }).waitFor();
     assert.equal(await citizen.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -119,7 +135,7 @@ async function main() {
       }
     }
     assert.deepEqual(errors, []);
-    console.log('PASS: visible, clickable logout for all roles at five desktop/mobile sizes; campaign creation and mobile pledge submission; logout revocation.');
+    console.log('PASS: visible logout at five sizes; campaign and general relief pledge submission on mobile; logout revocation.');
   } finally {
     await context.close();
     await browser.close();

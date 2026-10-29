@@ -553,6 +553,11 @@ h3 { font-size: 15px; font-weight: 650; }
 .report-filters .field:first-child { flex-basis: 280px; }
 .completion-summary { display: flex; gap: 20px; flex-wrap: wrap; margin: 22px 0; font-size: 13px; }
 .completion-summary a { color: var(--teal); display: inline-flex; gap: 5px; align-items: center; }
+.community-pledge-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
+.community-pledge-form .field { margin: 0; min-width: 0; }
+.community-pledge-form > p, .community-pledge-form > button { grid-column: 1 / -1; }
+.community-pledge-form > button { justify-self: start; }
+@media (max-width: 650px) { .community-pledge-form { grid-template-columns: minmax(0, 1fr); } }
 .status-track { overflow-x: auto; }
 .track-stage { flex: 1 0 92px; }
 .status-task_accepted, .status-en_route, .status-in_progress { color: #315c89; background: #edf3fb; }

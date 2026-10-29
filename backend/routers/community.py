@@ -43,6 +43,9 @@ class ReviewInput(Input):
     status: Literal["RECEIVED", "REJECTED"]
     note: str = Field(min_length=3, max_length=1000)
 
+class GeneralPledgeInput(PledgeInput):
+    campaign_id: int | None = Field(default=None, gt=0)
+
 
 def news_view(row):
     return {key: getattr(row, key) for key in ("id", "title", "body", "source", "status", "created_by", "verified_by", "published_by", "created_at", "published_at")}
@@ -109,7 +112,7 @@ def close_campaign(campaign_id: int, db: Session = Depends(get_db), user: User =
     row.status = "CLOSED"; db.commit(); return campaign_view(row)
 
 @router.post("/campaigns/{campaign_id}/pledges", status_code=201)
-def create_pledge(campaign_id: int, data: PledgeInput, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_pledge(campaign_id: int | None, data: PledgeInput, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     # Lock the donor first so retries, including cross-campaign retries, share
     # one ordering and cannot create duplicate records during a race.
     db.scalar(select(User.id).where(User.id == user.id).with_for_update())
@@ -123,15 +126,22 @@ def create_pledge(campaign_id: int, data: PledgeInput, db: Session = Depends(get
         if prior.fingerprint != fingerprint:
             raise HTTPException(409, "This pledge key was already used for different details")
         return pledge_view(db.get(DonationPledge, prior.pledge_id))
-    campaign = locked(db, DonationCampaign, campaign_id)
-    if campaign.status != "ACTIVE":
-        raise HTTPException(409, "Campaign is closed")
+    if campaign_id is not None:
+        campaign = locked(db, DonationCampaign, campaign_id)
+        if campaign.status != "ACTIVE":
+            raise HTTPException(409, "Campaign is closed")
     row = DonationPledge(**payload, campaign_id=campaign_id, donor_id=user.id, status="PENDING")
     db.add(row); db.flush()
     db.add(DonationPledgeReceipt(donor_id=user.id, idempotency_key=data.idempotency_key,
                                  fingerprint=fingerprint, pledge_id=row.id))
     db.commit(); db.refresh(row)
     return pledge_view(row)
+
+@router.post("/pledges", status_code=201)
+def add_donation_pledge(data: GeneralPledgeInput, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Record general relief support or a pledge to an active campaign."""
+    payload = PledgeInput.model_validate(data.model_dump(exclude={"campaign_id"}))
+    return create_pledge(data.campaign_id, payload, db, user)
 
 @router.get("/pledges")
 def list_pledges(db: Session = Depends(get_db), user: User = Depends(get_current_user)):

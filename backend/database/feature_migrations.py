@@ -52,6 +52,13 @@ def migrate_feature_tables(connection: Connection, metadata: MetaData) -> None:
     connection.execute(text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
                        {"key": "resq-feature-schema:" + schema})
     inspector = inspect(connection)
+    if inspector.has_table("donation_pledges", schema=schema):
+        campaign_column = next((column for column in inspector.get_columns("donation_pledges", schema=schema)
+                                if column["name"] == "campaign_id"), None)
+        if campaign_column is not None and not campaign_column["nullable"]:
+            # General relief pledges do not require a fundraising campaign.
+            # Keep the foreign key and every existing campaign association.
+            connection.execute(text(f"ALTER TABLE {table('donation_pledges')} ALTER COLUMN campaign_id DROP NOT NULL"))
     if inspector.has_table("shelters", schema=schema):
         columns = frozenset(c["name"] for c in inspector.get_columns("shelters", schema=schema))
         shelter = table("shelters")

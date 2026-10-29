@@ -2,8 +2,21 @@
 {% set active_campaigns = campaigns|selectattr('status', 'equalto', 'ACTIVE')|list %}
 <div class="page-heading">
   <div><span class="section-kicker">COMMUNITY</span><h1>News and donations</h1><p>Read verified updates and offer support to active campaigns.</p></div>
-  {% if active_campaigns %}<a class="button button-primary" href="#pledge-{{ active_campaigns[0].id }}">Add donation pledge</a>{% elif user.role == 'admin' %}<a class="button button-primary" href="#create-campaign">Create donation campaign</a>{% endif %}
+  <a class="button button-primary" href="#add-donation-pledge">Add donation pledge</a>
 </div>
+<section id="add-donation-pledge" class="card operations-section" aria-labelledby="donation-pledge-heading">
+  <div class="card-heading"><div><h2 id="donation-pledge-heading">Add a donation pledge</h2><p>Offer money or supplies for general relief or an active campaign.</p></div></div>
+  <form action="/ui/community/pledges" method="post" hx-post="/ui/community/pledges" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form community-pledge-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ pledge_key }}">
+    <div class="field"><label for="pledge-campaign">Support</label><select id="pledge-campaign" name="campaign_id"><option value="">General relief support</option>{% for campaign in active_campaigns %}<option value="{{ campaign.id }}" {{ 'selected' if pledge_values.get('campaign_id')|string == campaign.id|string }}>{{ campaign.title }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="pledge-kind">Offer type</label><select id="pledge-kind" name="kind" data-pledge-kind><option value="SUPPLIES" {{ 'selected' if pledge_values.get('kind', 'SUPPLIES') == 'SUPPLIES' }}>Supplies</option><option value="MONEY" {{ 'selected' if pledge_values.get('kind') == 'MONEY' }}>Money pledge</option></select></div>
+    <div class="field"><label for="pledge-description">What will you offer?</label><input id="pledge-description" name="description" minlength="2" maxlength="200" required placeholder="For example, bottled water" value="{{ pledge_values.get('description', '') }}"></div>
+    <div class="field"><label for="pledge-quantity">Quantity or amount</label><input id="pledge-quantity" name="quantity" type="number" min="0.01" max="1000000000" step="0.01" required value="{{ pledge_values.get('quantity', '') }}"></div>
+    <div class="field"><label for="pledge-unit">Unit <span class="optional">Use INR for money</span></label><input id="pledge-unit" name="unit" maxlength="40" required placeholder="For example, litres or INR" value="{{ pledge_values.get('unit', '') }}" data-pledge-unit></div>
+    <p class="field-hint">Offers are pledges. This application does not collect or process payments. An administrator confirms receipt separately.</p>
+    <button class="button button-primary" type="submit"><span class="button-label">Add donation pledge</span><span class="button-loading">Saving pledge...</span></button>
+  </form>
+</section>
 <section class="card operations-section" aria-labelledby="community-news-heading">
   <div class="card-heading"><h2 id="community-news-heading">Community news</h2></div>
   {% for item in news %}
@@ -38,15 +51,7 @@
   <article class="operation-history-item" aria-labelledby="campaign-{{ campaign.id }}-heading">
     <h3 id="campaign-{{ campaign.id }}-heading">{{ campaign.title }}</h3><p>{{ campaign.description }}</p><p class="field-hint">{{ campaign.status|title }}</p>
     {% if campaign.status == 'ACTIVE' %}
-    <form id="pledge-{{ campaign.id }}" aria-labelledby="pledge-{{ campaign.id }}-heading" action="/ui/community/campaigns/{{ campaign.id }}/pledges" method="post" hx-post="/ui/community/campaigns/{{ campaign.id }}/pledges" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form">
-      <h4 id="pledge-{{ campaign.id }}-heading">Add a pledge to {{ campaign.title }}</h4>
-      <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ pledge_keys[campaign.id] }}">
-      <div class="field"><label for="pledge-{{ campaign.id }}-kind">Offer type</label><select id="pledge-{{ campaign.id }}-kind" name="kind"><option value="SUPPLIES">Supplies</option><option value="MONEY">Money pledge</option></select></div>
-      <div class="field"><label for="pledge-{{ campaign.id }}-description">What will you offer?</label><input id="pledge-{{ campaign.id }}-description" name="description" minlength="2" maxlength="200" required></div>
-      <div class="field"><label for="pledge-{{ campaign.id }}-quantity">Quantity or amount</label><input id="pledge-{{ campaign.id }}-quantity" name="quantity" type="number" min="0.01" max="1000000000" step="0.01" required></div>
-      <div class="field"><label for="pledge-{{ campaign.id }}-unit">Unit <span class="optional">Use INR for money</span></label><input id="pledge-{{ campaign.id }}-unit" name="unit" maxlength="40" required></div>
-      <button class="button button-primary" type="submit"><span class="button-label">Add donation pledge</span><span class="button-loading">Saving pledge…</span></button>
-    </form>
+    <a class="button button-secondary" href="/community?campaign_id={{ campaign.id }}#add-donation-pledge" hx-get="/community?campaign_id={{ campaign.id }}" hx-target="#main-content" hx-push-url="true">Pledge to this campaign</a>
     {% if user.role == 'admin' %}
     <form action="/ui/community/campaigns/{{ campaign.id }}/close" method="post" hx-post="/ui/community/campaigns/{{ campaign.id }}/close" hx-target="#main-content">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="button button-secondary" type="submit">Close campaign</button>
@@ -55,9 +60,9 @@
     {% endif %}
   </article>
   {% else %}
-  <div class="operation-history-item"><p>No active donation campaigns are available.</p><p class="field-hint">{{ 'Create a campaign below so people can add money or supplies pledges.' if user.role == 'admin' else 'An administrator needs to open a campaign before you can add a donation pledge.' }}</p></div>
+  <div class="operation-history-item"><p>No active donation campaigns are available.</p><p class="field-hint">You can still make a general relief pledge using the form above.</p></div>
   {% endfor %}
-  {% if campaigns and not active_campaigns %}<div class="operation-history-item"><p>No campaigns are currently accepting pledges. {{ 'Create an active campaign below to accept new pledges.' if user.role == 'admin' else 'An administrator needs to open a campaign before you can add a donation pledge.' }}</p></div>{% endif %}
+  {% if campaigns and not active_campaigns %}<div class="operation-history-item"><p>No campaigns are currently accepting pledges. General relief pledges remain open.</p></div>{% endif %}
   {% if user.role == 'admin' %}
   <section id="create-campaign" class="operation-history-item" aria-labelledby="create-campaign-heading">
     <h3 id="create-campaign-heading">Create donation campaign</h3>
@@ -70,10 +75,10 @@
   </section>
   {% endif %}
 </section>
-<section class="card operations-section" aria-labelledby="pledges-heading">
+<section id="my-pledges" class="card operations-section" aria-labelledby="pledges-heading">
   <div class="card-heading"><h2 id="pledges-heading">{{ 'Donation records' if user.role == 'admin' else 'My pledges' }}</h2></div>
   {% for pledge in pledges %}
-  <article class="operation-history-item"><strong>{{ pledge.description }}</strong><p>{{ pledge.quantity }} {{ pledge.unit }} · {{ pledge.status|title }}</p>
+  <article class="operation-history-item"><strong>{{ pledge.description }}</strong><p class="field-hint">{{ 'Campaign #' ~ pledge.campaign_id if pledge.campaign_id else 'General relief support' }}</p><p>{{ pledge.quantity }} {{ pledge.unit }} · {{ pledge.status|title }}</p>
     {% if pledge.review_note %}<p>{{ pledge.review_note }}</p>{% endif %}
     {% if user.role == 'admin' and pledge.status == 'PENDING' %}
     <form action="/ui/community/pledges/{{ pledge.id }}/review" method="post" hx-post="/ui/community/pledges/{{ pledge.id }}/review" hx-target="#main-content" class="compact-form">

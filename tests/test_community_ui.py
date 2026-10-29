@@ -41,7 +41,7 @@ def test_active_campaign_pledge_actions_are_visible_and_submit_for_each_role(ope
 
     admin = operations_clients['admin']
     assert submit(admin, '/ui/community/campaigns', title='Visible flood appeal', description='Support displaced families').status_code == 200
-    action = '/ui/community/campaigns/1/pledges'
+    action = '/ui/community/pledges'
     for name in ('citizen', 'admin', 'rescue'):
         page = operations_clients[name].get('/community', headers={'HX-Request': 'true'})
         controls = PledgeControls()
@@ -54,19 +54,58 @@ def test_active_campaign_pledge_actions_are_visible_and_submit_for_each_role(ope
         body, values = form(page, action)
         assert 'type="submit"' in body and 'Add donation pledge' in body
         assert values['idempotency_key']
-        result = submit(operations_clients[name], action, **values, kind='MONEY', description=f'{name} support', quantity='100', unit='INR')
+        result = submit(operations_clients[name], action, **{**values, 'campaign_id': '1', 'kind': 'MONEY', 'description': f'{name} support', 'quantity': '100', 'unit': 'INR'})
         assert result.status_code == 200, result.text
         assert f'{name} support' in operations_clients[name].get('/community', headers={'HX-Request': 'true'}).text
 
 
-def test_no_campaign_state_explains_next_step_and_admin_creation_is_visible(operations_clients):
-    citizen = operations_clients['citizen'].get('/community', headers={'HX-Request': 'true'})
-    assert 'An administrator needs to open a campaign' in citizen.text
-    assert '/ui/community/campaigns/1/pledges' not in citizen.text
-    admin = operations_clients['admin'].get('/community', headers={'HX-Request': 'true'})
-    assert 'href="#create-campaign"' in admin.text
-    assert '<section id="create-campaign"' in admin.text
-    assert '<summary>Create campaign</summary>' not in admin.text
-    assert '<button class="button button-primary" type="submit"><span class="button-label">Create campaign</span>' in admin.text
-    assert submit(operations_clients['admin'], '/ui/community/campaigns', title='New campaign', description='Support displaced families').status_code == 200
-    assert '/ui/community/campaigns/1/pledges' in operations_clients['citizen'].get('/community', headers={'HX-Request': 'true'}).text
+def test_pledge_form_is_available_without_any_campaign_for_every_role(operations_clients):
+    from tests.test_operations_ui import form
+    for role in ('citizen', 'admin', 'rescue'):
+        client = operations_clients[role]
+        response = client.get('/community', headers={'HX-Request': 'true'})
+        assert 'href="#add-donation-pledge"' in response.text
+        assert 'General relief support' in response.text
+        assert '<section id="add-donation-pledge"' in response.text
+        body, values = form(response, '/ui/community/pledges')
+        assert 'Add donation pledge' in body
+        result = submit(client, '/ui/community/pledges', **{**values, 'campaign_id': '', 'kind': 'SUPPLIES', 'description': f'{role} general support', 'quantity': '5', 'unit': 'litres'})
+        assert result.status_code == 200, result.text
+        assert 'Your donation pledge has been recorded.' in result.text
+        assert result.headers.get('HX-Push-Url') == '/community'
+        page = client.get('/community', headers={'HX-Request': 'true'})
+        assert f'{role} general support' in page.text
+        if role == 'admin':
+            assert '<section id="create-campaign"' in page.text
+
+
+def test_pledge_validation_preserves_entered_values_and_retry_key(operations_clients):
+    from tests.test_operations_ui import form
+    client = operations_clients['citizen']
+    page = client.get('/community', headers={'HX-Request': 'true'})
+    _, values = form(page, '/ui/community/pledges')
+    result = submit(client, '/ui/community/pledges', **{**values, 'campaign_id': '', 'kind': 'SUPPLIES', 'description': 'Drinking water', 'quantity': '0', 'unit': 'litres'})
+    assert result.status_code == 422
+    assert 'value="Drinking water"' in result.text
+    assert 'value="litres"' in result.text
+    _, retry_values = form(result, '/ui/community/pledges')
+    assert retry_values['idempotency_key'] == values['idempotency_key']
+
+
+def test_consecutive_pledges_update_visible_records_and_generate_a_new_key(operations_clients):
+    from tests.test_operations_ui import form
+    client = operations_clients['citizen']
+    response = client.get('/community', headers={'HX-Request': 'true'})
+    keys = []
+    for description in ('First general pledge', 'Second general pledge'):
+        _, values = form(response, '/ui/community/pledges')
+        keys.append(values['idempotency_key'])
+        response = submit(client, '/ui/community/pledges', **{**values,
+            'campaign_id': '', 'kind': 'SUPPLIES', 'description': description,
+            'quantity': '2', 'unit': 'packets'})
+        assert response.status_code == 200
+        assert description in response.text
+        assert response.headers['HX-Push-Url'] == '/community'
+    assert keys[0] != keys[1]
+    assert 'First general pledge' in response.text
+    assert 'Second general pledge' in response.text

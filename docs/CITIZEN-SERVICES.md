@@ -4,7 +4,7 @@
 
 Administrators create news as drafts, verify them, and publish them. Only published updates are shown to non-administrators. Verification records the reviewing administrator; operators must verify the actual content and source before publication.
 
-Administrators may create and close donation campaigns. Signed-in users may record money or supplies as pledges, and administrators can mark a pledge received or rejected with a note. **This application does not collect money, process payments, verify receipts automatically, or add pledged supplies to inventory.** Money pledges are recorded in INR; confirmation is a manual administrative action. Pledges are visible to their owner and administrators only.
+Administrators may create and close donation campaigns. The Community page always provides a donation pledge form. Signed-in users can choose general relief support without a campaign, or an active campaign, and record money or supplies as pledges, and administrators can mark a pledge received or rejected with a note. **This application does not collect money, process payments, verify receipts automatically, or add pledged supplies to inventory.** Money pledges are recorded in INR; confirmation is a manual administrative action. Pledges are visible to their owner and administrators only.
 
 The citizen dashboard links to alerts, shelter search, community updates and safety references. Shelter cards are not a distance ranking. Safety reference summaries are marked as awaiting review and must not replace current official instructions. Emergency contacts link to their listed sources; operators should verify them before deployment and maintain them as official information changes.
 

@@ -71,6 +71,15 @@
       bootstrap();
     }
   });
+  function updatePledgeUnit(kind) {
+    const unit = kind?.form?.querySelector('[data-pledge-unit]');
+    if (!unit) return;
+    if (kind.value === 'MONEY') { unit.value = 'INR'; unit.readOnly = true; }
+    else if (unit.readOnly) { unit.value = ''; unit.readOnly = false; }
+  }
+  document.addEventListener('change', event => {
+    if (event.target?.matches?.('[data-pledge-kind]')) updatePledgeUnit(event.target);
+  });
   function refreshPage() {
     const root = document.getElementById('app-root');
     if (root) document.body.className = root.dataset.authenticated === 'true' ? 'workspace' : 'auth-page';
@@ -88,6 +97,7 @@
       if (selected) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
+    document.querySelectorAll('[data-pledge-kind]').forEach(updatePledgeUnit);
     document.querySelectorAll('[data-character-count]').forEach(counter => {
       const field = document.getElementById(counter.dataset.characterCount);
       if (!field) return;

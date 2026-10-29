@@ -38,7 +38,7 @@ class DonationPledge(Base):
         CheckConstraint("quantity > 0", name="ck_donation_quantity"),
     )
     id = Column(Integer, primary_key=True)
-    campaign_id = Column(Integer, ForeignKey("donation_campaigns.id"), nullable=False, index=True)
+    campaign_id = Column(Integer, ForeignKey("donation_campaigns.id"), nullable=True, index=True)
     donor_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     kind = Column(String(12), nullable=False)
     description = Column(String(200), nullable=False)

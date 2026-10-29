@@ -168,3 +168,18 @@ def test_wrong_distribution_foreign_key_rejected(legacy_db):
                                 f'FOREIGN KEY (request_id) REFERENCES {s}.relief_requests(id)'))
         with pytest.raises(RuntimeError, match="request_id has an incompatible foreign key"):
             validate_feature_tables(connection, metadata)
+
+
+def test_general_donation_pledge_migration_keeps_existing_campaigns(legacy_db):
+    engine, schema, metadata = legacy_db
+    name = f'"{schema}".donation_pledges'
+    with engine.begin() as connection:
+        connection.execute(text(f'CREATE TABLE {name} (id SERIAL PRIMARY KEY, campaign_id INTEGER NOT NULL)'))
+        connection.execute(text(f'INSERT INTO {name} (campaign_id) VALUES (17)'))
+    for _ in range(2):
+        with engine.begin() as connection:
+            migrate_feature_tables(connection, metadata)
+    with engine.begin() as connection:
+        assert connection.scalar(text(f'SELECT campaign_id FROM {name} WHERE id=1')) == 17
+        connection.execute(text(f'INSERT INTO {name} (campaign_id) VALUES (NULL)'))
+        assert connection.scalar(text(f'SELECT count(*) FROM {name}')) == 2
