@@ -1,0 +1,82 @@
+<section class="page-section arya-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">WEEK 3 · ARYA</p>
+      <h1>Shelter & Safety Assistant</h1>
+      <p>Ask about shelter availability or approved disaster-safety guidance.</p>
+    </div>
+  </header>
+
+  <div class="panel arya-panel">
+    <form method="post" action="/ui/assistant/chat" class="arya-chat-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+      <label for="question">Your question</label>
+      <textarea
+        id="question"
+        name="question"
+        rows="4"
+        maxlength="2000"
+        required
+        placeholder="Example: Find available shelters in Alappuzha."
+      >{{ question or "" }}</textarea>
+
+      <button type="submit" class="button button-primary">
+        Ask the assistant
+      </button>
+    </form>
+  </div>
+
+  {% if error %}
+    <div class="notice notice-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  {% if answer %}
+    <article class="panel arya-answer" aria-live="polite">
+      <div class="arya-answer-heading">
+        <h2>Answer</h2>
+        {% if result_mode %}
+          <span class="status-pill">{{ result_mode }}</span>
+        {% endif %}
+      </div>
+
+      <div class="arya-answer-text">{{ answer }}</div>
+
+      {% if warning %}
+        <p class="notice" role="status">{{ warning }}</p>
+      {% endif %}
+
+      {% if sources %}
+        <h3>Retrieved document sources</h3>
+        <ul class="arya-source-list">
+          {% for source in sources %}
+            <li>
+              <strong>{{ source.title }}</strong>
+              {% if source.source_name %}
+                <span> — {{ source.source_name }}</span>
+              {% endif %}
+
+              {% if source.source_url and source.source_url.startswith("https://") %}
+                <p>
+                  <a href="{{ source.source_url }}"
+                     target="_blank"
+                     rel="noopener noreferrer">
+                    Open source document
+                  </a>
+                </p>
+              {% else %}
+                <p>Source URL has not been provided.</p>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </article>
+  {% endif %}
+
+  <p class="arya-disclaimer">
+    Shelter results depend on the accuracy and freshness of the records.
+    This assistant does not dispatch emergency services. In immediate
+    danger, contact the appropriate local emergency service.
+  </p>
+</section>

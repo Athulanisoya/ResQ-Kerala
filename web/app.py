@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import secrets
 from pathlib import Path
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import FastAPI, Request
@@ -608,6 +609,126 @@ async def update_report_investigation(request: Request, incident_id: int):
         return redirect(request, f"/reports/{incident_id}")
     return await detail_page(request, incident_id, error=error_message(response),
                              status_code=response.status_code, values=form)
+
+@app.get("/shelters", response_class=HTMLResponse)
+async def shelters_page(
+    request: Request,
+    q: str = "",
+    available_only: bool = True,
+):
+    user = await current_user(request)
+
+    if not user:
+        return redirect(request, "/login")
+
+    params = {
+        "q": q[:160],
+        "available_only": str(available_only).lower(),
+        "limit": "25",
+    }
+
+    response = await api_call(
+        request,
+        "GET",
+        "/api/shelters?" + urlencode(params),
+    )
+
+    if response.status_code != 200:
+        return render(
+            request,
+            "shelters.html",
+            status_code=503 if response.status_code >= 500 else 200,
+            page_title="Shelter Search",
+            active_nav="shelters",
+            user=user,
+            query=q,
+            available_only=available_only,
+            shelters=[],
+            error=error_message(response),
+        )
+
+    return render(
+        request,
+        "shelters.html",
+        page_title="Shelter Search",
+        active_nav="shelters",
+        user=user,
+        query=q,
+        available_only=available_only,
+        shelters=response.json(),
+    )
+
+
+@app.get("/assistant", response_class=HTMLResponse)
+async def assistant_page(request: Request):
+    user = await current_user(request)
+
+    if not user:
+        return redirect(request, "/login")
+
+    return render(
+        request,
+        "assistant.html",
+        page_title="Shelter & Safety Assistant",
+        active_nav="assistant",
+        user=user,
+    )
+
+
+@app.post("/ui/assistant/chat", response_class=HTMLResponse)
+async def submit_assistant_question(request: Request):
+    user = await current_user(request)
+
+    if not user:
+        return redirect(request, "/login")
+
+    # browser_security parses and validates CSRF for /ui/ POST requests.
+    form = getattr(request.state, "form", {})
+    question = str(form.get("question", "")).strip()
+
+    if len(question) < 2 or len(question) > 2000:
+        return render(
+            request,
+            "assistant.html",
+            page_title="Shelter & Safety Assistant",
+            active_nav="assistant",
+            user=user,
+            question=question,
+            error="Enter a question between 2 and 2000 characters.",
+        )
+
+    response = await api_call(
+        request,
+        "POST",
+        "/api/assistant/chat",
+        {"question": question},
+    )
+
+    if response.status_code != 200:
+        return render(
+            request,
+            "assistant.html",
+            page_title="Shelter & Safety Assistant",
+            active_nav="assistant",
+            user=user,
+            question=question,
+            error=error_message(response),
+        )
+
+    result = response.json()
+
+    return render(
+        request,
+        "assistant.html",
+        page_title="Shelter & Safety Assistant",
+        active_nav="assistant",
+        user=user,
+        question=question,
+        answer=result.get("answer", ""),
+        result_mode=result.get("mode", ""),
+        sources=result.get("sources", []),
+        warning=result.get("warning"),
+    )
 
 
 # Keep the API mount last so every HTML action remains reachable.

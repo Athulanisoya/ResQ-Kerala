@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,8 +9,7 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
-from .routers import admin, alerts, auth, incidents, investigations, location_analysis, severity, summaries, teams, users, workspaces
-
+from .routers import admin, alerts, assistant, auth, incidents, investigations, location_analysis, severity, shelters, summaries, teams, users, workspaces,week4_workflow
 
 settings = get_settings()
 
@@ -73,3 +71,6 @@ app.include_router(teams.router)
 app.include_router(severity.router)
 app.include_router(investigations.router)
 app.include_router(summaries.router)
+app.include_router(shelters.router)
+app.include_router(assistant.router)
+app.include_router(week4_workflow.router)

@@ -70,7 +70,6 @@ def initialize_database():
                     if_not_exists=True,
                 )
             )
-
     # Create missing tables. Existing tables remain unchanged.
     Base.metadata.create_all(engine)
 

@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=WORKSPACE_ROOT / ".env", env_file_encoding="utf-8", extra="ignore"
     )
+    week4_llm_provider: str = "gemini"
 
+    ollama_base_url: str = "http://127.0.0.1:11434/v1"
+    ollama_model: str = "qwen3:4b"
     database_url: str
     jwt_secret: SecretStr
     jwt_expire_minutes: int = Field(default=30, ge=5, le=1440)
@@ -29,7 +32,7 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     gemini_api_key_file: Path = Field(default_factory=default_gemini_key_file)
     gemini_model: str = Field(default="gemini-3.1-flash-live-preview", min_length=1, max_length=100)
-    agent_timeout_seconds: float = Field(default=45, ge=1, le=120)
+    agent_timeout_seconds: float = Field(default=180, ge=1, le=300)
     agent_max_turns: int = Field(default=6, ge=2, le=12)
 
     def read_gemini_key(self) -> str | None:

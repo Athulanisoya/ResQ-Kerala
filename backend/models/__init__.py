@@ -7,6 +7,7 @@ from .alert import Alert
 from .incident_summary import IncidentSummary
 from .report_analysis import ReportAnalysis
 from .notification import Notification
+from .shelter import Shelter
 
 __all__ = [
     "Role",
@@ -22,4 +23,5 @@ __all__ = [
     "IncidentSummary",
     "ReportAnalysis",
     "Notification",
+    "Shelter",
 ]

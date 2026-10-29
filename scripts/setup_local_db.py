@@ -16,9 +16,9 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / ".runtime"
 DATA = RUNTIME / "postgres"
 BIN = Path(r"C:\Program Files\PostgreSQL\18\bin")
-PORT = 5443
-DATABASE = "resq_week1"
-USER = "resq_local"
+PORT = 5432
+DATABASE = "resq_kerala"
+USER = "postgres"
 PASSFILE = RUNTIME / "pgpass.conf"
 
 
@@ -56,10 +56,10 @@ def write_private_configuration():
         raise RuntimeError("Existing .env uses a different database. Preserve it before configuring this workspace.")
     values = {
         "DATABASE_URL": url,
-        "DATABASE_SCHEMA": "resq_week1",
+        "DATABASE_SCHEMA": "resq_kerala",
         "JWT_SECRET": existing.get("JWT_SECRET") or secrets.token_hex(48),
         "JWT_EXPIRE_MINUTES": existing.get("JWT_EXPIRE_MINUTES") or "30",
-        "CORS_ORIGINS": "http://127.0.0.1:8013,http://localhost:8013",
+        "CORS_ORIGINS": "http://127.0.0.1:8000,http://localhost:8000",
         "APP_VERSION": "2.0.0-integrated",
     }
     changes = {key: value for key, value in values.items() if existing.get(key) != value}
@@ -111,7 +111,7 @@ def initialize_cluster():
     with (DATA / "postgresql.conf").open("a", encoding="utf-8") as configuration:
         configuration.write(
             "\n# ResQ Kerala Week 1 workspace\nlisten_addresses = '127.0.0.1'\n"
-            "port = 5443\nshared_buffers = '64MB'\nmax_connections = 30\n"
+            "port = 5432\nshared_buffers = '64MB'\nmax_connections = 30\n"
         )
 
 
@@ -143,7 +143,7 @@ def ensure_database():
             ))
     with database_connection(DATABASE) as connection:
         connection.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {} AUTHORIZATION {}").format(
-            sql.Identifier("resq_week1"), sql.Identifier(USER),
+            sql.Identifier("resq_kerala"), sql.Identifier(USER),
         ))
         connection.execute("SELECT 1")
 
