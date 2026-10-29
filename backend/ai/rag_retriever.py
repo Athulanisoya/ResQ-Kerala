@@ -34,13 +34,15 @@ def load_documents():
     raw = json.loads(DOCUMENT_PATH.read_text(encoding="utf-8"))
     records = []
     for document in raw.get("documents", []):
-        # Unapproved drafts must never be used as official evidence.
+        # This flag is a retrieval allow-list, not proof of official or owner approval.
         if document.get("approved") is not True:
             continue
         title = str(document.get("title", "")).strip()
         source_url = str(document.get("source_url", "")).strip()
         source_name = str(document.get("source_name", "")).strip()
         text = str(document.get("text", "")).strip()
+        approval_status = str(document.get("approval_status", "unspecified")).strip() or "unspecified"
+        review_required = approval_status not in {"owner_approved", "verified_by_project_owner"}
         if not title or not text:
             continue
         for number, chunk in enumerate(split_into_chunks(text), start=1):
@@ -48,6 +50,8 @@ def load_documents():
                 "title": title,
                 "source_name": source_name or title,
                 "source_url": source_url,
+                "approval_status": approval_status,
+                "review_required": review_required,
                 "chunk_number": number,
                 "text": chunk,
             })

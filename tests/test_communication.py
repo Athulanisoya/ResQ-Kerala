@@ -418,3 +418,83 @@ def test_failed_closure_rolls_back_final_status_history_and_notifications(corres
         assert db.get(Incident, api.incident_id).status == "RESOLVED"
         assert list(db.scalars(select(IncidentStatusHistory))) == []
         assert list(db.scalars(select(Notification))) == []
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_both_close_routes_enforce_pending_vidya_relief_and_legacy_questions(correspondence, legacy):
+    from backend.models.relief import ReliefRequest as VidyaRequest
+    api = correspondence
+    path = f"/api/incidents/{api.incident_id}/close" if legacy else api.close_url
+    payload = {"reason": "All response work complete"} if legacy else {"note": "All response work complete"}
+    assert api.client.post(path, headers=api.headers("citizen"), json=payload).status_code == 403
+    assert api.client.post(path, headers=api.headers("admin"), json=payload).status_code == 409
+    with api.sessions() as db:
+        incident = db.get(Incident, api.incident_id)
+        incident.status = "RESOLVED"
+        request = VidyaRequest(incident_id=incident.id, item="FOOD", quantity=3, fulfilled=1,
+                               created_by=api.users["citizen"])
+        db.add(request); db.commit(); request_id = request.id
+    blocked = api.client.post(path, headers=api.headers("admin"), json=payload)
+    assert blocked.status_code == 409 and "relief" in blocked.json()["detail"]
+    with api.sessions() as db:
+        db.get(VidyaRequest, request_id).fulfilled = 3
+        db.add(IncidentStatusHistory(incident_id=api.incident_id, status="AWAITING_CLARIFICATION",
+                                     note="Clarification requested by admin: where?"))
+        db.commit()
+    blocked = api.client.post(path, headers=api.headers("admin"), json=payload)
+    assert blocked.status_code == 409 and "clarification" in blocked.json()["detail"]
+    with api.sessions() as db:
+        db.add(IncidentStatusHistory(incident_id=api.incident_id, status="UNDER_REVIEW",
+                                     note="Citizen clarification response: Safe now."))
+        db.commit()
+    closed = api.client.post(path, headers=api.headers("admin"), json=payload)
+    assert closed.status_code == 200, closed.text
+    with api.sessions() as db:
+        assert db.get(Incident, api.incident_id).status == "CLOSED"
+        assert len(list(db.scalars(select(IncidentStatusHistory).where(
+            IncidentStatusHistory.incident_id == api.incident_id, IncidentStatusHistory.status == "CLOSED")))) == 1
+
+
+def test_open_investigation_blocks_closure(correspondence):
+    from backend.models.investigation import InvestigationReport
+    api = correspondence
+    with api.sessions() as db:
+        db.get(Incident, api.incident_id).status = "RESOLVED"
+        investigation = InvestigationReport(incident_id=api.incident_id, assigned_to_name="Reviewer", status="IN_PROGRESS",
+                                            created_by_user_id=api.users["admin"], updated_by_user_id=api.users["admin"])
+        db.add(investigation); db.commit(); investigation_id = investigation.id
+    response = api.client.post(api.close_url, headers=api.headers("admin"), json={})
+    assert response.status_code == 409 and "investigation" in response.json()["detail"]
+    with api.sessions() as db:
+        db.get(InvestigationReport, investigation_id).status = "COMPLETED"
+        db.commit()
+    assert api.client.post(api.close_url, headers=api.headers("admin"), json={}).status_code == 200
+
+
+@pytest.mark.parametrize("reply_path", ["legacy", "canonical"])
+def test_legacy_clarification_remains_visible_and_preserves_active_assignment(correspondence, reply_path):
+    api = correspondence
+    incident_path = f"/api/incidents/{api.incident_id}"
+    with api.sessions() as db:
+        db.get(Incident, api.incident_id).status = "IN_PROGRESS"
+        db.commit()
+    request = api.client.post(incident_path + "/clarification", headers=api.headers("admin"),
+                              json={"message": "Is the road still passable?"})
+    assert request.status_code == 200, request.text
+    with api.sessions() as db:
+        incident = db.get(Incident, api.incident_id)
+        assert incident.status == "IN_PROGRESS" and incident.assigned_team_id == api.team_id
+    questions = api.client.get(api.questions_url, headers=api.headers("citizen")).json()
+    assert len(questions) == 1 and questions[0]["status"] == "OPEN"
+    notifications = api.client.get(BASE + "/notifications", headers=api.headers("citizen")).json()["notifications"]
+    assert any(item["title"] == "Clarification requested" for item in notifications)
+    path = incident_path + "/clarification/respond" if reply_path == "legacy" else f"{BASE}/clarifications/{questions[0]['id']}/reply"
+    assert api.client.post(path, headers=api.other_headers, json={"message": "Road is open."}).status_code == 403
+    reply = api.client.post(path, headers=api.headers("citizen"), json={"message": "Road is open."})
+    assert reply.status_code == 200, reply.text
+    assert api.client.get(api.questions_url, headers=api.headers("citizen")).json()[0]["status"] == "ANSWERED"
+    with api.sessions() as db:
+        incident = db.get(Incident, api.incident_id)
+        assert incident.status == "IN_PROGRESS" and incident.assigned_team_id == api.team_id
+        incident.status = "RESOLVED"; db.commit()
+    assert api.client.post(api.close_url, headers=api.headers("admin"), json={}).status_code == 200

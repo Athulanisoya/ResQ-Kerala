@@ -94,6 +94,13 @@ async def ask_clarification(request: Request, incident_id: int):
         {"question": form.get("question", ""), "required": form.get("required") == "yes"}, "admin")
 
 
+@router.post("/ui/reports/{incident_id}/legacy-clarification/reply")
+async def reply_legacy_clarification(request: Request, incident_id: int):
+    return await save_communication(request, incident_id,
+        f"/api/incidents/{incident_id}/clarification/respond",
+        {"message": request.state.form.get("legacy_reply", "")}, "citizen")
+
+
 @router.post("/ui/reports/{incident_id}/clarifications/{clarification_id}/reply")
 async def reply_clarification(request: Request, incident_id: int, clarification_id: int):
     request.state.form["reply_clarification_id"] = clarification_id

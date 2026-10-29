@@ -45,14 +45,14 @@ def accept_task(db, incident_id, user):
             "Only an assigned task can be accepted",
         )
 
-    incident.status = "ACCEPTED"
-
-    add_service_history(
-        db,
-        incident,
-        f"Task accepted by team {user.team_id}; user {user.id}",
-    )
-
+    from backend.services.operations_service import _current_task, _record_progress, _notify
+    task = _current_task(db, incident)
+    task.accepted_at = datetime.utcnow()
+    _record_progress(db, incident, task, user, "ACCEPTED",
+                     f"Task accepted by team {user.team_id}; user {user.id}")
+    db.flush()
+    _notify(db, incident, "Task accepted", f"{task.team_name} accepted the task.",
+            event_key=f"task:{task.id}:accepted")
     db.commit()
 
     return incident
@@ -75,6 +75,7 @@ def update_progress(db, incident_id, user, data):
 
     allowed = {
         "ACCEPTED": {"EN_ROUTE"},
+        "TASK_ACCEPTED": {"EN_ROUTE"},
         "EN_ROUTE": {"IN_PROGRESS"},
     }
 
@@ -100,35 +101,24 @@ def update_progress(db, incident_id, user, data):
             )
         ).all()
 
-        if (
-            not requests
-            or any(
-                request.fulfilled != request.quantity
-                for request in requests
-            )
-        ):
+        from backend.services.operations_service import unfinished_relief
+        if not requests or unfinished_relief(db, incident.id):
             raise HTTPException(
                 409,
                 "Complete all relief requests before resolving",
             )
 
-        # Keep availability and completion in the same transaction so this
-        # team can be assigned to the next incident once relief is finished.
-        team = db.scalar(
-            select(Team)
-            .where(Team.id == team.id)
-            .with_for_update()
-        )
-        team.status = "AVAILABLE"
-
-    incident.status = data.status
-
-    add_service_history(
-        db,
-        incident,
-        f"User {user.id}: {data.note}",
-    )
-
+    from backend.services.operations_service import _current_task, _record_progress, _notify, release_team_if_idle
+    task = _current_task(db, incident)
+    _record_progress(db, incident, task, user, data.status, f"User {user.id}: {data.note}")
+    if data.status == "RESOLVED":
+        task.active = False
+        task.ended_at = datetime.utcnow()
+        db.flush()
+        release_team_if_idle(db, team.id)
+    db.flush()
+    _notify(db, incident, "Response progress updated", f"{task.team_name}: {data.status.replace('_', ' ').lower()}.",
+            event_key=f"task:{task.id}:{data.status}")
     db.commit()
 
     return incident
@@ -209,12 +199,15 @@ def handoff_to_relief(db, incident_id, user, data):
             "Choose an available Relief team",
         )
 
-    old.status = "AVAILABLE"
-
+    from backend.models.operations import IncidentTaskEvent
+    from backend.services.operations_service import _current_task, capture_assignment, release_team_if_idle, _notify
+    task = _current_task(db, incident)
+    task.status = "HANDED_OFF"
+    task.active = False
+    task.ended_at = datetime.utcnow()
+    db.add(IncidentTaskEvent(task_id=task.id, status="HANDED_OFF", note=data.note, actor_user_id=user.id))
     new.status = "BUSY"
-
     incident.assigned_team_id = new.id
-
     incident.status = "ASSIGNED"
 
     add_service_history(
@@ -226,6 +219,11 @@ def handoff_to_relief(db, incident_id, user, data):
         ),
     )
 
+    successor_task = capture_assignment(db, incident, new, data.note, user.id)
+    db.flush()
+    release_team_if_idle(db, old.id)
+    _notify(db, incident, "Response handoff completed", f"{old.name} handed off to {new.name}.",
+            event_key=f"task:{successor_task.id}:handoff")
     db.commit()
 
     return incident

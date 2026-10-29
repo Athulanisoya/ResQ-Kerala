@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Float, Text
 from backend.database.connection import Base
 
 
@@ -24,6 +24,9 @@ class Shelter(Base):
     occupied = Column(Integer, nullable=False, default=0)
     status = Column(String(10), nullable=False, default="OPEN")
     contact = Column(String(60))
+    facilities = Column(Text)
+    latitude = Column(Float)
+    longitude = Column(Float)
     source_name = Column(String(200))
     team_id = Column(Integer, ForeignKey("response_teams.id"))
     version = Column(Integer, nullable=False, default=1)

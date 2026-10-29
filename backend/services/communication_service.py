@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
-from backend.models.communication import ClarificationReply, IncidentClarification, Notification
+from backend.models.communication import ClarificationReply, IncidentClarification, Notification, LegacyClarificationLink
 from backend.models.incident import Incident, IncidentStatusHistory
 from backend.models.user import Role, User
 
@@ -139,16 +139,20 @@ def require_open_incident(incident: Incident):
         raise HTTPException(status_code=409, detail="This incident is closed to further correspondence")
 
 
-def ask_clarification(db: Session, incident_id: int, admin: User, question: str, required: bool = True):
+def ask_clarification(db: Session, incident_id: int, admin: User, question: str, required: bool = True, *, legacy: bool = False):
     try:
         if admin.role != Role.ADMIN:
             raise HTTPException(status_code=403, detail="Only administrators can request clarification")
         incident = locked_incident(db, incident_id)
         require_open_incident(incident)
+        if legacy and incident.status == "AWAITING_CLARIFICATION":
+            raise HTTPException(status_code=409, detail="Answer the existing legacy clarification first")
         record = IncidentClarification(incident_id=incident.id, asked_by_id=admin.id,
                                        question=question, required=required)
         db.add(record)
         db.flush()
+        if legacy:
+            db.add(LegacyClarificationLink(incident_id=incident.id, clarification_id=record.id))
         db.add(IncidentStatusHistory(incident_id=incident.id, status="CLARIFICATION_REQUESTED",
                                      note=f"Clarification #{record.id} requested: {question}"))
         notify_incident(db, incident, "Clarification requested", question,
@@ -234,11 +238,26 @@ def close_incident(db: Session, incident_id: int, admin: User, note: str | None 
             raise HTTPException(status_code=409, detail="Only a resolved incident can be closed")
         if unfinished_relief(db, incident.id):
             raise HTTPException(status_code=409, detail="Complete outstanding relief before closure")
+        from backend.models.investigation import InvestigationReport
+        open_investigation = db.scalar(select(InvestigationReport.id).where(
+            InvestigationReport.incident_id == incident.id,
+            InvestigationReport.status.not_in(("COMPLETE", "COMPLETED"))).limit(1))
+        if open_investigation is not None:
+            raise HTTPException(status_code=409, detail="Complete the investigation before closure")
         unanswered = db.scalar(select(IncidentClarification.id).where(
             IncidentClarification.incident_id == incident.id, IncidentClarification.required.is_(True),
             IncidentClarification.status == "OPEN").limit(1))
         if unanswered is not None:
             raise HTTPException(status_code=409, detail="Answer or cancel required clarifications before closure")
+        # The original clarification API predates IncidentClarification and
+        # records its pending state in the status history. Do not ignore it.
+        legacy_event = db.scalar(select(IncidentStatusHistory).where(
+            IncidentStatusHistory.incident_id == incident.id,
+            or_(IncidentStatusHistory.status == "AWAITING_CLARIFICATION",
+                IncidentStatusHistory.note.like("Citizen clarification response:%"))
+        ).order_by(IncidentStatusHistory.id.desc()).limit(1))
+        if legacy_event is not None and legacy_event.status == "AWAITING_CLARIFICATION":
+            raise HTTPException(status_code=409, detail="Answer the pending legacy clarification before closure")
         incident.status = "CLOSED"
         closed_at = utc_now()
         db.add(IncidentStatusHistory(incident_id=incident.id, status="CLOSED",

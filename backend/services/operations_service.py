@@ -291,8 +291,14 @@ def assign_relief_request(db: Session, user: User, request_id: int, data):
 
 def unfinished_relief(db: Session, incident_id: int) -> bool:
     db.flush()
-    return db.scalar(select(ReliefRequest.id).where(ReliefRequest.incident_id == incident_id,
-                     ReliefRequest.status != "COMPLETED").limit(1)) is not None
+    from backend.models.relief import ReliefRequest as LegacyReliefRequest
+    return (
+        db.scalar(select(ReliefRequest.id).where(ReliefRequest.incident_id == incident_id,
+                  ReliefRequest.status != "COMPLETED").limit(1)) is not None
+        or db.scalar(select(LegacyReliefRequest.id).where(
+            LegacyReliefRequest.incident_id == incident_id,
+            LegacyReliefRequest.fulfilled < LegacyReliefRequest.quantity).limit(1)) is not None
+    )
 
 
 @atomic
@@ -480,7 +486,7 @@ def accept_task(db: Session, user: User, incident_id: int, data):
                          IncidentTask.team_id == user.team_id).order_by(IncidentTask.id.desc())
                          .execution_options(populate_existing=True))
     if existing is not None and existing.accepted_at is not None and incident.status in {
-            "TASK_ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "RESOLVED", "CLOSED"}:
+            "ACCEPTED", "TASK_ACCEPTED", "EN_ROUTE", "IN_PROGRESS", "RESCUE_COMPLETED", "RESOLVED", "CLOSED"}:
         # Network/form retries retain the original acceptance timestamp, note,
         # event and notification even when the team has already progressed.
         return task_dict(db, existing)
@@ -500,7 +506,7 @@ def progress_task(db: Session, user: User, incident_id: int, data):
     incident = _incident(db, incident_id, user, lock=True)
     if incident.assigned_team_id != user.team_id:
         _deny()
-    transitions = {"TASK_ACCEPTED": "EN_ROUTE", "EN_ROUTE": "IN_PROGRESS", "IN_PROGRESS": "RESOLVED"}
+    transitions = {"ACCEPTED": "EN_ROUTE", "TASK_ACCEPTED": "EN_ROUTE", "EN_ROUTE": "IN_PROGRESS", "IN_PROGRESS": "RESOLVED", "RESCUE_COMPLETED": "RESOLVED"}
     if transitions.get(incident.status) != data.status:
         raise HTTPException(409, "Follow task acceptance, en route, in progress, then resolved in order.")
     if data.status == "RESOLVED" and unfinished_relief(db, incident.id):
@@ -522,7 +528,7 @@ def progress_task(db: Session, user: User, incident_id: int, data):
 def handoff_task(db: Session, user: User, incident_id: int, data):
     _admin(user)
     incident = _incident(db, incident_id, user, lock=True)
-    if incident.status != "IN_PROGRESS" or incident.assigned_team_id is None:
+    if incident.status not in {"IN_PROGRESS", "RESCUE_COMPLETED"} or incident.assigned_team_id is None:
         raise HTTPException(409, "A rescue-to-relief handoff requires an in-progress assigned rescue task.")
     if data.team_id == incident.assigned_team_id:
         raise HTTPException(409, "Select a different relief team for handoff.")

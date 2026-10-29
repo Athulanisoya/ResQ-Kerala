@@ -26,3 +26,12 @@ class InvestigationReport(Base):
    updated_by_user_id=Column(Integer,ForeignKey("users.id"),nullable=False)
    created_at=Column(DateTime,default=datetime.utcnow,nullable=False)
    updated_at=Column(DateTime,default=datetime.utcnow,onupdate=datetime.utcnow,nullable=False)
+
+class InvestigationTeamAssignment(Base):
+    """An explicit team identity, independent of display-only investigator names."""
+    __tablename__ = "investigation_team_assignments"
+    id = Column(Integer, primary_key=True)
+    investigation_id = Column(Integer, ForeignKey("investigation_reports.id"), nullable=False, unique=True, index=True)
+    team_id = Column(Integer, ForeignKey("response_teams.id"), nullable=False, index=True)
+    assigned_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_at = Column(DateTime, default=datetime.utcnow, nullable=False)

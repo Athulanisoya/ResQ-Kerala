@@ -67,6 +67,9 @@ def shelter_view(row):
         "address": row.address,
         "status": row.status,
         "contact": row.contact,
+        "facilities": row.facilities,
+        "latitude": row.latitude,
+        "longitude": row.longitude,
         "source_name": row.source_name,
         "updated_at": row.updated_at,
         "available_capacity": row.available_capacity,
@@ -183,6 +186,12 @@ def update_shelter(db, shelter_id, user, data):
 
     row.occupied = data.occupied
 
+    if "facilities" in data.model_fields_set:
+        row.facilities = data.facilities
+    if "latitude" in data.model_fields_set:
+        row.latitude, row.longitude = data.latitude, data.longitude
+    if "status" in data.model_fields_set and data.status is not None:
+        row.status = data.status
     if row.status != "CLOSED":
         row.status = "FULL" if row.occupied >= row.capacity else "OPEN"
 

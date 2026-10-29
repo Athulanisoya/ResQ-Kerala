@@ -8,7 +8,7 @@
   </header>
 
   <div class="panel arya-panel">
-    <form method="get" action="/shelters" class="arya-search-form">
+    <form method="get" action="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true" class="arya-search-form">
       <div>
         <label for="q">District, locality or shelter name</label>
         <input
@@ -31,14 +31,33 @@
         Show only open shelters with space
       </label>
 
+      <label>Latitude for nearby search (optional) <input name="latitude" type="number" min="-90" max="90" step="any" value="{{ latitude or '' }}"></label>
+      <label>Longitude for nearby search (optional) <input name="longitude" type="number" min="-180" max="180" step="any" value="{{ longitude or '' }}"></label>
+      <p>Nearby search uses the coordinates you enter and lists only shelters with coordinates; it does not infer your location.</p>
       <button type="submit" class="button button-primary">Search</button>
     </form>
   </div>
 
+  {% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
   {% if error %}
     <div class="notice notice-error" role="alert">{{ error }}</div>
   {% endif %}
 
+  {% if user.role == 'admin' %}
+  <details class="panel"><summary>Add a shelter</summary>
+    {% if teams %}<form method="post" action="/ui/shelters" hx-post="/ui/shelters" hx-target="#main-content">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <label>Name <input name="name" minlength="3" maxlength="100" required></label>
+      <label>Location <input name="location" minlength="2" maxlength="255" required></label>
+      <label>Shelter team <select name="team_id" required>{% for team in teams %}<option value="{{ team.id }}">{{ team.name }}</option>{% endfor %}</select></label>
+      <label>Capacity <input type="number" name="capacity" min="1" max="1000000" required></label>
+      <label>Occupied <input type="number" name="occupied" min="0" max="1000000" value="0" required></label>
+      <label>Facilities <input name="facilities" maxlength="1000"></label>
+      <label>Latitude (optional) <input type="number" name="latitude" min="-90" max="90" step="any"></label>
+      <label>Longitude (optional) <input type="number" name="longitude" min="-180" max="180" step="any"></label>
+      <button type="submit">Add shelter</button>
+    </form>{% else %}<p>An existing Shelter response team is required before adding a managed shelter.</p>{% endif %}
+  </details>{% endif %}
   <div class="arya-shelter-grid">
     {% for shelter in shelters %}
       <article class="panel arya-shelter-card">
@@ -47,9 +66,12 @@
           <span class="status-pill">{{ shelter.status }}</span>
         </div>
 
-        <p><strong>District:</strong> {{ shelter.district }}</p>
-        <p><strong>Locality:</strong> {{ shelter.locality }}</p>
-        <p><strong>Address:</strong> {{ shelter.address }}</p>
+        {% if shelter.distance_km is defined %}<p><strong>Distance:</strong> {{ shelter.distance_km }} km</p>{% endif %}
+        {% if shelter.location %}<p><strong>Location:</strong> {{ shelter.location }}</p>{% endif %}
+        {% if shelter.district %}<p><strong>District:</strong> {{ shelter.district }}</p>{% endif %}
+        {% if shelter.locality %}<p><strong>Locality:</strong> {{ shelter.locality }}</p>{% endif %}
+        {% if shelter.address %}<p><strong>Address:</strong> {{ shelter.address }}</p>{% endif %}
+        {% if shelter.facilities %}<p><strong>Facilities:</strong> {{ shelter.facilities }}</p>{% endif %}
         <p><strong>Capacity:</strong> {{ shelter.capacity }}</p>
         <p><strong>Occupied:</strong> {{ shelter.occupied }}</p>
         <p><strong>Available spaces:</strong> {{ shelter.available_capacity }}</p>
@@ -59,8 +81,22 @@
         {% endif %}
 
         <p class="arya-data-source">
-          Data source: {{ shelter.source_name }}
+          Data source: {{ shelter.source_name or "not provided" }}
         </p>
+        {% if user.role == 'admin' or (user.role == 'response_team' and user.team_id and user.team_id == shelter.team_id) %}
+        <details><summary>Update shelter</summary>
+          <form method="post" action="/ui/shelters/{{ shelter.id }}/update" hx-post="/ui/shelters/{{ shelter.id }}/update" hx-target="#main-content">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="expected_version" value="{{ shelter.version }}">
+            <label>Capacity <input name="capacity" type="number" min="1" max="1000000" value="{{ shelter.capacity }}" required></label>
+            <label>Occupied <input name="occupied" type="number" min="0" max="1000000" value="{{ shelter.occupied }}" required></label>
+            <label>Facilities <input name="facilities" maxlength="1000" value="{{ shelter.facilities or '' }}"></label>
+            <label>Latitude <input name="latitude" type="number" min="-90" max="90" step="any" value="{{ shelter.latitude if shelter.latitude is not none else '' }}"></label>
+            <label>Longitude <input name="longitude" type="number" min="-180" max="180" step="any" value="{{ shelter.longitude if shelter.longitude is not none else '' }}"></label>
+            <label>Status <select name="status"><option value="OPEN" {% if shelter.status != 'CLOSED' %}selected{% endif %}>Open when space is available</option><option value="CLOSED" {% if shelter.status == 'CLOSED' %}selected{% endif %}>Closed</option></select></label>
+            <label>Update note <input name="note" minlength="3" maxlength="1000" required></label>
+            <button type="submit">Save update</button>
+          </form>
+        </details>{% endif %}
       </article>
     {% else %}
       {% if not error %}

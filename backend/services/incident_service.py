@@ -238,55 +238,18 @@ def assign_team(db: Session, incident_id: int, team_id: int):
     """Compatibility entry point for the existing admin API and validation tools."""
     return assign_incident_team(db, incident_id, team_id)
 
-def request_clarification(
-    db: Session,
-    incident_id: int,
-    admin_id: int,
-    message: str,
-):
-    """Request additional information from the reporting citizen."""
-    try:
-        incident = db.scalar(
-            select(Incident)
-            .where(Incident.id == incident_id)
-            .with_for_update()
-        )
-
-        if incident is None:
-            raise HTTPException(status_code=404, detail="Incident not found")
-
-        if incident.status in {"CLOSED", "RESOLVED"}:
-            raise HTTPException(
-                status_code=409,
-                detail="Cannot request clarification for a closed incident.",
-            )
-
-        incident.status = "AWAITING_CLARIFICATION"
-
-        db.add(
-            IncidentStatusHistory(
-                incident_id=incident.id,
-                status="AWAITING_CLARIFICATION",
-                note=f"Clarification requested by admin {admin_id}: {message}",
-            )
-        )
-
-        db.add(
-            Notification(
-                user_id=incident.user_id,
-                incident_id=incident.id,
-                notification_type="CLARIFICATION_REQUEST",
-                message=message,
-            )
-        )
-
-        db.commit()
-        db.refresh(incident)
-        return incident
-
-    except Exception:
-        db.rollback()
-        raise
+def request_clarification(db: Session, incident_id: int, admin_id: int, message: str):
+    """Route old clients through the retained, visible correspondence system."""
+    from backend.models.user import User
+    from backend.services.communication_service import ask_clarification
+    admin = db.get(User, admin_id)
+    if admin is None:
+        raise HTTPException(status_code=403, detail="Only administrators can request clarification")
+    incident = db.get(Incident, incident_id)
+    if incident is not None and incident.status == "AWAITING_CLARIFICATION":
+        raise HTTPException(status_code=409, detail="Answer the existing legacy clarification first")
+    ask_clarification(db, incident_id, admin, message, required=True, legacy=True)
+    return db.get(Incident, incident_id)
 
 
 def respond_to_clarification(
@@ -311,6 +274,20 @@ def respond_to_clarification(
                 status_code=403,
                 detail="Only the reporting citizen can respond.",
             )
+
+        from backend.models.communication import IncidentClarification, LegacyClarificationLink
+        from backend.models.user import User
+        from backend.services.communication_service import reply_to_clarification
+        question = db.scalar(select(IncidentClarification).join(
+            LegacyClarificationLink, LegacyClarificationLink.clarification_id == IncidentClarification.id
+        ).where(LegacyClarificationLink.incident_id == incident_id,
+                IncidentClarification.status == "OPEN").order_by(IncidentClarification.id.desc()).limit(1))
+        if question is not None:
+            user = db.get(User, user_id)
+            if user is None:
+                raise HTTPException(status_code=403, detail="Only the reporting citizen can respond")
+            reply_to_clarification(db, question.id, user, message)
+            return db.get(Incident, incident_id)
 
         if incident.status != "AWAITING_CLARIFICATION":
             raise HTTPException(
@@ -346,52 +323,13 @@ def respond_to_clarification(
         raise
 
 
-def close_incident(
-    db: Session,
-    incident_id: int,
-    admin_id: int,
-    reason: str,
-):
-    """Close an incident and record the closure reason."""
-    try:
-        incident = db.scalar(
-            select(Incident)
-            .where(Incident.id == incident_id)
-            .with_for_update()
-        )
+def close_incident(db: Session, incident_id: int, admin_id: int, reason: str):
+    """Compatibility endpoint using the same final-closure rules as the UI."""
+    from backend.models.user import User
+    from backend.services.communication_service import close_incident as close_final
 
-        if incident is None:
-            raise HTTPException(status_code=404, detail="Incident not found")
-
-        if incident.status in {"CLOSED", "RESOLVED"}:
-            raise HTTPException(
-                status_code=409,
-                detail="This incident is already closed.",
-            )
-
-        incident.status = "CLOSED"
-
-        db.add(
-            IncidentStatusHistory(
-                incident_id=incident.id,
-                status="CLOSED",
-                note=f"Case closed by admin {admin_id}: {reason}",
-            )
-        )
-
-        db.add(
-            Notification(
-                user_id=incident.user_id,
-                incident_id=incident.id,
-                notification_type="CASE_CLOSED",
-                message=f"Your incident has been closed. Reason: {reason}",
-            )
-        )
-
-        db.commit()
-        db.refresh(incident)
-        return incident
-
-    except Exception:
-        db.rollback()
-        raise
+    admin = db.get(User, admin_id)
+    if admin is None:
+        raise HTTPException(status_code=403, detail="Only administrators can close incidents")
+    close_final(db, incident_id, admin, reason)
+    return db.get(Incident, incident_id)

@@ -32,3 +32,8 @@ __all__ = [
 
 from .relief import ReliefRequest, Inventory, Distribution
 from .shelter import ShelterUpdate
+
+from .community import CommunityNews, DonationCampaign, DonationPledge
+from .attachments import IncidentAttachment
+from .recovery import PasswordResetToken
+from .assistant_history import AssistantSession, AssistantMessage

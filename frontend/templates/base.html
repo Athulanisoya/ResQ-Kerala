@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/static/operations.css">
   <script src="/static/vendor/htmx.min.js" defer></script>
   <script src="/static/app.js" defer></script>
+  <script src="/static/recovery.js" defer></script>
 </head>
 <body class="{{ 'workspace' if user else 'auth-page' }}" hx-history="false">
   <div id="app-root" data-authenticated="{{ 'true' if user else 'false' }}">
@@ -25,11 +26,16 @@
       <a href="/dashboard" data-nav="dashboard" class="nav-item {{ 'active' if active_nav|default('') == 'dashboard' }}" hx-get="/dashboard" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('grid') }}<span>Overview</span></a>
       <a href="/reports" data-nav="reports" class="nav-item {{ 'active' if active_nav|default('') == 'reports' }}" hx-get="/reports" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('reports') }}<span>{{ 'Report queue' if user.role == 'admin' else 'Assignments' if user.role == 'response_team' else 'My reports' }}</span></a>
       {% if user.role == 'citizen' %}<a href="/reports/new" data-nav="new" class="nav-item {{ 'active' if active_nav|default('') == 'new' }}" hx-get="/reports/new" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('plus') }}<span>New report</span></a>{% endif %}
+      <a href="/shelters" data-nav="shelters" class="nav-item {{ 'active' if active_nav|default('') == 'shelters' }}" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">{{ icon('grid') }}<span>Shelters</span></a>
+      <a href="/assistant" data-nav="assistant" class="nav-item {{ 'active' if active_nav|default('') == 'assistant' }}" hx-get="/assistant" hx-target="#main-content" hx-push-url="true">{{ icon('reports') }}<span>Safety assistant</span></a>
+      <a href="/community" data-nav="community" class="nav-item {{ 'active' if active_nav|default('') == 'community' }}" hx-get="/community" hx-target="#main-content" hx-push-url="true">{{ icon('people') }}<span>Community</span></a>
       <a href="/operations" data-nav="operations" class="nav-item {{ 'active' if active_nav|default('') == 'operations' }}" hx-get="/operations" hx-target="#main-content" hx-push-url="true">{{ icon('people') }}<span>Relief &amp; supplies</span></a>
+      {% if user.role == 'response_team' %}<a href="/investigations" data-nav="investigations" class="nav-item {{ 'active' if active_nav|default('') == 'investigations' }}" hx-get="/investigations" hx-target="#main-content" hx-push-url="true">{{ icon('reports') }}<span>Investigations</span></a>{% endif %}
       {% if user.role == 'response_team' %}<a href="/assignments-history" data-nav="history" class="nav-item {{ 'active' if active_nav|default('') == 'history' }}" hx-get="/assignments-history" hx-target="#main-content" hx-push-url="true">{{ icon('clock') }}<span>Past tasks</span></a>{% endif %}
       <a href="/updates" data-nav="updates" class="nav-item {{ 'active' if active_nav|default('') == 'updates' }}" hx-get="/updates" hx-target="#main-content" hx-push-url="true">{{ icon('clock') }}<span>My updates</span><span id="updates-count" hx-target="this" hx-push-url="false" hx-get="/ui/updates/count" hx-trigger="load, every 30s [document.visibilityState === 'visible'], resq:refresh-updates from:body" hx-swap="innerHTML" aria-live="polite"></span></a>
       <a href="/alerts" data-nav="alerts" class="nav-item {{ 'active' if active_nav|default('') == 'alerts' }}" hx-get="/alerts" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('wave') }}<span>Official alerts</span></a>
       <a href="/account" data-nav="account" class="nav-item {{ 'active' if active_nav|default('') == 'account' }}" hx-get="/account" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('shield') }}<span>My account</span></a>
+      {% if user.role == 'admin' %}<a href="/management" data-nav="management" class="nav-item {{ 'active' if active_nav|default('') == 'management' }}" hx-get="/management" hx-target="#main-content" hx-push-url="true">{{ icon('shield') }}<span>Administration</span></a>{% endif %}
       <a href="/permissions" data-nav="permissions" class="nav-item {{ 'active' if active_nav|default('') == 'permissions' }}" hx-get="/permissions" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress">{{ icon('grid') }}<span>Workspace permissions</span></a>
     </nav>
     <div class="sidebar-note">{{ icon('shield') }}<p>A clearer path<br>from report to response.</p><span>KERALA, TOGETHER.</span></div>

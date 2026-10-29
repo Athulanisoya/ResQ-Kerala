@@ -337,3 +337,18 @@ def test_duplicate_request_and_delivery_lines_rejected_before_mutation(ops):
     delivery_line = {"request_item_id": request["items"][0]["id"], "quantity": 1, "unit": "kg"}
     assert ops.request("POST", f"/relief-requests/{request['id']}/deliveries", {
         "idempotency_key": "duplicate-lines-01", "items": [delivery_line, delivery_line]}, "relief").status_code == 422
+
+
+def test_pending_vidya_relief_blocks_resolution_until_fulfilled(ops):
+    from backend.models.relief import ReliefRequest as VidyaRequest
+    ops.in_progress()
+    with ops.sessions() as db:
+        request = VidyaRequest(incident_id=ops.incident_id, item="FOOD", quantity=2, fulfilled=1,
+                               created_by=ops.users["citizen"])
+        db.add(request); db.commit(); request_id = request.id
+    blocked = ops.progress("RESOLVED")
+    assert blocked.status_code == 409
+    with ops.sessions() as db:
+        db.get(VidyaRequest, request_id).fulfilled = 2
+        db.commit()
+    assert ops.progress("RESOLVED").status_code == 200

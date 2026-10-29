@@ -55,3 +55,16 @@ class InvestigationResponse(BaseModel):
     updated_by_user_id: int
     created_at: datetime
     updated_at: datetime
+
+
+class InvestigationTeamAssign(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    team_id: int = Field(gt=0)
+
+
+class InvestigationAssignmentResponse(InvestigationResponse):
+    report_reference: str
+    location: str
+    message: str
+    people_affected: int | None
+    help_required: str | None

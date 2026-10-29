@@ -81,6 +81,7 @@ def test_rag_ignores_unapproved_documents(tmp_path, monkeypatch):
             item["title"] == "Approved Preparedness Document"
             for item in results
         )
+        assert all(item["approval_status"] == "unspecified" and item["review_required"] for item in results)
     finally:
         rag_retriever.load_documents.cache_clear()
         rag_retriever.build_index.cache_clear()
@@ -99,3 +100,12 @@ def test_shelter_assistant_defaults_to_local_provider(monkeypatch):
     settings = Settings(_env_file=None, database_url="sqlite://",
                         allow_sqlite_for_tests=True, jwt_secret="x" * 32)
     assert settings.week4_llm_provider == "ollama"
+
+
+def test_project_safety_references_disclose_review_status():
+    from backend.ai import rag_retriever
+    rag_retriever.load_documents.cache_clear()
+    documents = rag_retriever.load_documents()
+    assert documents
+    assert any(item["approval_status"] == "official_source_paraphrase_for_project_review" for item in documents)
+    assert all(item["review_required"] for item in documents)

@@ -210,3 +210,40 @@ def test_investigation_validates_assignee_findings_and_supported_status(api):
         payload = {"status": "COMPLETED", "findings": "Residents are safe.", **changes}
         assert api.client.patch(path, headers=headers, json=payload).status_code == 422
     assert api.client.get(f"{api.path}/investigation", headers=headers).json() == started
+
+
+def test_investigation_team_assignment_scopes_findings_and_revokes_on_reassignment(api, investigation_password_hash):
+    from backend.models import Team
+    with api.sessions() as db:
+        selected = Team(name="Field investigation", team_type="Investigation")
+        other = Team(name="Other investigation", team_type="Investigation")
+        rescue = Team(name="Rescue", team_type="Rescue")
+        db.add_all([selected, other, rescue]); db.flush()
+        db.get(User, api.users["response_team"]).team_id = selected.id
+        stranger = User(full_name="Other team", email="other-investigator@example.com", password_hash=investigation_password_hash,
+                        role=Role.RESPONSE_TEAM, team_id=other.id)
+        db.add(stranger); db.commit()
+        selected_id, rescue_id = selected.id, rescue.id
+    assignment_url = f"{api.path}/investigation/team"
+    assert api.client.post(assignment_url, headers=api.headers("citizen"), json={"team_id": selected_id}).status_code == 403
+    assert api.client.post(assignment_url, headers=api.headers(), json={"team_id": rescue_id}).status_code == 409
+    result = api.client.post(assignment_url, headers=api.headers(), json={"team_id": selected_id})
+    assert result.status_code == 200, result.text
+    investigation_id = result.json()["id"]
+    team = api.headers("response_team")
+    outsider_login = api.client.post("/api/auth/login", json={"email": "other-investigator@example.com", "password": PASSWORD})
+    outsider = {"Authorization": f"Bearer {outsider_login.json()['access_token']}"}
+    assignments_url = "/api/admin/incidents/investigations/assigned"
+    assigned = api.client.get(assignments_url, headers=team)
+    assert assigned.status_code == 200 and assigned.json()[0]["location"] == "Kochi"
+    assert api.client.get(assignments_url, headers=outsider).json() == []
+    read_url = f"{api.path}/investigation"
+    assert api.client.get(read_url, headers=team).status_code == 200
+    assert api.client.get(read_url, headers=outsider).status_code == 403
+    patch_url = f"/api/admin/incidents/investigations/{investigation_id}"
+    payload = {"status": "IN_PROGRESS", "findings": "Location and affected residents confirmed."}
+    assert api.client.patch(patch_url, headers=outsider, json=payload).status_code == 403
+    assert api.client.patch(patch_url, headers=team, json=payload).status_code == 200
+    assert api.start(name="Independent reviewer").status_code == 201
+    assert api.client.patch(patch_url, headers=team, json=payload).status_code == 403
+    assert api.client.get(assignments_url, headers=team).json() == []

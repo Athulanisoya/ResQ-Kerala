@@ -65,3 +65,18 @@ def test_extra_nullable_or_defaulted_column_is_accepted():
             "legacy_flag INTEGER NOT NULL DEFAULT 0)"
         ))
         validate_feature_tables(connection, expected_metadata())
+
+
+def test_additive_shelter_details_migration_preserves_records():
+    from sqlalchemy import inspect
+    from backend.database.feature_migrations import migrate_feature_tables
+    engine = create_engine("sqlite://")
+    metadata = expected_metadata()
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE shelters (id INTEGER PRIMARY KEY, name TEXT NOT NULL, location TEXT, version INTEGER NOT NULL)"))
+        connection.execute(text("INSERT INTO shelters VALUES (1, 'Existing', 'Kochi', 1)"))
+        migrate_feature_tables(connection, metadata)
+        migrate_feature_tables(connection, metadata)
+        columns = {column['name'] for column in inspect(connection).get_columns('shelters')}
+        assert {'facilities', 'latitude', 'longitude'} <= columns
+        assert connection.scalar(text("SELECT name FROM shelters WHERE id=1")) == 'Existing'

@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 import httpx
+from backend.utils.attachment_limits import AttachmentRequestLimit
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -87,7 +88,7 @@ def render(request, content_template, *, status_code=200, **context):
 @app.middleware("http")
 async def browser_security(request: Request, call_next):
     path = request.url.path
-    ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions", "/alerts", "/updates", "/operations", "/assignments-history"} or (
+    ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions", "/alerts", "/updates", "/operations", "/assignments-history", "/shelters", "/assistant", "/community", "/investigations", "/management"} or (
         path.startswith("/reports/") and path.rsplit("/", 1)[-1].isdigit())
     # Document navigation cannot attach a bearer header. The public shell loads
     # the requested page through HTMX using only this tab's saved session.
@@ -628,7 +629,11 @@ async def update_report_investigation(request: Request, incident_id: int):
 async def shelters_page(
     request: Request,
     q: str = "",
-    available_only: bool = True,
+    available_only: bool = False,
+    latitude: str = "",
+    longitude: str = "",
+    notice: str | None = None,
+    error: str | None = None,
 ):
     user = await current_user(request)
 
@@ -638,9 +643,14 @@ async def shelters_page(
     params = {
         "q": q[:160],
         "available_only": str(available_only).lower(),
-        "limit": "25",
     }
 
+    if latitude or longitude:
+        if not latitude or not longitude:
+            return render(request, "shelters.html", page_title="Shelter Search", active_nav="shelters",
+                          user=user, shelters=[], query=q, available_only=available_only,
+                          error="Provide both latitude and longitude for nearby search.")
+        params.update(latitude=latitude, longitude=longitude)
     response = await api_call(
         request,
         "GET",
@@ -661,93 +671,143 @@ async def shelters_page(
             error=error_message(response),
         )
 
+    teams = []
+    if user.get("role") == "admin":
+        team_response = await api_call(request, "GET", "/api/teams")
+        if team_response.status_code == 200:
+            teams = [team for team in team_response.json() if team.get("team_type", "").casefold() == "shelter"]
     return render(
         request,
         "shelters.html",
+        teams=teams,
+        notice=notice,
+        error=error,
         page_title="Shelter Search",
         active_nav="shelters",
         user=user,
         query=q,
         available_only=available_only,
+        latitude=latitude, longitude=longitude,
         shelters=response.json(),
     )
 
 
-@app.get("/assistant", response_class=HTMLResponse)
-async def assistant_page(request: Request):
+@app.post("/ui/shelters", response_class=HTMLResponse)
+async def create_shelter_page(request: Request):
     user = await current_user(request)
-
     if not user:
         return redirect(request, "/login")
+    if user.get("role") != "admin":
+        return HTMLResponse("Only an administrator can create a shelter.", status_code=403)
+    form = request.state.form
+    try:
+        payload = {"name": str(form.get("name", "")), "location": str(form.get("location", "")),
+                   "team_id": int(form.get("team_id", "")), "capacity": int(form.get("capacity", "")),
+                   "occupied": int(form.get("occupied", "0")), "facilities": str(form.get("facilities", "")).strip() or None}
+        for field in ("latitude", "longitude"):
+            value = str(form.get(field, "")).strip()
+            payload[field] = float(value) if value else None
+    except (ValueError, TypeError):
+        return await shelters_page(request, error="Enter valid numbers for team, capacity, occupancy and coordinates.")
+    response = await api_call(request, "POST", "/api/shelters", payload)
+    if response.status_code != 201:
+        return await shelters_page(request, error=error_message(response))
+    return await shelters_page(request, notice="Shelter created.")
 
-    return render(
-        request,
-        "assistant.html",
-        page_title="Shelter & Safety Assistant",
-        active_nav="assistant",
-        user=user,
-    )
+
+@app.post("/ui/shelters/{shelter_id}/update", response_class=HTMLResponse)
+async def update_shelter_page(request: Request, shelter_id: int):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    form = request.state.form
+    try:
+        payload = {"capacity": int(form.get("capacity", "")), "occupied": int(form.get("occupied", "")),
+                   "expected_version": int(form.get("expected_version", "")), "note": str(form.get("note", "")),
+                   "facilities": str(form.get("facilities", "")).strip() or None, "status": str(form.get("status", "OPEN"))}
+        for field in ("latitude", "longitude"):
+            value = str(form.get(field, "")).strip()
+            payload[field] = float(value) if value else None
+    except (ValueError, TypeError):
+        return await shelters_page(request, error="Enter valid capacity and occupancy values.")
+    response = await api_call(request, "PATCH", f"/api/shelters/{shelter_id}", payload)
+    if response.status_code != 200:
+        return await shelters_page(request, error=error_message(response))
+    return await shelters_page(request, notice="Shelter updated.")
+
+
+async def assistant_view(request: Request, user: dict, session_id: int | None = None, *, error=None, question="", status_code=200):
+    sessions_response = await api_call(request, "GET", "/api/assistant/sessions")
+    sessions = sessions_response.json() if sessions_response.status_code == 200 else []
+    messages = []
+    if sessions_response.status_code != 200 and error is None:
+        error = error_message(sessions_response)
+    if session_id is not None:
+        response = await api_call(request, "GET", f"/api/assistant/sessions/{session_id}")
+        if response.status_code != 200:
+            return render(request, "assistant.html", page_title="Shelter & Safety Assistant", active_nav="assistant",
+                          user=user, sessions=sessions, messages=[], question=question,
+                          error=error_message(response), status_code=response.status_code)
+        messages = response.json().get("messages", [])
+    return render(request, "assistant.html", page_title="Shelter & Safety Assistant", active_nav="assistant",
+                  user=user, sessions=sessions, selected_session=session_id, messages=messages,
+                  question=question, error=error, status_code=status_code)
+
+
+@app.get("/assistant", response_class=HTMLResponse)
+async def assistant_page(request: Request, session_id: int | None = None):
+    user = await current_user(request)
+    if not user:
+        return redirect(request, "/login")
+    return await assistant_view(request, user, session_id)
 
 
 @app.post("/ui/assistant/chat", response_class=HTMLResponse)
 async def submit_assistant_question(request: Request):
     user = await current_user(request)
-
     if not user:
         return redirect(request, "/login")
-
-    # browser_security parses and validates CSRF for /ui/ POST requests.
     form = getattr(request.state, "form", {})
     question = str(form.get("question", "")).strip()
-
+    try:
+        session_id = int(form["session_id"]) if form.get("session_id") else None
+        if session_id is not None and session_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return await assistant_view(request, user, error="Choose a valid conversation.", question=question, status_code=422)
     if len(question) < 2 or len(question) > 2000:
-        return render(
-            request,
-            "assistant.html",
-            page_title="Shelter & Safety Assistant",
-            active_nav="assistant",
-            user=user,
-            question=question,
-            error="Enter a question between 2 and 2000 characters.",
-        )
-
-    response = await api_call(
-        request,
-        "POST",
-        "/api/assistant/chat",
-        {"question": question},
-    )
-
+        return await assistant_view(request, user, session_id, error="Enter a question between 2 and 2000 characters.", question=question, status_code=422)
+    response = await api_call(request, "POST", "/api/assistant/chat", {"question": question, "session_id": session_id})
     if response.status_code != 200:
-        return render(
-            request,
-            "assistant.html",
-            page_title="Shelter & Safety Assistant",
-            active_nav="assistant",
-            user=user,
-            question=question,
-            error=error_message(response),
-        )
-
-    result = response.json()
-
-    return render(
-        request,
-        "assistant.html",
-        page_title="Shelter & Safety Assistant",
-        active_nav="assistant",
-        user=user,
-        question=question,
-        answer=result.get("answer", ""),
-        result_mode=result.get("mode", ""),
-        sources=result.get("sources", []),
-        warning=result.get("warning"),
-    )
+        return await assistant_view(request, user, session_id, error=error_message(response), question=question,
+                                    status_code=response.status_code)
+    session_id = response.json()["session_id"]
+    result = await assistant_view(request, user, session_id)
+    if request.headers.get("HX-Request") == "true":
+        result.headers["HX-Push-Url"] = f"/assistant?session_id={session_id}"
+    return result
 
 
 # Keep the API mount last so every HTML action remains reachable.
+from web.community import router as community_ui
+app.include_router(community_ui)
 from web.communication import router as communication_ui
 from web.operations import router as operations_ui
+from web.investigations import router as investigations_ui
+from web.attachments import router as attachments_ui
+from web.recovery import router as recovery_ui
+from web.management import router as management_ui
 app.include_router(communication_ui)
 app.include_router(operations_ui)
+app.include_router(investigations_ui)
+app.include_router(attachments_ui)
+app.include_router(recovery_ui)
+app.include_router(management_ui)
+from web.week4 import router as week4_ui
+from web.duplicates import router as duplicates_ui
+from web.dashboard_info import router as dashboard_info_ui
+app.include_router(week4_ui)
+app.include_router(duplicates_ui)
+app.include_router(dashboard_info_ui)
+app.add_middleware(AttachmentRequestLimit)
 app.mount("/", api)

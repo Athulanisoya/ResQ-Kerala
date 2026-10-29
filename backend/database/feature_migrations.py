@@ -17,6 +17,19 @@ _VIDYA_RELIEF = frozenset({
 })
 
 
+def _add_shelter_details(connection, metadata):
+    inspector = inspect(connection)
+    schema = metadata.schema
+    if not inspector.has_table("shelters", schema=schema):
+        return
+    columns = {column["name"] for column in inspector.get_columns("shelters", schema=schema)}
+    quote = connection.dialect.identifier_preparer.quote
+    name = f"{quote(schema)}.{quote('shelters')}" if schema else quote('shelters')
+    for column, sql_type in (("facilities", "TEXT"), ("latitude", "FLOAT"), ("longitude", "FLOAT")):
+        if column not in columns:
+            connection.execute(text(f"ALTER TABLE {name} ADD COLUMN {quote(column)} {sql_type}"))
+
+
 def migrate_feature_tables(connection: Connection, metadata: MetaData) -> None:
     """Upgrade known PostgreSQL branch layouts in the caller's transaction.
 
@@ -25,6 +38,7 @@ def migrate_feature_tables(connection: Connection, metadata: MetaData) -> None:
     All changes roll back if migration or subsequent validation fails.
     """
     if connection.dialect.name != "postgresql":
+        _add_shelter_details(connection, metadata)
         return
     schema = metadata.schema
     if not schema:
@@ -80,6 +94,7 @@ def migrate_feature_tables(connection: Connection, metadata: MetaData) -> None:
                                        ("ix_shelters_district_status", "district, status")):
                 connection.execute(text(f"CREATE INDEX {quote(index)} ON {shelter} ({columns_sql})"))
 
+    _add_shelter_details(connection, metadata)
     inspector = inspect(connection)
     if not inspector.has_table("relief_requests", schema=schema):
         return

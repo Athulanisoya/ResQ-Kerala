@@ -1,4 +1,5 @@
 import logging
+import math
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -21,11 +22,26 @@ def list_shelters(
     location: str | None = Query(default=None, min_length=2, max_length=255),
     available_only: bool = False,
     limit: int | None = Query(default=None, ge=1, le=25),
+    latitude: float | None = Query(default=None, ge=-90, le=90),
+    longitude: float | None = Query(default=None, ge=-180, le=180),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    rows = service.search_shelters(db, query=q, district=district, location=location, available_only=available_only, limit=limit)
-    return [service.shelter_view(row) for row in rows]
+    if (latitude is None) != (longitude is None):
+        raise HTTPException(422, "Latitude and longitude must be supplied together")
+    rows = service.search_shelters(db, query=q, district=district, location=location, available_only=available_only, limit=None if latitude is not None else limit)
+    if latitude is None:
+        return [service.shelter_view(row) for row in rows]
+    def distance(row):
+        lat1, lat2 = math.radians(latitude), math.radians(row.latitude)
+        dlat = lat2 - lat1
+        dlon = math.radians(row.longitude - longitude)
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        return 6371.0088 * 2 * math.asin(math.sqrt(min(1, max(0, a))))
+    located = sorted((row for row in rows if row.latitude is not None and row.longitude is not None), key=distance)
+    if limit is not None:
+        located = located[:limit]
+    return [{**service.shelter_view(row), "distance_km": round(distance(row), 2)} for row in located]
 
 
 @router.get("/{shelter_id}")

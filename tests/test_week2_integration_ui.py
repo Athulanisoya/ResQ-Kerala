@@ -136,3 +136,30 @@ def test_existing_alert_account_and_location_routes_survive_integration(week2_re
     assert "Synthetic integration alert" in checked.text
     assert admin.get(f"/api/admin/incidents/{incident_id}/analysis").json() is None
     assert admin.get(f"/api/admin/incidents/{incident_id}/investigation").json() is None
+
+
+def test_investigation_team_assignment_and_findings_through_html(week2_report):
+    from backend.main import app as api
+    from backend.database.connection import get_db
+    from backend.models import Team
+    citizen, admin, team, incident_id, path, _ = week2_report
+    session_generator = api.dependency_overrides[get_db]()
+    db = next(session_generator)
+    try:
+        db.get(Team, 1).team_type = "investigation"
+        db.commit()
+    finally:
+        session_generator.close()
+    page = admin.get(path)
+    assert "Assign investigation team" in page.text
+    assigned = post(admin, f"/ui/reports/{incident_id}/investigation/team", team_id="1")
+    assert assigned.status_code == 200 and assigned.headers["HX-Redirect"] == path
+    login(team, "response_team")
+    assignments = team.get("/investigations")
+    assert assignments.status_code == 200 and "Chengannur" in assignments.text
+    details = team.get("/api/admin/incidents/investigations/assigned").json()
+    assert len(details) == 1
+    saved = post(team, f"/ui/investigations/{details[0]['id']}", status="COMPLETED",
+                 findings="The report location and family have been verified.", action_taken="Sent findings to the coordinator.")
+    assert saved.status_code == 200 and saved.headers["HX-Redirect"] == "/investigations"
+    assert "The report location and family have been verified." in team.get("/investigations").text

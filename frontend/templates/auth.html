@@ -22,6 +22,7 @@
         <div class="field"><label for="password">Password</label><div class="input-icon">{{ icon('lock') }}<input id="password" name="password" type="password" minlength="10" maxlength="128" autocomplete="{{ 'new-password' if registering else 'current-password' }}" placeholder="{{ 'Choose a password' if registering else 'Enter your password' }}" aria-describedby="{{ 'password-hint' if registering else '' }}" required></div>{% if registering %}<p class="field-hint" id="password-hint">Use 10–128 characters.</p>{% endif %}</div>
         <button class="button button-primary button-full" type="submit"><span class="button-label">{{ 'Create my account' if registering else 'Sign in' }}</span><span class="button-loading">Please wait…</span>{{ icon('arrow') }}</button>
       </form>
+      {% if not registering %}<p><a href="/forgot-password">Forgot password?</a></p>{% endif %}
       <p class="auth-switch">{{ 'Already have an account?' if registering else 'New to ResQ Kerala?' }} <a href="{{ '/login' if registering else '/register' }}" hx-get="{{ '/login' if registering else '/register' }}" hx-target="#main-content" hx-push-url="true">{{ 'Sign in' if registering else 'Create an account' }}</a></p>
       <div class="auth-footnote">{{ icon('shield') }}<span>One workspace for citizens, administrators<br>and response teams.</span></div>
     </div>

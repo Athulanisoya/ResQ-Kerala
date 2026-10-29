@@ -113,3 +113,32 @@ def test_failed_reply_preserves_only_its_form_and_optional_question_choice(clien
     assert invalid.status_code == 422
     checkbox = invalid.text.split('name="required"', 1)[1].split(">", 1)[0]
     assert "checked" not in checkbox
+
+
+def test_pre_upgrade_clarification_is_visible_and_owner_can_reply(clients):
+    from backend.database.connection import get_db
+    from backend.main import app as api
+    from backend.models import Incident, IncidentStatusHistory
+    citizen, admin, team = clients
+    incident_id = create_case(citizen)
+    path = f"/reports/{incident_id}"
+    session_generator = api.dependency_overrides[get_db]()
+    db = next(session_generator)
+    try:
+        db.get(Incident, incident_id).status = "AWAITING_CLARIFICATION"
+        db.add(IncidentStatusHistory(incident_id=incident_id, status="AWAITING_CLARIFICATION",
+                                     note="Clarification requested by admin 2: Is the road clear?"))
+        db.commit()
+    finally:
+        session_generator.close()
+    page = citizen.get(path)
+    assert "Earlier clarification request" in page.text and "Is the road clear?" in page.text
+    assert f"/ui/reports/{incident_id}/legacy-clarification/reply" in page.text
+    login(admin, "admin")
+    assert "Send earlier reply" not in admin.get(path).text
+    assert post(admin, f"/ui/reports/{incident_id}/legacy-clarification/reply", legacy_reply="Road is clear now.").status_code == 403
+    response = post(citizen, f"/ui/reports/{incident_id}/legacy-clarification/reply", legacy_reply="Road is clear now.")
+    assert response.status_code == 200 and response.headers["HX-Redirect"] == path
+    refreshed = citizen.get(path)
+    assert "Send earlier reply" not in refreshed.text
+    assert "Road is clear now." in refreshed.text

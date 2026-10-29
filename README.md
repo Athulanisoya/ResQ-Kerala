@@ -79,7 +79,13 @@ Gemma 4 must fit the computer's available memory. The setup command verifies an 
 
 **Week 4:** **My updates** provides private notifications, an unread badge and read controls. Admins request clarification on a report, citizens submit a retained reply, and the case timeline preserves both alongside the original report. Search and status filters cover the complete lifecycle. Only an admin can close a resolved incident, after linked relief and required clarification questions are complete.
 
-See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). These features use the existing FastAPI/HTMX application and add the small shared contracts required by Athul's screens. Shelter search, chatbot and Malayalam AI translation remain outside this change. Curated Malayalam place aliases remain available in the geography tool.
+See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). These features use the existing FastAPI/HTMX application and add the small shared contracts required by Athul's screens. Shelter search, the safety assistant and optional provisional Malayalam translation are available in the integrated workspace. Curated Malayalam place aliases remain available in the geography tool.
+
+## Additional integrated services
+
+The HTMX workspace includes shelter search and management, a safety assistant, investigation team assignments, duplicate-report review, community updates, donation pledges, private report attachments, and administrative user/team controls and reports. Donations are pledges that an administrator can reconcile; the application does not process online payments. Password recovery requires SMTP and sender configuration. See [citizen services](docs/CITIZEN-SERVICES.md) for setup and limits.
+
+Administrators can run and review a revisioned integrated AI analysis. The optional local model can create translation and summary drafts and run the seven-tool workflow. Results require human review; missing or unsupported inputs are not evidence of safety. See [AI workflow](docs/AI-WORKFLOW.md). The experimental severity model can be retrained from a separately supplied labelled CSV using `python -m scripts.train_severity --dataset PATH --output-dir OUTPUT_DIRECTORY`; the command records a held-out evaluation without changing the running model. A model score is not a calibrated probability or evidence of field readiness.
 
 ## Stop and verify
 

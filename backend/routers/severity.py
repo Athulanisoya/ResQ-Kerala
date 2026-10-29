@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from backend.ai.severity_model import SeverityUnavailable, predict_severity
+from backend.ai.severity_model import SeverityUncertain, SeverityUnavailable, assess_severity, predict_severity
 from backend.database.connection import get_db
 from backend.models import Role, User
 from backend.schemas.investigation_schema import AnalysisResponse
@@ -23,16 +23,20 @@ class SeverityRequest(BaseModel):
 class SeverityResponse(BaseModel):
     message: str
     predicted_severity: Literal["High", "Low", "Moderate"]
+    model_score: float | None = None
+    requires_manual_review: bool = True
 
 
 @router.post("/predict-severity", response_model=SeverityResponse,
              dependencies=[Depends(require_roles(Role.ADMIN))])
 def predict_flood_severity(request: SeverityRequest):
     try:
-        severity = predict_severity(request.message)
+        result = assess_severity(request.message)
+    except SeverityUncertain as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except SeverityUnavailable as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
-    return {"message": request.message, "predicted_severity": severity}
+    return {"message": request.message, **result}
 
 
 @router.post("/incidents/{incident_id}/predict-severity", response_model=AnalysisResponse)
@@ -41,6 +45,8 @@ def predict_incident_severity(incident_id: int, db: Session = Depends(get_db),
     incident = require_incident(db, incident_id)
     try:
         severity = predict_severity(incident.message)
+    except SeverityUncertain as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except SeverityUnavailable as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     return save_predicted_severity(db, incident_id, user.id,

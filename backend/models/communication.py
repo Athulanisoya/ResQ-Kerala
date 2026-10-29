@@ -49,3 +49,11 @@ class ClarificationReply(Base):
     replied_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class LegacyClarificationLink(Base):
+    """Maps an id-less legacy question to its canonical clarification record."""
+    __tablename__ = "legacy_clarification_links"
+    id = Column(Integer, primary_key=True)
+    incident_id = Column(Integer, ForeignKey("incident_reports.id"), nullable=False, index=True)
+    clarification_id = Column(Integer, ForeignKey("incident_clarifications.id"), nullable=False, unique=True)

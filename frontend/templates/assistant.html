@@ -1,82 +1,15 @@
 <section class="page-section arya-page">
-  <header class="page-header">
-    <div>
-      <p class="eyebrow">WEEK 3 · ARYA</p>
-      <h1>Shelter & Safety Assistant</h1>
-      <p>Ask about shelter availability or approved disaster-safety guidance.</p>
-    </div>
-  </header>
-
-  <div class="panel arya-panel">
-    <form method="post" action="/ui/assistant/chat" class="arya-chat-form">
-      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-
-      <label for="question">Your question</label>
-      <textarea
-        id="question"
-        name="question"
-        rows="4"
-        maxlength="2000"
-        required
-        placeholder="Example: Find available shelters in Alappuzha."
-      >{{ question or "" }}</textarea>
-
-      <button type="submit" class="button button-primary">
-        Ask the assistant
-      </button>
-    </form>
+  <header class="page-header"><div><p class="eyebrow">COMMUNITY SUPPORT</p><h1>Shelter &amp; Safety Assistant</h1><p>Ask about shelter availability, safety guidance or your report.</p><p class="notice" role="status">Repository safety paraphrases require owner verification. Follow current official guidance and check the linked source.</p></div></header>
+  <div class="panel arya-panel"><h2>Conversations</h2><p><a href="/assistant" hx-get="/assistant" hx-target="#main-content" hx-push-url="true">Start a new conversation</a></p>
+    {% for chat in sessions %}<p><a href="/assistant?session_id={{ chat.id }}" hx-get="/assistant?session_id={{ chat.id }}" hx-target="#main-content" hx-push-url="true" {% if selected_session == chat.id %}aria-current="page"{% endif %}>{{ chat.title }}</a></p>{% else %}<p>No saved conversations yet.</p>{% endfor %}
   </div>
-
-  {% if error %}
-    <div class="notice notice-error" role="alert">{{ error }}</div>
-  {% endif %}
-
-  {% if answer %}
-    <article class="panel arya-answer" aria-live="polite">
-      <div class="arya-answer-heading">
-        <h2>Answer</h2>
-        {% if result_mode %}
-          <span class="status-pill">{{ result_mode }}</span>
-        {% endif %}
-      </div>
-
-      <div class="arya-answer-text">{{ answer }}</div>
-
-      {% if warning %}
-        <p class="notice" role="status">{{ warning }}</p>
-      {% endif %}
-
-      {% if sources %}
-        <h3>Retrieved document sources</h3>
-        <ul class="arya-source-list">
-          {% for source in sources %}
-            <li>
-              <strong>{{ source.title }}</strong>
-              {% if source.source_name %}
-                <span> — {{ source.source_name }}</span>
-              {% endif %}
-
-              {% if source.source_url and source.source_url.startswith("https://") %}
-                <p>
-                  <a href="{{ source.source_url }}"
-                     target="_blank"
-                     rel="noopener noreferrer">
-                    Open source document
-                  </a>
-                </p>
-              {% else %}
-                <p>Source URL has not been provided.</p>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    </article>
-  {% endif %}
-
-  <p class="arya-disclaimer">
-    Shelter results depend on the accuracy and freshness of the records.
-    This assistant does not dispatch emergency services. In immediate
-    danger, contact the appropriate local emergency service.
-  </p>
+  {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+  {% for message in messages %}<article class="panel arya-answer"><div class="arya-answer-heading"><h2>{{ 'You' if message.role == 'user' else 'Assistant' }}</h2>{% if message.role == 'assistant' and message.details and message.details.mode %}<span class="status-pill">{{ message.details.mode }}</span>{% endif %}</div><div class="arya-answer-text">{{ message.content }}</div>
+    {% if message.details and message.details.warning %}<p class="notice" role="status">{{ message.details.warning }}</p>{% endif %}
+    {% if message.details and message.details.sources %}<h3>Retrieved document sources</h3><ul class="arya-source-list">{% for source in message.details.sources %}<li><strong>{{ source.title }}</strong>{% if source.source_name %} — {{ source.source_name }}{% endif %}{% if source.approval_status %}<p>Approval status: {{ source.approval_status|replace("_", " ") }}</p>{% endif %}{% if source.review_required %}<p class="notice" role="status"><strong>Owner verification required.</strong> Check current official guidance before relying on this summary.</p>{% endif %}{% if source.source_url and source.source_url.startswith('https://') %}<p><a href="{{ source.source_url }}" target="_blank" rel="noopener noreferrer">Open source document</a></p>{% endif %}</li>{% endfor %}</ul>{% endif %}</article>{% endfor %}
+  <div class="panel arya-panel"><form method="post" action="/ui/assistant/chat" hx-post="/ui/assistant/chat" hx-target="#main-content" class="arya-chat-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">{% if selected_session %}<input type="hidden" name="session_id" value="{{ selected_session }}">{% endif %}
+    <label for="question">Your question</label><textarea id="question" name="question" rows="4" maxlength="2000" required placeholder="Example: Find available shelters in Alappuzha.">{{ question or '' }}</textarea><button type="submit" class="button button-primary">Ask the assistant</button>
+  </form></div>
+  <p class="arya-disclaimer">Your conversation is saved to your account. Model-backed answers may use recent turns; locally retrieved report details are not sent as conversation context. Fallback answers use the latest question. Shelter records may be incomplete or stale. This assistant does not dispatch emergency services. In immediate danger, contact the appropriate local emergency service.</p>
 </section>

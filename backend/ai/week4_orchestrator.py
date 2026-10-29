@@ -31,11 +31,13 @@ from openai import (
 from sqlalchemy.orm import Session
 
 from backend.ai.shelter_agent import GEMINI_BASE_URL
+from backend.ai.ollama_model import OllamaModel
+from backend.ai.local_language import generate_local_drafts
 from backend.ai.gemini_live_model import GeminiLiveError, GeminiLiveModel
 from backend.ai.location_extractor import extract_location
 from backend.ai.rag_retriever import retrieve
 from backend.ai.report_summarizer import summarize_report
-from backend.ai.severity_model import SeverityUnavailable, predict_severity
+from backend.ai.severity_model import SeverityUnavailable, SeverityUncertain, predict_severity
 from backend.config import get_settings
 from backend.services.alert_service import match_alerts
 from backend.services.shelter_service import search_shelters
@@ -113,6 +115,9 @@ def tool_3_predict_severity(
             "predicted_severity": severity,
             "source": "existing_severity_model",
         }
+    except SeverityUncertain as exc:
+        result = {"status": "uncertain", "predicted_severity": None,
+                  "reason": str(exc), "requires_manual_review": True}
     except SeverityUnavailable:
         result = {
             "status": "unavailable",
@@ -151,7 +156,7 @@ def tool_4_create_summary(
 def tool_5_retrieve_safety_evidence(
     ctx: RunContextWrapper[Week4Context],
 ) -> dict:
-    """Retrieve passages from the approved safety-document collection."""
+    """Retrieve allow-listed project reference passages; their owner-review status is included."""
     c = ctx.context
 
     try:
@@ -160,13 +165,14 @@ def tool_5_retrieve_safety_evidence(
             "status": "completed" if passages else "no_evidence",
             "passages": passages,
             "source_count": len(passages),
+            "review_notice": "Project reference paraphrases may require owner verification; consult current official sources.",
         }
     except Exception:
         result = {
             "status": "unavailable",
             "passages": [],
             "source_count": 0,
-            "reason": "Approved-document retrieval failed.",
+            "reason": "Project-reference retrieval failed.",
         }
 
     return _record(c, "tool_5_retrieve_safety_evidence", result)
@@ -265,7 +271,8 @@ def assemble_evidence(context: Week4Context) -> dict:
     missing_tools = [
         name
         for name in required_tools
-        if name not in context.results
+        if name not in context.results or
+        str(context.results[name].get("status", "")).lower() in {"unavailable", "error", "not_run", "failed", "uncertain"}
     ]
 
     retrieval = context.results.get(
@@ -279,6 +286,8 @@ def assemble_evidence(context: Week4Context) -> dict:
             "title": passage.get("title"),
             "source_name": passage.get("source_name"),
             "source_url": passage.get("source_url"),
+            "approval_status": passage.get("approval_status", "unspecified"),
+            "review_required": passage.get("review_required", True),
             "chunk_number": passage.get("chunk_number"),
             "relevance": passage.get("relevance"),
         }
@@ -660,107 +669,66 @@ async def invoke_week4_tool(tool, context: Week4Context):
 #             "human_review_required": True,
 #         }
 
-async def run_week4_workflow(
-    db: Session,
-    incident: Any,
-) -> dict:
-    """Run Week 4 analysis tools sequentially under Python control."""
+async def run_week4_workflow(db: Session, incident: Any, *, use_ai: bool = True) -> dict:
+    """Run a bounded local SDK agent; fall back to deterministic evidence.
 
+    Reports and retrieval snippets are untrusted; model prose is provisional.
+    Original report text is always preserved and humans make all decisions.
+    """
     settings = get_settings()
-    original_text = incident.message
-
-    context = Week4Context(
-        db=db,
-        incident=incident,
-        original_text=original_text,
-        reported_location=incident.location,
-    )
-
-    provider = settings.week4_llm_provider.strip().lower()
-
-    # Metadata only: this workflow does not call the configured LLM.
-    if provider == "ollama":
-        configured_model = settings.ollama_model
-    elif provider == "gemini":
-        configured_model = settings.gemini_model
-    else:
-        configured_model = None
-
-    tools = [
-        tool_1_extract_location,
-        tool_2_check_alerts,
-        tool_3_predict_severity,
-        tool_4_create_summary,
-        tool_5_retrieve_safety_evidence,
-        tool_6_search_shelters,
-        tool_7_assemble_evidence,
-    ]
-
-    # Run the first six tools in the required order.
-    for tool in tools[:6]:
+    tools = [tool_1_extract_location, tool_2_check_alerts, tool_3_predict_severity,
+             tool_4_create_summary, tool_5_retrieve_safety_evidence,
+             tool_6_search_shelters, tool_7_assemble_evidence]
+    def new_context():
+        return Week4Context(db=db, incident=incident, original_text=incident.message,
+                            reported_location=incident.location)
+    context = new_context()
+    drafts = {"translation": None, "summary": None, "status": "not_run", "requires_manual_review": True}
+    agent_used = False
+    model_attempted = False
+    narrative = None
+    warning = None
+    if use_ai:
+        model_attempted = True
+        drafts = await generate_local_drafts(incident.message, settings)
+        model = OllamaModel(model=settings.ollama_model, base_url=settings.ollama_base_url,
+                            timeout_seconds=settings.agent_timeout_seconds)
         try:
-            await asyncio.wait_for(
-                invoke_week4_tool(tool, context),
-                timeout=settings.agent_timeout_seconds,
-            )
-
-        except Exception as exc:
-            # Do not pretend a failed tool completed successfully.
-            context.events.append({
-                "tool": tool.name,
-                "status": "error",
-                "result": {
-                    "reason": (
-                        f"{type(exc).__name__}: {exc}"
-                    )
-                },
-            })
-
-    # Assemble evidence even if an earlier tool failed.
-    assembly_tool = tools[6]
-
-    try:
-        await asyncio.wait_for(
-            invoke_week4_tool(assembly_tool, context),
-            timeout=settings.agent_timeout_seconds,
-        )
-
-    except Exception as exc:
-        context.events.append({
-            "tool": "tool_7_assemble_evidence",
-            "status": "error",
-            "result": {
-                "reason": f"{type(exc).__name__}: {exc}"
-            },
-        })
-
-    assembled = context.results.get(
-        "tool_7_assemble_evidence"
-    )
-
+            run = await asyncio.wait_for(
+                Runner.run(build_week4_agent(model), input="Analyze the incident using all seven tools in order.",
+                           context=context, max_turns=max(8, min(12, settings.agent_max_turns + 3)),
+                           run_config=RunConfig(tracing_disabled=True, trace_include_sensitive_data=False)),
+                timeout=settings.agent_timeout_seconds)
+            sequence = [event.get("tool") for event in context.events]
+            if sequence != [tool.name for tool in tools] or "tool_7_assemble_evidence" not in context.results:
+                raise ValueError("Agent did not complete the required tool sequence")
+            agent_used = True
+            narrative = str(run.final_output) if run.final_output else None
+        except Exception:
+            context = new_context()
+            warning = "The local agent did not complete the required tool sequence. The result uses the deterministic fallback."
+        finally:
+            await model.close()
+    if not agent_used:
+        for tool in tools:
+            try:
+                await asyncio.wait_for(invoke_week4_tool(tool, context), timeout=settings.agent_timeout_seconds)
+            except Exception:
+                context.events.append({"tool": tool.name, "status": "error", "result": {"reason": "Tool execution failed."}})
+    assembled = context.results.get("tool_7_assemble_evidence")
     if assembled is None:
-        # Build a safe fallback without claiming assembly succeeded.
         assembled = assemble_evidence(context)
         assembled["status"] = "incomplete"
-
-        if "tool_7_assemble_evidence" not in assembled["missing_tools"]:
-            assembled["missing_tools"].append(
-                "tool_7_assemble_evidence"
-            )
-
+        assembled["missing_tools"].append("tool_7_assemble_evidence")
         assembled["tool_events"] = list(context.events)
-        assembled["warning"] = (
-            "Evidence assembly did not complete successfully. "
-            "Review the results manually."
-        )
-
-    assembled["model"] = configured_model
-    assembled["orchestration_mode"] = "python_sequential"
-    assembled["llm_used"] = False
-    assembled["agent_response"] = (
-        "Python executed the Week 4 tools sequentially. "
-        "No LLM tool-routing request was made."
-    )
-    assembled["human_review_required"] = True
-
+        warning = "Evidence assembly failed. Review the original report manually."
+    assembled.update({"model": settings.ollama_model if model_attempted else None,
+                      "orchestration_mode": "sdk_agent" if agent_used else "python_sequential",
+                      "llm_used": agent_used or drafts.get("status") == "provisional",
+                      "agent_response": narrative,
+                      "warning": warning,
+                      "translation": drafts.get("translation"),
+                      "generative_summary": drafts.get("summary"),
+                      "language_draft_status": drafts.get("status"),
+                      "human_review_required": True})
     return assembled

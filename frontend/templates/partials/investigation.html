@@ -24,6 +24,10 @@
 <section id="investigation" class="card location-analysis-card" aria-labelledby="investigation-heading">
   <div class="card-heading"><div><h2 id="investigation-heading">Investigation</h2><p>Assign a reviewer and record the findings before completing the investigation.</p></div>{{ icon('reports') }}</div>
   <div class="location-analysis-body">
+    {% if not investigation or investigation.status not in ['COMPLETE', 'COMPLETED'] %}
+    {% set choices = namespace(found=false) %}{% for team in teams %}{% if team.team_type|lower == 'investigation' %}{% set choices.found = true %}{% endif %}{% endfor %}
+    {% if choices.found %}<form action="/ui/reports/{{ report.id }}/investigation/team" method="post" hx-post="/ui/reports/{{ report.id }}/investigation/team" hx-target="#main-content" class="compact-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><label for="investigation-team">Investigation team</label><select id="investigation-team" name="team_id" required>{% for team in teams if team.team_type|lower == 'investigation' %}<option value="{{ team.id }}">{{ team.name }}</option>{% endfor %}</select><button class="button button-secondary" type="submit">Assign investigation team</button></form>{% endif %}
+    {% endif %}
     {% if investigation %}
     <dl class="analysis-facts"><div><dt>Assigned investigator</dt><dd>{{ investigation.assigned_to_name }}</dd></div><div><dt>Status</dt><dd>{{ investigation.status|replace('_', ' ')|title }}</dd></div><div><dt>Last updated</dt><dd>{{ investigation.updated_at|local_time }}</dd></div></dl>
     {% if investigation.status in ['COMPLETE', 'COMPLETED'] %}

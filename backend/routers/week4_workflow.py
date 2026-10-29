@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from backend.models.incident import Incident
+from backend.models.week4_analysis import Week4AnalysisRevision
 
 from backend.ai.week4_orchestrator import run_week4_workflow
 from backend.database.connection import get_db
@@ -12,7 +15,8 @@ router = APIRouter(prefix="/api/incidents",tags=["Week 4 AI Orchestration"])
 async def analyze_incident_week4(
     incident_id: int,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_roles(Role.ADMIN)),
+    user: User = Depends(require_roles(Role.ADMIN)),
+    use_ai: bool = True,
 ):
    
 
@@ -24,7 +28,7 @@ async def analyze_incident_week4(
             detail="Incident not found.",
         )
 
-    result = await run_week4_workflow(db, incident)
+    result = await run_week4_workflow(db, incident, use_ai=use_ai)
 
     
     if result.get("status") == "complete":
@@ -47,4 +51,25 @@ async def analyze_incident_week4(
             result["status"] = "incomplete"
             result["missing_tools"] = missing
 
-    return Week4WorkflowResponse.model_validate(result)
+    # Serialize revision assignment for this incident on PostgreSQL. Model
+    # calls happen before the lock so they do not hold up response operations.
+    db.scalar(select(Incident.id).where(Incident.id == incident_id).with_for_update())
+    revision = (db.scalar(select(func.max(Week4AnalysisRevision.revision)).where(
+        Week4AnalysisRevision.incident_id == incident_id)) or 0) + 1
+    result["revision"] = revision
+    validated = Week4WorkflowResponse.model_validate(result)
+    db.add(Week4AnalysisRevision(incident_id=incident_id, revision=revision,
+                                 created_by=user.id, result=validated.model_dump(mode="json")))
+    db.commit()
+    return validated
+
+
+@router.get("/{incident_id}/week4-analysis")
+def analysis_history(incident_id: int, db: Session = Depends(get_db),
+                     user: User = Depends(require_roles(Role.ADMIN))):
+    if get_incident_by_id(db, incident_id) is None:
+        raise HTTPException(status_code=404, detail="Incident not found.")
+    rows = db.scalars(select(Week4AnalysisRevision).where(
+        Week4AnalysisRevision.incident_id == incident_id).order_by(Week4AnalysisRevision.revision.desc()))
+    return [{"revision": row.revision, "created_at": row.created_at,
+             "created_by": row.created_by, "result": row.result} for row in rows]

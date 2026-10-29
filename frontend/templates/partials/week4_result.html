@@ -1,0 +1,17 @@
+<div class="card-heading"><h2>Integrated analysis</h2></div>
+<p>Draft analysis is advisory. Review the original report and all results before acting.</p>
+{% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+<form method="post" action="/ui/reports/{{ report.id }}/week4-analysis" hx-post="/ui/reports/{{ report.id }}/week4-analysis" hx-target="#week4-analysis" hx-swap="innerHTML" hx-indicator="#request-progress" hx-disabled-elt="find button">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <label><input type="checkbox" name="use_ai" value="true"> Use the configured local model for draft translation, summary and tool orchestration</label>
+  <button type="submit" class="button">Run integrated analysis</button>
+</form>
+{% if revisions %}{% set latest = revisions[0] %}
+<p>Revision {{ latest.revision }} · {{ latest.result.status }} · {{ latest.result.orchestration_mode }}</p>
+{% if latest.result.warning %}<p class="notice">{{ latest.result.warning }}</p>{% endif %}
+{% if latest.result.translation %}<h3>Provisional English translation</h3><p>{{ latest.result.translation }}</p>{% endif %}
+{% if latest.result.generative_summary %}<h3>Provisional generated summary</h3><p>{{ latest.result.generative_summary }}</p>{% endif %}
+{% if latest.result.results.get('tool_3_predict_severity') %}<h3>Severity</h3><p>{{ latest.result.results.get('tool_3_predict_severity').get('predicted_severity') or 'Unavailable or uncertain' }}</p>{% if latest.result.results.get('tool_3_predict_severity').get('reason') %}<p>{{ latest.result.results.get('tool_3_predict_severity').get('reason') }}</p>{% endif %}{% endif %}
+<details><summary>Tool results and sources</summary><pre>{{ latest.result.results | tojson(indent=2) }}</pre></details>
+<details><summary>Revision history</summary><ol>{% for item in revisions %}<li>Revision {{ item.revision }} · {{ item.created_at }} · {{ item.result.status }}</li>{% endfor %}</ol></details>
+{% else %}<p>No integrated analysis has been run for this report.</p>{% endif %}

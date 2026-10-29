@@ -31,10 +31,11 @@ def test_admin_can_predict_using_the_shipped_model(api):
     response = api.client.post("/api/ai/predict-severity", headers=api.headers("admin"),
                                json={"message": "  A child is trapped inside a flooded house.  "})
     assert response.status_code == 200, response.text
-    assert response.json() == {
-        "message": "A child is trapped inside a flooded house.",
-        "predicted_severity": "High",
-    }
+    result = response.json()
+    assert result["message"] == "A child is trapped inside a flooded house."
+    assert result["predicted_severity"] == "High"
+    assert 0 <= result["model_score"] <= 1
+    assert result["requires_manual_review"] is True
 
 
 @pytest.mark.parametrize("role,expected", [(None, 401), ("citizen", 403), ("response_team", 403)])
@@ -75,3 +76,14 @@ def test_unexpected_model_output_becomes_a_service_error(monkeypatch):
     monkeypatch.setattr(severity_model, "get_pipeline", lambda: InvalidPipeline())
     with pytest.raises(severity_model.SeverityUnavailable):
         severity_model.predict_severity("Flood water is rising.")
+
+
+@pytest.mark.parametrize("message", [
+    "no flooding, nobody is trapped or injured",
+    "asdf qwerty zxcv",
+    "വെള്ളം കയറി ഞങ്ങൾ കുടുങ്ങി അടിയന്തര രക്ഷാപ്രവർത്തനം വേണം",
+])
+def test_uncertain_messages_require_manual_review(api, message):
+    response = api.client.post("/api/ai/predict-severity", headers=api.headers("admin"), json={"message": message})
+    assert response.status_code == 422
+    assert "review" in response.json()["detail"].lower()

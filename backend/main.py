@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from backend.utils.attachment_limits import AttachmentRequestLimit
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,7 +11,7 @@ from .config import get_settings
 from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
 from .routers import admin, alerts, assistant, auth, incidents, investigations, location_analysis, relief, severity, shelters, summaries, teams, users, workspaces, week4_workflow
-from .routers import communication, operations
+from .routers import communication, operations, community, attachments, recovery, duplicates, management
 
 settings = get_settings()
 
@@ -78,3 +79,11 @@ app.include_router(week4_workflow.router)
 app.include_router(relief.router)
 app.include_router(operations.router)
 app.include_router(communication.router)
+
+app.include_router(community.router)
+app.include_router(attachments.router)
+app.include_router(recovery.router)
+app.include_router(duplicates.router)
+app.include_router(management.router)
+
+app.add_middleware(AttachmentRequestLimit)
