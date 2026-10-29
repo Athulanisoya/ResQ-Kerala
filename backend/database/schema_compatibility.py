@@ -61,6 +61,18 @@ def validate_feature_tables(connection: Connection, metadata: MetaData) -> None:
         if extra_required:
             problems.append(f"{table.name}: extra required columns {', '.join(extra_required)}")
 
+        # A prior table rename can leave a valid-looking distribution table
+        # pointing to the wrong relief ledger. Column names alone cannot prove
+        # that its history still refers to the intended request table.
+        if table.name == "relief_distributions" and "request_id" in expected:
+            fk_options = {"postgresql_ignore_search_path": True} if connection.dialect.name == "postgresql" else {}
+            fks = inspector.get_foreign_keys(table.name, schema=table.schema, **fk_options)
+            if not any(fk["constrained_columns"] == ["request_id"]
+                       and fk["referred_table"] == "vidya_relief_requests"
+                       and fk["referred_columns"] == ["id"]
+                       and fk["referred_schema"] == table.schema for fk in fks):
+                problems.append("relief_distributions: request_id has an incompatible foreign key")
+
     if problems:
         raise RuntimeError(
             "Existing shelter or relief tables are incompatible with this version: "

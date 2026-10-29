@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=WORKSPACE_ROOT / ".env", env_file_encoding="utf-8", extra="ignore"
     )
-    week4_llm_provider: str = "gemini"
+    week4_llm_provider: str = "ollama"
 
     database_url: str
     jwt_secret: SecretStr

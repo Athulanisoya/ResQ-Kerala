@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import CreateSchema
 
 from .schema_compatibility import validate_feature_tables
+from .feature_migrations import migrate_feature_tables
 from .migrations import (
     ensure_user_team_foreign_key,
     migrate_incident_summaries,
@@ -73,6 +74,7 @@ def initialize_database():
             )
     # Reject incompatible legacy feature tables before creating any tables.
     with engine.begin() as connection:
+        migrate_feature_tables(connection, Base.metadata)
         validate_feature_tables(connection, Base.metadata)
         Base.metadata.create_all(connection)
 

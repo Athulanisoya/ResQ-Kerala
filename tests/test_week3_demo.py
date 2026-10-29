@@ -84,3 +84,18 @@ def test_rag_ignores_unapproved_documents(tmp_path, monkeypatch):
     finally:
         rag_retriever.load_documents.cache_clear()
         rag_retriever.build_index.cache_clear()
+
+def test_shelter_without_source_does_not_claim_demo_provenance():
+    shelter = ShelterCreate(
+        name="Community Shelter", district="Kochi", locality="Kochi",
+        address="Main Road", capacity=10,
+    )
+    assert shelter.source_name is None
+
+
+def test_shelter_assistant_defaults_to_local_provider(monkeypatch):
+    from backend.config import Settings
+    monkeypatch.delenv("WEEK4_LLM_PROVIDER", raising=False)
+    settings = Settings(_env_file=None, database_url="sqlite://",
+                        allow_sqlite_for_tests=True, jwt_secret="x" * 32)
+    assert settings.week4_llm_provider == "ollama"

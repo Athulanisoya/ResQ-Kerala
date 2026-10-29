@@ -35,7 +35,7 @@ Expired sessions show a sign-in notice. Temporary service failures keep the save
 
 User team memberships reference `response_teams.id` with a database foreign key. Startup adds this constraint to existing valid PostgreSQL tables without changing account data. If existing accounts reference missing teams, startup stops with an explanation and preserves those records for correction.
 
-The combined Week 3/4 workflows use an expanded shelter table and separate relief-request tables. Databases created by an earlier feature branch may have incompatible shelter or relief tables. Startup detects these layouts and stops without changing their data; back up the database and migrate the existing tables and their records before upgrading. The application does not automatically migrate these feature-branch tables. Fresh databases and compatible existing schemas can start normally.
+The combined Week 3/4 workflows use an expanded shelter table and separate relief-request tables. On PostgreSQL, startup upgrades recognized older Arya and Vidya shelter and relief layouts transactionally while preserving their records and references. Back up existing data before upgrading. Unknown or incompatible layouts stop startup without committing the upgrade and require a manual migration; legacy SQLite layouts are not migrated automatically.
 
 
 ## Week 1 demonstration
@@ -68,6 +68,8 @@ ollama pull gemma4:e4b-it-q4_K_M
 ```
 
 The configuration command checks Ollama and the installed model before saving `OLLAMA_BASE_URL` and `OLLAMA_MODEL` in the private `.env`; it preserves database credentials, custom options and comments. The default server is `http://127.0.0.1:11434` and the default model is `gemma4:e4b-it-q4_K_M`. Use `--model` to select an installed local model or `--base-url` for another loopback Ollama port. Restart the application after changing configuration; if it is already running, use `.\scripts\stop.ps1` followed by `.\scripts\start.ps1`. The admin location card checks actual server/model availability. The former `configure_gemini` command now delegates to this keyless setup. Existing saved Gemini analyses retain their original model label.
+
+The shelter assistant also defaults to local Ollama. An administrator can explicitly select Gemini with `WEEK4_LLM_PROVIDER=gemini` and a private Gemini key; in that mode, questions are sent to Gemini. Without a working provider, the assistant uses local retrieval and reports that fallback.
 
 Gemma 4 must fit the computer's available memory. The setup command verifies an existing installation and does not download models. See [Ollama's Gemma 4 model page](https://ollama.com/library/gemma4) for model variants, and [Athul's location and agent implementation notes](docs/week2-athul.md) for the tools, model transport and API contracts.
 

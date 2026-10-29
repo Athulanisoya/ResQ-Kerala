@@ -12,7 +12,7 @@ class ShelterCreate(InputModel):
     occupied: int = Field(default=0, ge=0)
     status: ShelterStatus = "OPEN"
     contact: str | None = Field(default=None, max_length=60)
-    source_name: str = Field(default="ResQ demo seed", min_length=2, max_length=200)
+    source_name: str | None = Field(default=None, min_length=2, max_length=200)
     @model_validator(mode="after")
     def validate_occupancy(self):
         if self.occupied > self.capacity:
@@ -23,15 +23,15 @@ class ShelterCreate(InputModel):
 class ShelterResponse(OutputModel):
     id: int
     name: str
-    district: str
-    locality: str
-    address: str
+    district: str | None
+    locality: str | None
+    address: str | None
     capacity: int
     occupied: int
     status: ShelterStatus
     contact: str | None
-    source_name: str
-    updated_at: datetime
+    source_name: str | None
+    updated_at: datetime | None
     available_capacity: int
 
 
