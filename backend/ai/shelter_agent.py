@@ -248,10 +248,10 @@ def _local_fallback(context: AryaAgentContext) -> dict:
             messages.append("Shelters returned by the database:")
             for shelter in rows:
                 messages.append(
-                    f"- {shelter.name}, {shelter.locality}, "
-                    f"{shelter.district}: "
+                    f"- {shelter.name}, {shelter.locality or shelter.location or 'location not provided'}, "
+                    f"{shelter.district or 'district not provided'}: "
                     f"{shelter.available_capacity} spaces available. "
-                    f"Address: {shelter.address}. "
+                    f"Address: {shelter.address or shelter.location or 'not provided'}. "
                     f"Status: {shelter.status}."
                 )
         else:

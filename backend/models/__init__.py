@@ -25,3 +25,6 @@ __all__ = [
     "Notification",
     "Shelter",
 ]
+
+from .relief import ReliefRequest, Inventory, Distribution
+from .shelter import ShelterUpdate

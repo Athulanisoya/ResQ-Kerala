@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
-from .routers import admin, alerts, assistant, auth, incidents, investigations, location_analysis, severity, shelters, summaries, teams, users, workspaces,week4_workflow
+from .routers import admin, alerts, assistant, auth, incidents, investigations, location_analysis, relief, severity, shelters, summaries, teams, users, workspaces, week4_workflow
 
 settings = get_settings()
 
@@ -74,3 +74,4 @@ app.include_router(summaries.router)
 app.include_router(shelters.router)
 app.include_router(assistant.router)
 app.include_router(week4_workflow.router)
+app.include_router(relief.router)
