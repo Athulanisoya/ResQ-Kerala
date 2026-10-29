@@ -150,3 +150,56 @@ def test_shelter_creation_requires_shelter_team(services):
     response = services.client.post("/api/shelters", headers=services.headers("admin"),
                                     json=shelter_payload(services, team_id=services.relief_team_id))
     assert response.status_code == 409
+
+
+def test_both_shelter_workflows_share_search_and_history(services):
+    api = services
+    headers = api.headers("admin")
+    created = api.client.post("/api/shelters", headers=headers, json={
+        "name": "Community Centre", "district": "Ernakulam", "locality": "Aluva",
+        "address": "Aluva School", "capacity": 20, "occupied": 5,
+        "source_name": "Synthetic community listing",
+    })
+    assert created.status_code == 201, created.text
+    shelter_id = created.json()["id"]
+    managed = api.client.post("/api/shelters", headers=headers, json=shelter_payload(api))
+    assert managed.status_code == 201, managed.text
+    search = api.client.get("/api/shelters", headers=headers, params={"location": "Aluva"})
+    assert [row["id"] for row in search.json()] == [shelter_id]
+    history = api.client.get(f"/api/shelters/{shelter_id}/history", headers=headers)
+    assert [row["version"] for row in history.json()] == [1]
+    patch = {"capacity": 20, "occupied": 20, "expected_version": 1, "note": "All beds filled"}
+    assert api.client.patch(f"/api/shelters/{shelter_id}", headers=headers, json=patch).json()["status"] == "FULL"
+    assert [row["version"] for row in api.client.get(f"/api/shelters/{shelter_id}/history", headers=headers).json()] == [1, 2]
+    assert shelter_id in [row["id"] for row in api.client.get("/api/shelters", headers=headers).json()]
+    assert shelter_id not in [row["id"] for row in api.client.get("/api/shelters?available_only=true", headers=headers).json()]
+
+
+def test_shelter_list_does_not_silently_truncate(services):
+    from backend.models.shelter import Shelter
+    api = services
+    with api.sessions() as db:
+        db.add_all([Shelter(name=f"Synthetic shelter {i}", location="Kochi", capacity=10, occupied=1)
+                    for i in range(12)])
+        db.commit()
+    response = api.client.get("/api/shelters", headers=api.headers("citizen"))
+    assert len(response.json()) == 12
+    limited = api.client.get("/api/shelters?limit=5", headers=api.headers("citizen"))
+    assert len(limited.json()) == 5
+
+
+def test_week4_shelter_tool_preserves_managed_location(services):
+    import asyncio
+    import json
+    from agents.tool import ToolContext
+    from backend.ai.week4_orchestrator import Week4Context, tool_6_search_shelters
+    api = services
+    created = api.client.post("/api/shelters", headers=api.headers("admin"), json=shelter_payload(api))
+    assert created.status_code == 201
+    with api.sessions() as db:
+        context = Week4Context(db=db, incident=None, original_text="", reported_location="Kochi School")
+        output = asyncio.run(tool_6_search_shelters.on_invoke_tool(ToolContext(context, tool_name="tool_6_search_shelters", tool_call_id="test", tool_arguments="{}"), "{}"))
+        result = json.loads(output) if isinstance(output, str) else output
+        assert result["count"] == 1
+        assert result["shelters"][0]["location"] == "Kochi School"
+        assert result["shelters"][0]["source_name"] is None

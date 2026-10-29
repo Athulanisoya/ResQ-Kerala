@@ -6,15 +6,12 @@ from backend.ai.summarizer import (
 )
 
 
-def test_missing_api_key_returns_provisional_summary(monkeypatch):
+def test_missing_api_key_returns_local_provisional_summary(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
     result = summarize_report("Flood water entered a house in Kochi.")
 
-    assert result["summary"] == (
-        "AI summarization unavailable. "
-        "Review the original report manually."
-    )
+    assert result["summary"] == "Report excerpts: Flood water entered a house in Kochi."
     assert result["is_provisional"] is True
     assert result["requires_manual_review"] is True
 
@@ -31,20 +28,17 @@ def test_empty_report_requires_manual_review(monkeypatch):
     assert result["requires_manual_review"] is True
 
 
-def test_gemini_failure_returns_provisional_summary(monkeypatch):
+def test_configured_api_key_does_not_trigger_network_summarization(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
 
-    with patch(
-        "backend.ai.summarizer.genai.Client",
-        side_effect=RuntimeError("Simulated provider failure"),
-    ):
+    with patch("socket.socket.connect", side_effect=AssertionError("Unexpected network request")):
         result = summarize_report(
             "Flood water entered a house in Kochi."
         )
 
     assert result["is_provisional"] is True
     assert result["requires_manual_review"] is True
-    assert "Review the original report manually." in result["summary"]
+    assert result["summary"] == "Report excerpts: Flood water entered a house in Kochi."
 
 
 def test_fallback_summary_does_not_invent_facts():

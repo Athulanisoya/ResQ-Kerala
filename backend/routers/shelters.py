@@ -19,8 +19,8 @@ def list_shelters(
     q: str = Query(default="", max_length=160),
     district: str | None = Query(default=None, max_length=100),
     location: str | None = Query(default=None, min_length=2, max_length=255),
-    available_only: bool = True,
-    limit: int = Query(default=10, ge=1, le=25),
+    available_only: bool = False,
+    limit: int | None = Query(default=None, ge=1, le=25),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
@@ -38,7 +38,7 @@ def add_shelter(data: ShelterCreate | ManagedShelterCreate, db: Session = Depend
     try:
         if isinstance(data, ManagedShelterCreate):
             return service.create_managed_shelter(db, user, data)
-        return service.shelter_view(service.create_shelter(db, data.model_dump()))
+        return service.shelter_view(service.create_shelter(db, data.model_dump(), user))
     except IntegrityError as exc:
         db.rollback()
         logger.exception("Shelter database integrity error")

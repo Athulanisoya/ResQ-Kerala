@@ -217,6 +217,8 @@ def tool_6_search_shelters(ctx: RunContextWrapper[Week4Context]) -> dict:
                 "district": row.district,
                 "locality": row.locality,
                 "address": row.address,
+                "location": row.location,
+                "source_name": row.source_name,
                 "capacity": row.capacity,
                 "occupied": row.occupied,
                 "available_capacity": row.available_capacity,

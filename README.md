@@ -35,6 +35,9 @@ Expired sessions show a sign-in notice. Temporary service failures keep the save
 
 User team memberships reference `response_teams.id` with a database foreign key. Startup adds this constraint to existing valid PostgreSQL tables without changing account data. If existing accounts reference missing teams, startup stops with an explanation and preserves those records for correction.
 
+The combined Week 3/4 workflows use an expanded shelter table and separate relief-request tables. Databases created by an earlier feature branch may have incompatible shelter or relief tables. Startup detects these layouts and stops without changing their data; back up the database and migrate the existing tables and their records before upgrading. The application does not automatically migrate these feature-branch tables. Fresh databases and compatible existing schemas can start normally.
+
+
 ## Week 1 demonstration
 
 1. Register a citizen, sign in and submit a flood report with its location, people affected and help required.

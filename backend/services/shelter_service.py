@@ -1,7 +1,7 @@
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from backend.models.shelter import Shelter
-def search_shelters(db: Session,query: str = "",district: str | None = None,available_only: bool = True,limit: int = 10,location: str | None = None):
+def search_shelters(db: Session,query: str = "",district: str | None = None,available_only: bool = True,limit: int | None = 10,location: str | None = None):
     statement = select(Shelter)
     query = (query or "").strip()
     district = (district or "").strip()
@@ -21,21 +21,31 @@ def search_shelters(db: Session,query: str = "",district: str | None = None,avai
             Shelter.district.ilike(f"%{district}%")
         )
     if location:
-        statement = statement.where(Shelter.location.icontains(location, autoescape=True))
+        statement = statement.where(or_(
+            Shelter.location.icontains(location, autoescape=True),
+            Shelter.district.icontains(location, autoescape=True),
+            Shelter.locality.icontains(location, autoescape=True),
+            Shelter.address.icontains(location, autoescape=True),
+        ))
     if available_only:
         statement = statement.where(
             Shelter.status == "OPEN",
             Shelter.occupied < Shelter.capacity
         )
 
-    statement = statement.order_by(Shelter.district,Shelter.locality,Shelter.name).limit(max(1, min(limit, 25)))
+    statement = statement.order_by(Shelter.district, Shelter.locality, Shelter.name)
+    if limit is not None:
+        statement = statement.limit(max(1, min(limit, 25)))
 
     return list(db.scalars(statement).all())
 def get_shelter(db: Session, shelter_id: int):
     return db.get(Shelter, shelter_id)
-def create_shelter(db: Session, values: dict):
+def create_shelter(db: Session, values: dict, user=None):
     shelter = Shelter(**values)
     db.add(shelter)
+    db.flush()
+    if user is not None:
+        save_snapshot(db, shelter, user, "Shelter created")
     db.commit()
     db.refresh(shelter)
     return shelter
