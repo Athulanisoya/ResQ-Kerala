@@ -4,8 +4,47 @@
 {% set citizen = user.role == 'citizen' %}
 {% set admin = user.role == 'admin' %}
 {% include 'partials/alerts.html' %}
-<div class="page-heading"><div><span class="section-kicker">{{ 'COMMUNITY WORKSPACE' if citizen else 'COORDINATION DESK' if admin else 'RESPONSE WORKSPACE' }}</span><h1>{{ 'Your community. Your connection.' if citizen else 'A clearer picture. A coordinated response.' if admin else 'Ready to respond, together.' }}</h1><p>{{ 'Report what is happening. Follow what happens next.' if citizen else 'Review incoming reports and connect verified incidents with a response team.' if admin else 'Find your team’s assigned incidents and the information you need.' }}</p></div>{% if citizen %}<a class="button button-primary" href="/reports/new" hx-get="/reports/new" hx-target="#main-content" hx-push-url="true">{{ icon('plus') }}Report an incident</a>{% endif %}</div>
-<section class="overview-banner" aria-labelledby="overview-banner-title"><div class="banner-copy"><span class="eyebrow light">{{ 'EVERY REPORT IS A FIRST STEP' if citizen else 'FROM INFORMATION TO ACTION' }}</span><h2 id="overview-banner-title">{{ 'A small action can make<br>a meaningful difference.'|safe if citizen else 'The right information.<br>The right team.'|safe }}</h2><p>{{ 'Share clear details about a flood incident. Your report moves through review, verification and team assignment.' if citizen else 'Follow each incident from submission to verification and assignment, all in one place.' }}</p><a href="{{ '/reports/new' if citizen else '/reports' }}" hx-get="{{ '/reports/new' if citizen else '/reports' }}" hx-target="#main-content" hx-push-url="true" class="banner-link">{{ 'Start a report' if citizen else 'Open report queue' if admin else 'View assignments' }}{{ icon('arrow') }}</a></div><div class="banner-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-orbit orbit-three"></div><div class="art-orbit orbit-four"></div><div class="art-center">{{ icon('shield') }}</div><span class="art-dot dot-one"></span><span class="art-dot dot-two"></span><span class="art-dot dot-three"></span></div></section>
+<div class="canopy-advisory" aria-label="Official information">
+  {{ icon('wave') }}<p>Stay informed. Check rainfall, flood and coastal advisories before you travel.</p>
+  <a href="/alerts" hx-get="/alerts" hx-target="#main-content" hx-push-url="true">View official alerts {{ icon('arrow') }}</a>
+</div>
+<section class="canopy-hero" aria-labelledby="overview-banner-title">
+  <div class="canopy-hero-copy">
+    <span class="eyebrow light">{{ 'ഒരുമിച്ച്, കരുതലോടെ.' if citizen else 'COORDINATION DESK' if admin else 'RESPONSE WORKSPACE' }}</span>
+    <h1 id="overview-banner-title">{{ 'Together, we look after Kerala.' if citizen else 'A clearer picture. A coordinated response.' if admin else 'Ready to respond, together.' }}</h1>
+    <p>{{ 'Find safety when you need it. Offer a helping hand when you can.' if citizen else 'Review incoming reports and connect verified incidents with a response team.' if admin else 'Find your team’s assigned incidents and the information you need.' }}</p>
+    <div class="canopy-hero-actions">
+      <a class="button button-sand" href="{{ '/reports/new' if citizen else '/reports' }}" hx-get="{{ '/reports/new' if citizen else '/reports' }}" hx-target="#main-content" hx-push-url="true">{{ icon('lifebuoy' if citizen else 'reports') }}{{ 'I need help' if citizen else 'Open report queue' if admin else 'View assignments' }}</a>
+      <a class="button button-hero-outline" href="/community" hx-get="/community" hx-target="#main-content" hx-push-url="true">{{ icon('hand') }}{{ 'I can help' if citizen else 'Community support' }}</a>
+    </div>
+  </div>
+  <p class="canopy-hero-note">From our hills to our shores,<br>no one stands alone.</p>
+</section>
+<section class="canopy-services" aria-label="Local support services">
+  <article class="canopy-service canopy-service-urgent">
+    <span class="canopy-service-icon">{{ icon('lifebuoy' if citizen else 'reports') }}</span>
+    <h2>{{ 'Request help' if citizen else 'Review reports' if admin else 'Your assignments' }}</h2>
+    <p>{{ 'Tell the response team what you need.' if citizen else 'Review incidents and coordinate a response.' if admin else 'See the tasks assigned to your team.' }}</p>
+    <a href="{{ '/reports/new' if citizen else '/reports' }}" hx-get="{{ '/reports/new' if citizen else '/reports' }}" hx-target="#main-content" hx-push-url="true">{{ 'Create request' if citizen else 'Open report queue' if admin else 'View assignments' }}{{ icon('arrow') }}</a>
+  </article>
+  <article class="canopy-service">
+    <span class="canopy-service-icon">{{ icon('house') }}</span><h2>Find a shelter</h2><p>See safe spaces and their available capacity.</p>
+    <a href="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">Browse shelters{{ icon('arrow') }}</a>
+  </article>
+  <article class="canopy-service canopy-service-help">
+    <span class="canopy-service-icon">{{ icon('package') }}</span><h2>Make a pledge</h2><p>Offer essential supplies or financial support.</p>
+    <a href="/community#add-donation-pledge" hx-get="/community" hx-target="#main-content" hx-push-url="/community#add-donation-pledge">Add donation pledge{{ icon('plus') }}</a>
+  </article>
+  <article class="canopy-service canopy-service-help">
+    <span class="canopy-service-icon">{{ icon('hand') }}</span><h2>Help your community</h2><p>Connect local needs with relief supplies and support.</p>
+    <a href="/operations" hx-get="/operations" hx-target="#main-content" hx-push-url="true">Explore relief support{{ icon('arrow') }}</a>
+  </article>
+</section>
+<section class="canopy-pledge-banner" aria-labelledby="dashboard-pledge-title">
+  <div class="canopy-pledge-copy"><span class="section-kicker">A HELPING HAND, IN EVERY PLEDGE</span><h2 id="dashboard-pledge-title">Share what you can. Help where it matters.</h2><p>Pledge essential supplies or financial support for families and communities across Kerala.</p></div>
+  <div class="canopy-pledge-actions"><a class="button button-primary" href="/community#add-donation-pledge" hx-get="/community" hx-target="#main-content" hx-push-url="/community#add-donation-pledge">{{ icon('plus') }}Add donation pledge</a><a class="text-link" href="/community#my-pledges" hx-get="/community" hx-target="#main-content" hx-push-url="/community#my-pledges">View my pledges{{ icon('arrow') }}</a></div>
+</section>
+{% include 'partials/dashboard_community.html' %}
 <section class="stats-grid {{ 'team-stats' if user.role == 'response_team' }}" aria-label="Report overview">
   <article class="stat-card"><div class="stat-label">{{ 'My reports' if citizen else 'All reports' if admin else 'My assignments' }}<span class="stat-icon">{{ icon('reports') }}</span></div><strong>{{ counts.get('total', 0) }}</strong><span class="stat-note">{{ 'Submitted by you' if citizen else 'In the report queue' if admin else 'Assigned to your team' }}</span></article>
   {% if user.role != 'response_team' %}<article class="stat-card"><div class="stat-label">Awaiting review<span class="stat-icon amber">{{ icon('clock') }}</span></div><strong>{{ counts.get('pending_review', 0) }}</strong><span class="stat-note">Submitted or under review</span></article><article class="stat-card"><div class="stat-label">Verified<span class="stat-icon teal">{{ icon('shield') }}</span></div><strong>{{ counts.get('verified', 0) }}</strong><span class="stat-note">Ready for team assignment</span></article><article class="stat-card"><div class="stat-label">Assigned<span class="stat-icon green">{{ icon('people') }}</span></div><strong>{{ counts.get('assigned', 0) }}</strong><span class="stat-note">Connected with a response team</span></article>{% else %}<article class="stat-card"><div class="stat-label">Assigned<span class="stat-icon green">{{ icon('people') }}</span></div><strong>{{ counts.get('assigned', 0) }}</strong><span class="stat-note">View incident details below</span></article>{% endif %}
@@ -13,5 +52,3 @@
 <section class="card report-card" aria-labelledby="recent-title"><div class="card-heading"><div><h2 id="recent-title">{{ 'Recent reports' if citizen else 'Recent incidents' if admin else 'Your team’s assignments' }}</h2><p>{{ 'A quick view of your latest activity.' if citizen else 'Keep the next step in view.' }}</p></div><a class="text-link" href="/reports" hx-get="/reports" hx-target="#main-content" hx-push-url="true">View all{{ icon('arrow') }}</a></div>{{ report_table(reports, user, true) }}</section>
 <div class="completion-summary"><a href="/reports?status=RESOLVED" hx-get="/reports?status=RESOLVED" hx-target="#main-content" hx-push-url="true"><strong>{{ counts.get('resolved',0) }}</strong> resolved, awaiting final review</a><a href="/reports?status=CLOSED" hx-get="/reports?status=CLOSED" hx-target="#main-content" hx-push-url="true"><strong>{{ counts.get('closed',0) }}</strong> closed cases</a><a href="/updates" hx-get="/updates" hx-target="#main-content" hx-push-url="true">Open my updates {{ icon('arrow') }}</a></div>
 <div class="process-note">{{ icon('info') }}<p><strong>A clear path forward.</strong> Review → Team acceptance → Rescue progress → Resolution → Admin closure. Open a report to see every update or answer a clarification.</p></div>
-
-{% include 'partials/dashboard_community.html' %}

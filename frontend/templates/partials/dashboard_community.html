@@ -1,1 +1,1 @@
-{% if user.role == 'citizen' %}<div hx-get="/ui/dashboard/community" hx-trigger="load" hx-swap="innerHTML"><p>Loading community information…</p></div>{% endif %}
+{% if user.role == 'citizen' %}<div class="canopy-community-resources" hx-get="/ui/dashboard/community" hx-trigger="load, every 30s [document.visibilityState === 'visible']" hx-swap="innerHTML" aria-label="Current community information"><p class="card canopy-resource-loading" role="status">Loading community information…</p></div>{% endif %}

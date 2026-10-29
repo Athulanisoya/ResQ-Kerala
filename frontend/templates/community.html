@@ -1,16 +1,18 @@
+{% from 'icons.html' import icon %}
 {% include 'partials/alerts.html' %}
 {% set active_campaigns = campaigns|selectattr('status', 'equalto', 'ACTIVE')|list %}
-<div class="page-heading">
-  <div><span class="section-kicker">COMMUNITY</span><h1>News and donations</h1><p>Read verified updates and offer support to active campaigns.</p></div>
-  <a class="button button-primary" href="#add-donation-pledge">Add donation pledge</a>
+<div class="canopy-community">
+<div class="page-heading canopy-community-heading">
+  <div><span class="section-kicker">KERALA, TOGETHER</span><h1>News and donations</h1><p>From our hills to our shores, every helping hand matters. Follow community updates and share what you can.</p></div>
+  <div class="canopy-pledge-links"><a class="button button-primary" href="#add-donation-pledge">{{ icon('plus') }}Add donation pledge</a><a class="button button-secondary" href="#my-pledges">{{ 'Donation records' if user.role == 'admin' else 'My pledges' }}{{ icon('arrow') }}</a></div>
 </div>
-<section id="add-donation-pledge" class="card operations-section" aria-labelledby="donation-pledge-heading">
-  <div class="card-heading"><div><h2 id="donation-pledge-heading">Add a donation pledge</h2><p>Offer money or supplies for general relief or an active campaign.</p></div></div>
+<section id="add-donation-pledge" class="card operations-section canopy-pledge" aria-labelledby="donation-pledge-heading">
+  <div class="card-heading canopy-pledge-heading"><div class="canopy-pledge-intro"><span class="section-kicker">A HELPING HAND, IN EVERY PLEDGE</span><h2 id="donation-pledge-heading">Add a donation pledge</h2><p>Share essential supplies or financial support for general relief or an active campaign.</p></div><span class="canopy-community-mark" aria-hidden="true">{{ icon('people') }}</span></div>
   <form action="/ui/community/pledges" method="post" hx-post="/ui/community/pledges" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form community-pledge-form">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ pledge_key }}">
     <div class="field"><label for="pledge-campaign">Support</label><select id="pledge-campaign" name="campaign_id"><option value="">General relief support</option>{% for campaign in active_campaigns %}<option value="{{ campaign.id }}" {{ 'selected' if pledge_values.get('campaign_id')|string == campaign.id|string }}>{{ campaign.title }}</option>{% endfor %}</select></div>
     <div class="field"><label for="pledge-kind">Offer type</label><select id="pledge-kind" name="kind" data-pledge-kind><option value="SUPPLIES" {{ 'selected' if pledge_values.get('kind', 'SUPPLIES') == 'SUPPLIES' }}>Supplies</option><option value="MONEY" {{ 'selected' if pledge_values.get('kind') == 'MONEY' }}>Money pledge</option></select></div>
-    <div class="field"><label for="pledge-description">What will you offer?</label><input id="pledge-description" name="description" minlength="2" maxlength="200" required placeholder="For example, bottled water" value="{{ pledge_values.get('description', '') }}"></div>
+    <div class="field canopy-pledge-description"><label for="pledge-description">What will you offer?</label><input id="pledge-description" name="description" minlength="2" maxlength="200" required placeholder="For example, bottled water" value="{{ pledge_values.get('description', '') }}"></div>
     <div class="field"><label for="pledge-quantity">Quantity or amount</label><input id="pledge-quantity" name="quantity" type="number" min="0.01" max="1000000000" step="0.01" required value="{{ pledge_values.get('quantity', '') }}"></div>
     <div class="field"><label for="pledge-unit">Unit <span class="optional">Use INR for money</span></label><input id="pledge-unit" name="unit" maxlength="40" required placeholder="For example, litres or INR" value="{{ pledge_values.get('unit', '') }}" data-pledge-unit></div>
     <p class="field-hint">Offers are pledges. This application does not collect or process payments. An administrator confirms receipt separately.</p>
@@ -91,3 +93,4 @@
   </article>
   {% else %}<div class="operation-history-item"><p>No pledges recorded.</p></div>{% endfor %}
 </section>
+</div>

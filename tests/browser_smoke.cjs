@@ -48,6 +48,7 @@ async function main() {
     await citizen.getByRole('button', { name: 'Create my account', exact: true }).click();
     await citizen.waitForURL(base + '/dashboard');
     const initial = await citizen.evaluate(() => performance.timeOrigin);
+    await citizen.locator('.canopy-more summary').click();
     await citizen.getByRole('link', { name: 'New report', exact: true }).click();
     await citizen.waitForURL(base + '/reports/new');
     assert.equal(await citizen.evaluate(() => performance.timeOrigin), initial, 'HTMX navigation should not reload the page');

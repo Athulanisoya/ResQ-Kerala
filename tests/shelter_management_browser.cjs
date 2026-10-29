@@ -19,6 +19,7 @@ const crypto=require('node:crypto');
  const stamp=Date.now();const teamName=`Synthetic shelter live team ${stamp}`;const shelterName=`Synthetic live shelter ${stamp}`;const email=`shelter.live.${stamp}@example.com`;const password=crypto.randomBytes(24).toString('base64url');
  try{
   const admin=await page();await login(admin,demo.accounts.find(a=>a.role==='admin').email,demo.password);
+  await admin.locator('.canopy-more summary').click();
   await admin.getByRole('link',{name:'Administration',exact:true}).click();
   const createTeam=admin.locator('form[action="/ui/management/teams"]');
   await createTeam.getByLabel('Team name',{exact:true}).fill(teamName);await createTeam.getByLabel('Team type',{exact:true}).selectOption('Shelter');await createTeam.getByRole('button',{name:'Create team',exact:true}).click();

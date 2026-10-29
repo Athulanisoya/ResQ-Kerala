@@ -1,5 +1,27 @@
-<section class="card operations-section"><h2>Active alerts</h2>{% for item in alerts %}<article><strong>{{ item.title }}</strong><p>{{ item.place_name }} · {{ item.level|title }} · {{ item.message }}</p></article>{% else %}<p>{{ 'Alerts are temporarily unavailable.' if 'alerts' in failed else 'No active alerts. This does not establish that an area is safe.' }}</p>{% endfor %}<a href="/alerts" hx-get="/alerts" hx-target="#main-content" hx-push-url="true">View alerts</a></section>
-<section class="card operations-section"><h2>Emergency contacts</h2><p class="field-hint">Check the linked official source for current details.</p>{% for contact in contacts %}<p>{{ contact.service }}: <strong>{{ contact.number }}</strong> · <a href="{{ contact.source_url }}" target="_blank" rel="noopener noreferrer">Source</a></p>{% endfor %}</section>
-<section class="card operations-section"><h2>Available shelters</h2><p>These are recent records, not a proximity ranking. Search by your location and verify availability.</p>{% for item in shelters %}<p>{{ item.name }} · {{ item.location or item.locality or item.district or 'Location not provided' }} · {{ item.available_capacity }} available</p>{% else %}<p>{{ 'Shelter information is temporarily unavailable.' if 'shelters' in failed else 'No shelters currently listed with space.' }}</p>{% endfor %}<a href="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">Search shelters</a></section>
-<section class="card operations-section"><h2>Safety information</h2><p class="field-hint">These project reference summaries await review; follow current official instructions.</p>{% for item in safety_documents %}<article><strong>{{ item.title }}</strong><p>{{ item.text }}</p>{% if item.source_url %}<a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">Source: {{ item.source_name }}</a>{% endif %}</article>{% else %}<p>No safety references available.</p>{% endfor %}</section>
-<section class="card operations-section"><h2>Latest news</h2>{% for item in news %}<article><strong>{{ item.title }}</strong><p>{{ item.body }}</p></article>{% else %}<p>{{ 'News is temporarily unavailable.' if 'news' in failed else 'No published updates.' }}</p>{% endfor %}<a href="/community" hx-get="/community" hx-target="#main-content" hx-push-url="true">View news and campaigns</a></section>
+{% from 'icons.html' import icon %}
+<div class="canopy-community-grid">
+  <section class="card canopy-resource-card canopy-resource-alerts" aria-labelledby="dashboard-alerts-title">
+    <div class="canopy-resource-heading"><div><span class="section-kicker">STAY INFORMED</span><h2 id="dashboard-alerts-title">Active alerts</h2></div><a class="text-link" href="/alerts" hx-get="/alerts" hx-target="#main-content" hx-push-url="true">View alerts{{ icon('arrow') }}</a></div>
+    {% for item in alerts %}<article class="canopy-resource-row"><div><h3>{{ item.title }}</h3><p class="canopy-resource-meta">{{ item.place_name }} · {{ item.level|title }}</p><p>{{ item.message }}</p></div></article>{% else %}<p>{{ 'Alerts are temporarily unavailable.' if 'alerts' in failed else 'No active alerts. This does not establish that an area is safe.' }}</p>{% endfor %}
+  </section>
+  <section class="card canopy-resource-card" aria-labelledby="dashboard-shelters-title">
+    <div class="canopy-resource-heading"><h2 id="dashboard-shelters-title">Available shelters</h2>{{ icon('house') }}</div>
+    <p class="canopy-resource-meta">These are recent records, not a proximity ranking. Search by your location and verify availability.</p>
+    {% for item in shelters %}<article class="canopy-resource-row"><div><h3>{{ item.name }}</h3><p class="canopy-resource-meta">{{ item.location or item.locality or item.district or 'Location not provided' }}</p></div><div class="canopy-capacity"><strong>{{ item.available_capacity }}</strong><span>spaces available</span></div></article>{% else %}<p>{{ 'Shelter information is temporarily unavailable.' if 'shelters' in failed else 'No shelters currently listed with space.' }}</p>{% endfor %}
+    <div class="canopy-resource-actions"><a class="text-link" href="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">Search shelters{{ icon('arrow') }}</a></div>
+  </section>
+  <section class="card canopy-resource-card" aria-labelledby="dashboard-news-title">
+    <div class="canopy-resource-heading"><h2 id="dashboard-news-title">Latest news</h2>{{ icon('people') }}</div>
+    {% for item in news %}<article class="canopy-resource-row"><div><h3>{{ item.title }}</h3><p>{{ item.body }}</p></div></article>{% else %}<p>{{ 'News is temporarily unavailable.' if 'news' in failed else 'No published updates.' }}</p>{% endfor %}
+    <div class="canopy-resource-actions"><a class="text-link" href="/community" hx-get="/community" hx-target="#main-content" hx-push-url="true">View news and campaigns{{ icon('arrow') }}</a></div>
+  </section>
+  <section class="card canopy-resource-card" aria-labelledby="dashboard-emergency-title">
+    <div class="canopy-resource-heading"><h2 id="dashboard-emergency-title">Emergency contacts</h2>{{ icon('lifebuoy') }}</div><p class="canopy-resource-meta">Check the linked official source for current details.</p>
+    {% for contact in contacts %}<div class="canopy-resource-row"><div><h3>{{ contact.service }}</h3><p><strong>{{ contact.number }}</strong> · <a href="{{ contact.source_url }}" target="_blank" rel="noopener noreferrer">Official source</a></p></div></div>{% endfor %}
+  </section>
+  <section class="card canopy-resource-card" aria-labelledby="dashboard-safety-title">
+    <div class="canopy-resource-heading"><h2 id="dashboard-safety-title">Safety information</h2>{{ icon('shield') }}</div><p class="canopy-resource-meta">These project reference summaries await review; follow current official instructions.</p>
+    {% for item in safety_documents %}<article class="canopy-resource-row"><div><h3>{{ item.title }}</h3><p>{{ item.text }}</p>{% if item.source_url %}<a class="text-link" href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">Source: {{ item.source_name }}{{ icon('arrow') }}</a>{% endif %}</div></article>{% else %}<p>No safety references available.</p>{% endfor %}
+    <div class="canopy-resource-actions"><a class="text-link" href="/assistant" hx-get="/assistant" hx-target="#main-content" hx-push-url="true">Ask the safety assistant{{ icon('arrow') }}</a></div>
+  </section>
+</div>

@@ -60,9 +60,19 @@
   });
   document.addEventListener('resq:signed-out', event => signedOut(event.detail.notice));
   document.addEventListener('click', event => {
+    const serviceMenu = event.target.closest('.canopy-more');
+    if (serviceMenu && event.target.closest('a[data-nav]')) serviceMenu.open = false;
+    if (!serviceMenu) document.querySelectorAll('.canopy-more[open]').forEach(menu => { menu.open = false; });
     if (event.target.closest('[data-sign-in-again]')) {
       clearToken(); window.location.assign('/login');
     } else if (event.target.closest('[data-retry-bootstrap]')) bootstrap();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('.canopy-more[open]').forEach(menu => {
+      menu.open = false;
+      menu.querySelector('summary')?.focus();
+    });
   });
   window.addEventListener('pageshow', event => {
     if (event.persisted) {
@@ -105,7 +115,15 @@
       if (!field.dataset.counterReady) { field.addEventListener('input', update); field.dataset.counterReady = 'true'; }
       update();
     });
+    fitChatWorkspace();
   }
+  function fitChatWorkspace() {
+    const chat = document.querySelector('.chat-workspace');
+    if (!chat?.getBoundingClientRect) return;
+    const top = chat.getBoundingClientRect().top + window.scrollY;
+    chat.style.setProperty('--canopy-chat-offset', `${Math.ceil(top + 16)}px`);
+  }
+  window.addEventListener('resize', fitChatWorkspace);
   document.addEventListener('DOMContentLoaded', () => {
     refreshPage();
     if (document.querySelector('[data-session-bootstrap]')) bootstrap();
@@ -113,10 +131,14 @@
   document.addEventListener('htmx:afterSettle', event => {
     refreshPage();
     if (event.detail.target.id === 'main-content') {
-      // The sidebar survives main-content swaps; HTMX owns its single polling timer.
+      // The shared navigation survives main-content swaps; HTMX owns its polling timer.
       if (window.htmx) window.htmx.trigger(document.body, 'resq:refresh-updates');
       document.getElementById('main-content').focus({ preventScroll: true });
-      window.scrollTo({ top: 0, behavior: 'instant' });
+      let fragmentId = '';
+      try { fragmentId = decodeURIComponent(window.location.hash?.slice(1) || ''); } catch { /* Ignore malformed fragments. */ }
+      const fragment = fragmentId ? document.getElementById(fragmentId) : null;
+      if (fragment) fragment.scrollIntoView({ block: 'start', behavior: 'instant' });
+      else window.scrollTo({ top: 0, behavior: 'instant' });
       const heading = document.querySelector('#main-content h1, #main-content h2');
       if (heading) document.title = `${heading.textContent.trim()} · ResQ Kerala`;
     }
