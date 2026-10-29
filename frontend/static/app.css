@@ -535,6 +535,27 @@ h3 { font-size: 15px; font-weight: 650; }
   .analysis-actions .button { flex: 1 1 100%; }
 }
 @keyframes session-spin { to { transform: rotate(360deg); } }
+.notification-count { display: inline-flex; min-width: 20px; padding: 2px 6px; border-radius: 20px; background: #dcece4; color: #123d35; font-size: 10px; font-weight: 700; }
+.update-item { display: flex; justify-content: space-between; gap: 20px; padding: 24px; border-bottom: 1px solid var(--line); }
+.update-item h3, .clarification-item h3 { font-size: 15px; margin: 8px 0; overflow-wrap: anywhere; }
+.update-item p, .clarification-item p { font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0; }
+.update-item time, .clarification-item time { color: var(--muted); font-size: 11px; }
+.update-unread { border-left: 3px solid var(--teal); background: #f4f9f6; }
+.clarification-item { padding: 0 0 22px; margin-bottom: 22px; border-bottom: 1px solid var(--line); }
+.clarification-item blockquote { margin: 16px 0; padding: 12px 18px; background: #f1f6f3; border-left: 3px solid var(--teal); }
+.clarification-item footer { color: var(--muted); font-size: 11px; }
+.checkbox-label { display: flex; align-items: center; gap: 10px; font-size: 12px; line-height: 1.6; }
+.checkbox-label input { width: auto; }
+.report-filters { align-items: end; flex-wrap: wrap; gap: 14px; }
+.report-filters .field { flex: 1 1 200px; margin: 0; }
+.report-filters .field:first-child { flex-basis: 280px; }
+.completion-summary { display: flex; gap: 20px; flex-wrap: wrap; margin: 22px 0; font-size: 13px; }
+.completion-summary a { color: var(--teal); display: inline-flex; gap: 5px; align-items: center; }
+.status-track { overflow-x: auto; }
+.track-stage { flex: 1 0 92px; }
+.status-task_accepted, .status-en_route, .status-in_progress { color: #315c89; background: #edf3fb; }
+.status-resolved, .status-closed { color: #2c6944; background: #e9f4ed; }
+@media (max-width: 600px) { .update-item { flex-direction: column; } .report-filters .button { width: 100%; } }
 @media (max-width: 760px) {
   .permissions-card .card-heading { flex-wrap: wrap; }
   .permissions-table { min-width: 530px; }

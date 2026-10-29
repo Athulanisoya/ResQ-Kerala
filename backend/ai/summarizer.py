@@ -1,93 +1,27 @@
-import os
+"""Local summary adapter for the merged report-analysis snapshot contract.
 
-from google import genai
+Citizen submission stays offline and does not wait for a language model. The
+optional Gemma 4 location agent is a separate explicit administrator action.
+"""
+from types import SimpleNamespace
 
-
-MODEL_NAME = "gemini-3.5-flash-lite"
+from backend.ai.report_summarizer import summarize_report as extract_summary
 
 
 def fallback_summary(message: str) -> str:
-    """Return a fallback when AI summarization is unavailable."""
-
     if not message or not message.strip():
         return "No report text available. Manual review required."
-
-    return (
-        "AI summarization unavailable. "
-        "Review the original report manually."
-    )
+    return "Summary unavailable. Review the original report manually."
 
 
-def summarize_report(message: str) -> dict:
-    """
-    Generate a concise disaster report summary using Gemini.
-
-    If generation fails, return a provisional result
-    that requires manual review.
-    """
-
-    if not message or not message.strip():
-        return {
-            "summary": fallback_summary(message),
-            "is_provisional": True,
-            "requires_manual_review": True,
-        }
-
-    api_key = os.getenv("GEMINI_API_KEY")
-
-    if not api_key:
-        return {
-            "summary": fallback_summary(message),
-            "is_provisional": True,
-            "requires_manual_review": True,
-        }
-
-    try:
-        client = genai.Client(api_key=api_key)
-
-        prompt = f"""
-You are summarizing disaster reports for RESQ Kerala,
-an emergency response coordination system.
-
-Summarize the following disaster report in 2-3 concise sentences.
-
-Instructions:
-- Preserve locations and important numbers.
-- Preserve the number of people affected, if stated.
-- Include requests for rescue, food, water, medical assistance,
-  shelter, or other essential help.
-- Do not invent facts or infer unstated information.
-- Do not omit critical information about people in danger.
-- Do not guess when information is unclear.
-- Return only the summary.
-
-Original disaster report:
-<report>
-{message}
-</report>
-"""
-
-        interaction = client.interactions.create(
-            model=MODEL_NAME,
-            input=prompt,
-        )
-
-        summary = (interaction.output_text or "").strip()
-
-        if not summary:
-            raise ValueError("Gemini returned an empty summary.")
-
-        return {
-            "summary": summary,
-            "is_provisional": False,
-            "requires_manual_review": False,
-        }
-
-    except Exception as error:
-        print(f"Gemini summarization error: {error}")
-
-        return {
-            "summary": fallback_summary(message),
-            "is_provisional": True,
-            "requires_manual_review": True,
-        }
+def summarize_report(message) -> dict:
+    """Accept the historical text argument or a complete incident record."""
+    incident = SimpleNamespace(message=message) if isinstance(message, str) else message
+    summary = extract_summary(incident)
+    if not summary.strip():
+        summary = fallback_summary(getattr(incident, "message", ""))
+    return {
+        "summary": summary,
+        "is_provisional": True,
+        "requires_manual_review": True,
+    }

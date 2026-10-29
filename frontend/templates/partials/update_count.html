@@ -1,0 +1,1 @@
+{% if unread_count is none %}<span class="muted" title="Update count unavailable. Open My updates to retry.">?</span>{% elif unread_count %}<span class="notification-count" aria-label="{{ unread_count }} unread updates">{{ unread_count }}</span>{% else %}<span class="sr-only">No unread updates</span>{% endif %}

@@ -118,13 +118,15 @@ def migrate_incident_summaries(
                 incident_id,
                 summary,
                 summary_is_provisional,
-                requires_manual_review
+                requires_manual_review,
+                created_at
             )
             SELECT
                 incident.id,
                 incident.summary,
-                incident.summary_is_provisional,
-                incident.requires_manual_review
+                COALESCE(incident.summary_is_provisional, TRUE),
+                COALESCE(incident.requires_manual_review, TRUE),
+                CURRENT_TIMESTAMP
             FROM {incident_table} AS incident
             WHERE incident.summary IS NOT NULL
               AND NOT EXISTS (

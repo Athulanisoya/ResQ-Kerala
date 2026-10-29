@@ -13,7 +13,7 @@ from sqlalchemy import (
 from backend.database.connection import Base
 
 class ReliefRequest(Base):
-    __tablename__ = "relief_requests"
+    __tablename__ = "vidya_relief_requests"
 
     __table_args__ = (
         UniqueConstraint(
@@ -80,7 +80,7 @@ class Distribution(Base):
 
     request_id = Column(
         Integer,
-        ForeignKey("relief_requests.id"),
+        ForeignKey("vidya_relief_requests.id"),
         nullable=False,
         index=True,
     )

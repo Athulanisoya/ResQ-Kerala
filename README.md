@@ -1,4 +1,4 @@
-# ResQ Kerala — integrated Week 2
+# ResQ Kerala — integrated workspace with Athul's Weeks 1–4
 
 This integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-maanaz` in one PostgreSQL-backed FastAPI/HTMX application. It retains citizen reporting, per-tab login, administrator review and team assignment, and adds Kerala location extraction, scheduled alerts and alert matching, the trained severity classifier, reviewed analysis, and investigation assignment/findings/completion.
 
@@ -52,17 +52,29 @@ User team memberships reference `response_teams.id` with a database foreign key.
 5. Enter an investigator's name and select **Start investigation**. Save findings while In progress, use **Reassign investigator** if needed, then choose Completed and save again. Completed investigation findings remain available for review and cannot be edited.
 6. Expire the demo alert and select **Analyze location** again to demonstrate `NO_MATCH`. An unknown or ambiguous location produces `UNCERTAIN`. No matching alert does not establish that the report is false or the area is safe.
 
-Admins can also select **Run Gemini agent** after configuring a Gemini API key. The optional agent uses the OpenAI Agents SDK with the configured Gemini model (`gemini-3.1-flash-live-preview` by default) and controlled location extraction/active-alert tools. Deterministic geography and the severity classifier work without that key. Missing provider configuration or failed agent runs produce a labelled local fallback.
+Admins can also select **Run Gemma 4 agent** when local Ollama is running and the configured model is installed. The optional agent uses the OpenAI Agents SDK with **Gemma 4 via Ollama** and the existing location extraction and active-alert tools. Report text stays on this computer for model inference; no Gemini or OpenAI API key is required. Deterministic geography and the severity classifier remain available independently. An unavailable model or failed agent run produces a labelled local fallback.
 
-To enter a Gemini key locally with hidden input:
+The merged summary-snapshot endpoint is `GET /api/incidents/{id}/analysis`, available to the report owner, admins and the assigned team. New submissions also save a separate `report_analysis` snapshot with provisional/manual-review flags using the local extractor. This preserves the incoming branch's API without an external model request during submission. The admin's reviewed assessment remains at `/api/admin/incidents/{id}/analysis`. See [the Week 4 branch integration notes](docs/ATHUL-WEEK4-PUBLICATION.md).
+
+Install [Ollama](https://ollama.com/download), start it, and configure the local model:
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.configure_gemini
+ollama pull gemma4:e4b-it-q4_K_M
+.\.venv\Scripts\python.exe -m scripts.configure_ollama
+.\scripts\start.ps1
 ```
 
-Setup reruns preserve private Gemini options, custom configuration and comments. The app reads the saved key on the next agent request. `GEMINI_API_KEY` or `GEMINI_API_KEY_FILE` can also be supplied through local configuration. See [Athul's location and agent implementation](docs/week2-athul.md) for technical details; its original branch-specific Linux launch instructions are historical.
+The configuration command checks Ollama and the installed model before saving `OLLAMA_BASE_URL` and `OLLAMA_MODEL` in the private `.env`; it preserves database credentials, custom options and comments. The default server is `http://127.0.0.1:11434` and the default model is `gemma4:e4b-it-q4_K_M`. Use `--model` to select an installed local model or `--base-url` for another loopback Ollama port. Restart the application after changing configuration; if it is already running, use `.\scripts\stop.ps1` followed by `.\scripts\start.ps1`. The admin location card checks actual server/model availability. The former `configure_gemini` command now delegates to this keyless setup. Existing saved Gemini analyses retain their original model label.
 
-Rescue progress, relief, shelters, chatbot, notifications, Malayalam report translation and case closure remain later-week work. Curated Malayalam place aliases are supported by the geography tool.
+Gemma 4 must fit the computer's available memory. The setup command verifies an existing installation and does not download models. See [Ollama's Gemma 4 model page](https://ollama.com/library/gemma4) for model variants, and [Athul's location and agent implementation notes](docs/week2-athul.md) for the tools, model transport and API contracts.
+
+## Athul's Week 3 and Week 4
+
+**Week 3:** Assigned teams accept a task, then mark En route, In progress and Resolved. Admins manage audited inventory and assign linked relief requests. Relief teams record partial deliveries with item/unit snapshots, remaining demand, stock validation and retry protection. An admin can hand an in-progress rescue case to a relief team; the former team retains its private task history.
+
+**Week 4:** **My updates** provides private notifications, an unread badge and read controls. Admins request clarification on a report, citizens submit a retained reply, and the case timeline preserves both alongside the original report. Search and status filters cover the complete lifecycle. Only an admin can close a resolved incident, after linked relief and required clarification questions are complete.
+
+See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). These features use the existing FastAPI/HTMX application and add the small shared contracts required by Athul's screens. Shelter search, chatbot and Malayalam AI translation remain outside this change. Curated Malayalam place aliases remain available in the geography tool.
 
 ## Stop and verify
 
@@ -76,7 +88,10 @@ Stop checks the recorded application's PID, creation time and command line befor
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -m scripts.verify_local
+.\.venv\Scripts\python.exe -m scripts.verify_athul_workspaces
 .\.venv\Scripts\python.exe -m scripts.check_location_agent
+# Optional real Gemma 4 run; requires local Ollama and the configured model.
+.\.venv\Scripts\python.exe -m scripts.check_location_agent --live
 # Optional client-state checks; Node is needed only to run this test.
 node tests/session_client.cjs
 ```

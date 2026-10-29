@@ -1,7 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey,Boolean
-from backend.models.report_analysis import ReportAnalysis
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 
 
 from backend.database.connection import Base

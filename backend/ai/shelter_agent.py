@@ -417,7 +417,7 @@ async def answer_question(db: Session, question: str) -> dict:
             # Connect to the local Ollama OpenAI-compatible API.
             async with AsyncOpenAI(
                 api_key="ollama",
-                base_url=settings.ollama_base_url.rstrip("/") + "/",
+                base_url=settings.ollama_base_url.rstrip("/") + "/v1/",
                 max_retries=0,
                 timeout=settings.agent_timeout_seconds,
             ) as client:

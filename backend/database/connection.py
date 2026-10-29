@@ -5,6 +5,7 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import CreateSchema
 
+from .schema_compatibility import validate_feature_tables
 from .migrations import (
     ensure_user_team_foreign_key,
     migrate_incident_summaries,
@@ -70,8 +71,10 @@ def initialize_database():
                     if_not_exists=True,
                 )
             )
-    # Create missing tables. Existing tables remain unchanged.
-    Base.metadata.create_all(engine)
+    # Reject incompatible legacy feature tables before creating any tables.
+    with engine.begin() as connection:
+        validate_feature_tables(connection, Base.metadata)
+        Base.metadata.create_all(connection)
 
     # Apply data-preserving schema upgrades.
     with engine.begin() as connection:

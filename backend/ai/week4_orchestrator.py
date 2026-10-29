@@ -30,7 +30,7 @@ from openai import (
 )
 from sqlalchemy.orm import Session
 
-from backend.ai.agent import GEMINI_BASE_URL
+from backend.ai.shelter_agent import GEMINI_BASE_URL
 from backend.ai.gemini_live_model import GeminiLiveError, GeminiLiveModel
 from backend.ai.location_extractor import extract_location
 from backend.ai.rag_retriever import retrieve

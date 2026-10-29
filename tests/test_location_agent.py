@@ -7,14 +7,11 @@ os.environ['DATABASE_URL'] = 'sqlite+pysqlite:///:memory:'
 os.environ['ALLOW_SQLITE_FOR_TESTS'] = 'true'
 os.environ['JWT_SECRET'] = 'synthetic-location-agent-tests-secret-2026'
 
-import httpx
 import pytest
-from agents import ModelSettings
 from agents.exceptions import MaxTurnsExceeded
 from agents.testing import ScriptedModel, assistant_message, function_call
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from openai import AuthenticationError, InternalServerError, RateLimitError
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -69,7 +66,7 @@ def test_real_sdk_calls_both_tools_and_returns_database_evidence(database):
         context = agent.LocationContext(db, 'Water rising in Aluva.', 'Aluva')
         result = asyncio.run(agent.run_tool_workflow(context, model, settings()))
         assert result.mode == 'agent'
-        assert result.model == 'gemini-3.1-flash-live-preview'
+        assert result.model == 'gemma4:e4b-it-q4_K_M'
         assert result.extraction.place.id == 'ernakulam-aluva'
         assert result.alert_match.status == 'MATCH'
         assert [a.id for a in result.alert_match.alerts] == [warning.id]
@@ -84,11 +81,11 @@ def test_real_sdk_calls_both_tools_and_returns_database_evidence(database):
             assert tool.params_json_schema['additionalProperties'] is False
 
 
-def test_live_model_uses_native_transport_and_is_closed(database, monkeypatch):
+def test_ollama_model_requires_no_api_key_and_is_closed(database, monkeypatch):
     model = tool_model()
     received = {}
 
-    def make_live_model(**kwargs):
+    def make_ollama_model(**kwargs):
         received.update(kwargs)
         return model
 
@@ -97,34 +94,56 @@ def test_live_model_uses_native_transport_and_is_closed(database, monkeypatch):
 
     model.close = close
     monkeypatch.setattr(agent, 'get_settings', lambda: settings())
-    monkeypatch.setattr(Settings, 'read_gemini_key', lambda _: 'synthetic-private-live-key')
-    monkeypatch.setattr(agent, 'GeminiLiveModel', make_live_model)
-    monkeypatch.setattr(agent, 'AsyncOpenAI', lambda **_: pytest.fail('Live models must not use Chat Completions'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    monkeypatch.setattr(agent, 'OllamaModel', make_ollama_model)
     with database() as db:
         result = asyncio.run(agent.analyze_location(db, 'Flood in Aluva.', 'Aluva', use_agent=True))
     assert result.mode == 'agent'
-    assert received['model'] == 'gemini-3.1-flash-live-preview'
+    assert received['model'] == 'gemma4:e4b-it-q4_K_M'
+    assert received['base_url'] == 'http://127.0.0.1:11434'
+    assert received['timeout_seconds'] == 120
+    assert set(received) == {'model', 'base_url', 'timeout_seconds', 'closed'}
     assert received['closed'] is True
     assert [call.name for call in result.tool_calls] == ['extract_report_location', 'check_active_alerts']
 
 
-@pytest.mark.parametrize('code,notice', [
-    (403, 'denied access'), (429, 'quota or rate limit'),
-    (503, 'high demand'), (1008, 'connection could not complete'),
+@pytest.mark.parametrize('code,reason,notice', [
+    (None, 'unavailable', 'could not be reached'),
+    (404, 'provider', 'not installed'),
+    (403, 'provider', 'denied access'),
+    (503, 'provider', 'could not run the model'),
+    (None, 'timeout', 'timed out'),
+    (None, 'protocol', 'could not complete the required tools'),
 ])
-def test_live_provider_failure_returns_safe_local_fallback(database, monkeypatch, code, notice):
+def test_ollama_failure_returns_safe_local_fallback_and_closes(database, monkeypatch, code, reason, notice):
+    model = tool_model()
+    closed = []
+
+    async def close():
+        closed.append(True)
+
+    model.close = close
     monkeypatch.setattr(agent, 'get_settings', lambda: settings())
-    monkeypatch.setattr(Settings, 'read_gemini_key', lambda _: 'synthetic-private-live-key')
+    monkeypatch.setattr(agent, 'OllamaModel', lambda **_: model)
 
     async def fail(*_):
-        raise agent.GeminiLiveError(code)
+        # Unsafe upstream messages must never be copied into saved analysis.
+        error = agent.OllamaError(code, reason=reason)
+        error.args = ('synthetic-report-data-in-provider-error',)
+        raise error
 
     monkeypatch.setattr(agent, 'run_tool_workflow', fail)
     with database() as db:
         result = asyncio.run(agent.analyze_location(db, 'Flood in Aluva.', 'Aluva', use_agent=True))
     assert result.mode == 'fallback'
     assert notice in result.warning
-    assert 'synthetic-private-live-key' not in result.model_dump_json()
+    assert result.model == 'gemma4:e4b-it-q4_K_M'
+    assert result.alert_match.status == 'NO_MATCH'
+    assert result.tool_calls == []
+    assert 'not a completed Ollama run' in result.warning
+    assert 'synthetic-report-data' not in result.model_dump_json()
+    assert closed == [True]
 
 
 def test_model_prose_cannot_replace_required_tools(database):
@@ -156,48 +175,38 @@ def test_unknown_location_stays_uncertain_in_sdk_result(database):
         assert not result.alert_match.alerts
 
 
-def test_missing_key_has_honest_local_fallback(database, monkeypatch):
-    monkeypatch.setattr(agent, 'get_settings', lambda: settings())
-    monkeypatch.setattr(Settings, 'read_gemini_key', lambda _: None)
-    monkeypatch.setattr(agent, 'AsyncOpenAI', lambda **_: pytest.fail('No provider request should be created'))
+def test_deterministic_lookup_never_constructs_a_model(database, monkeypatch):
+    monkeypatch.setattr(agent, 'OllamaModel', lambda **_: pytest.fail('Local lookup must not create a model'))
     with database() as db:
-        result = asyncio.run(agent.analyze_location(db, 'Flood in Aluva.', 'Aluva', use_agent=True))
-        assert result.mode == 'fallback'
-        assert 'No model request was made' in result.warning
+        result = asyncio.run(agent.analyze_location(db, 'Flood in Aluva.', 'Aluva'))
+        assert result.mode == 'deterministic'
+        assert result.model is None and result.warning is None
         assert result.tool_calls == []
         assert result.alert_match.status == 'NO_MATCH'
 
 
-@pytest.mark.parametrize('error_type,status_code,notice', [
-    (AuthenticationError, 401, 'rejected the API key'),
-    (RateLimitError, 429, 'quota or rate limit'),
-    (InternalServerError, 503, 'high demand'),
-])
-def test_provider_error_never_exposes_credentials(database, monkeypatch, error_type, status_code, notice):
+def test_workflow_timeout_closes_model_and_returns_honest_fallback(database, monkeypatch):
+    model = tool_model()
+    closed = []
+
+    async def close():
+        closed.append(True)
+
+    model.close = close
     monkeypatch.setattr(agent, 'get_settings', lambda: settings())
-    monkeypatch.setattr(Settings, 'read_gemini_key', lambda _: 'synthetic-never-sent-key')
+    monkeypatch.setattr(agent, 'OllamaModel', lambda **_: model)
 
     async def fail(*_):
-        response = httpx.Response(status_code, request=httpx.Request('POST', agent.GEMINI_BASE_URL))
-        raise error_type('synthetic-secret-in-provider-error', response=response, body=None)
+        raise TimeoutError('synthetic-report-data-in-timeout')
 
     monkeypatch.setattr(agent, 'run_tool_workflow', fail)
     with database() as db:
         result = asyncio.run(agent.analyze_location(db, 'Flood in Aluva.', 'Aluva', use_agent=True))
         assert result.mode == 'fallback'
-        assert notice in result.warning
-        assert 'synthetic-secret' not in result.model_dump_json()
-        assert 'synthetic-never-sent-key' not in result.model_dump_json()
-
-
-def test_key_file_is_read_on_each_run(tmp_path):
-    config = settings(gemini_api_key_file=tmp_path / 'gemini.key')
-    assert config.read_gemini_key() is None
-    config.gemini_api_key_file.write_text('synthetic-key-one\n')
-    assert config.read_gemini_key() == 'synthetic-key-one'
-    config.gemini_api_key_file.write_text('synthetic-key-two\n')
-    assert config.read_gemini_key() == 'synthetic-key-two'
-    assert 'synthetic-key' not in repr(config)
+        assert 'timed out' in result.warning
+        assert 'not a completed Ollama run' in result.warning
+        assert 'synthetic-report-data' not in result.model_dump_json()
+    assert closed == [True]
 
 
 def test_analysis_api_roles_automatic_snapshot_and_revision_history(database, monkeypatch):
@@ -210,7 +219,10 @@ def test_analysis_api_roles_automatic_snapshot_and_revision_history(database, mo
             yield db
 
     app.dependency_overrides[get_db] = get_database
-    monkeypatch.setattr(Settings, 'read_gemini_key', lambda _: None)
+    async def unavailable(*_):
+        raise agent.OllamaError(reason='unavailable')
+
+    monkeypatch.setattr(agent, 'run_tool_workflow', unavailable)
     with TestClient(app) as client:
         headers = {}
         for role in Role:

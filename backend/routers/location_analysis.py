@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.ai.agent import analyze_location
+from backend.ai.ollama_status import get_ollama_status
 from backend.config import get_settings
 from backend.database.connection import get_db
 from backend.models import Role, User
@@ -15,9 +16,8 @@ router = APIRouter(tags=["Location analysis"])
 
 
 @router.get("/api/agent/status")
-def agent_status(_user: User = Depends(require_roles(Role.ADMIN))):
-    settings = get_settings()
-    return {"configured": bool(settings.read_gemini_key()), "model": settings.gemini_model}
+async def agent_status(_user: User = Depends(require_roles(Role.ADMIN))):
+    return await get_ollama_status(get_settings())
 
 
 def require_incident(db, incident_id):

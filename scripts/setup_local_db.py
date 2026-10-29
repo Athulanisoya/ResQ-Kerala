@@ -71,7 +71,7 @@ def write_private_configuration():
             pending.write_bytes(destination.read_bytes())
         else:
             pending.write_text("# Generated local configuration. Keep this file private.\n", encoding="utf-8")
-        # Edit only setup-owned values. Preserve Gemini/agent options, custom
+        # Edit only setup-owned values. Preserve model/agent options, custom
         # settings and unchanged comments, and quote values using dotenv syntax.
         # Work on a copy so an interrupted update leaves the current file intact.
         for key, value in changes.items():

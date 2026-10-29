@@ -5,6 +5,9 @@ from .investigation import IncidentAnalysis, InvestigationReport
 from .location_analysis import LocationAnalysis
 from .alert import Alert
 from .incident_summary import IncidentSummary
+from .communication import Notification as CommunicationNotification, IncidentClarification, ClarificationReply
+from .operations import (InventoryItem, InventoryAdjustment, ReliefRequest as OperationsReliefRequest, ReliefRequestItem,
+                         ReliefDelivery, ReliefDeliveryItem, IncidentTask, IncidentTaskEvent)
 from .report_analysis import ReportAnalysis
 from .notification import Notification
 from .shelter import Shelter
@@ -22,8 +25,9 @@ __all__ = [
     "Alert",
     "IncidentSummary",
     "ReportAnalysis",
-    "Notification",
-    "Shelter",
+    "Notification", "Shelter", "CommunicationNotification", "IncidentClarification", "ClarificationReply", "InventoryItem",
+    "InventoryAdjustment", "OperationsReliefRequest", "ReliefRequestItem", "ReliefDelivery",
+    "ReliefDeliveryItem", "IncidentTask", "IncidentTaskEvent",
 ]
 
 from .relief import ReliefRequest, Inventory, Distribution

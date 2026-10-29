@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.models.report_analysis import ReportAnalysis
 from backend.database.connection import get_db
 from backend.models import Role, User
 from backend.schemas.incident_schema import (

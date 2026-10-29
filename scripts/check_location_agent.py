@@ -1,4 +1,4 @@
-"""Check geography tools; --live makes one bounded Gemini agent run."""
+"""Check geography tools; --live makes one bounded local Ollama agent run."""
 import argparse
 import asyncio
 import json
@@ -8,7 +8,7 @@ from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--live", action="store_true", help="Call Gemini using the configured private key")
+    parser.add_argument("--live", action="store_true", help="Call the configured local Ollama Gemma 4 model")
     parser.add_argument("--message", default="Flood water is rising in Aluva.")
     parser.add_argument("--location", default="Aluva")
     args = parser.parse_args()

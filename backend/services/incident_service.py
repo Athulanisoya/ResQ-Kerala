@@ -40,9 +40,9 @@ def create_incident(
         db.add(incident)
         db.flush()
 
-        # Generate the AI summary. The summarizer handles its own
-        # failures and returns a provisional fallback when necessary.
-        analysis_result = summarize_report(message)
+        # Retain the merged summary snapshot contract using local extraction.
+        # Submission never depends on an API key or a model-server request.
+        analysis_result = summarize_report(incident)
 
         # Save the analysis separately from the original incident.
         analysis = ReportAnalysis(
@@ -63,7 +63,7 @@ def create_incident(
             )
         )
 
-        # Athul's local checks run in the report transaction; Gemini is an
+        # Athul's local checks run in the report transaction; Ollama is an
         # explicit admin action and never delays citizen submission.
         from backend.services.location_analysis_service import analyze_new_incident
         analyze_new_incident(db, incident)
@@ -72,6 +72,10 @@ def create_incident(
         # of the administrator's reviewed assessment and optional providers.
         from backend.services.summary_service import save_summary
         save_summary(db, incident, user_id)
+
+        from backend.services.communication_service import notify_incident
+        notify_incident(db, incident, "Report submitted", f"Your report {incident.report_reference} at {incident.location} was submitted.",
+                        event_key=f"incident:{incident.id}:submitted")
 
         db.commit()
 
@@ -94,6 +98,8 @@ def get_my_incidents(db: Session, user_id: int):
 
 def get_incident_by_id(db: Session, incident_id: int):
     return db.get(Incident, incident_id)
+
+
 def get_latest_report_analysis(db: Session, incident_id: int):
     return db.scalar(
         select(ReportAnalysis)
@@ -154,6 +160,10 @@ def review_incident(
         )
     )
 
+    from backend.services.communication_service import notify_incident
+    notify_incident(db, incident, "Report status updated", f"Report status: {status.replace('_', ' ').lower()}.",
+                    event_key=f"incident:{incident.id}:review:{status}")
+
     db.commit()
     db.refresh(incident)
     return incident
@@ -207,6 +217,12 @@ def assign_incident_team(
                 note=assignment_note or f"Team {team.name} assigned",
             )
         )
+
+        from backend.services.operations_service import capture_assignment
+        from backend.services.communication_service import notify_incident
+        task = capture_assignment(db, incident, team, assignment_note)
+        notify_incident(db, incident, "Response team assigned", f"{team.name} was assigned to the report.",
+                        event_key=f"task:{task.id}:assigned")
 
         db.commit()
         db.refresh(incident)
