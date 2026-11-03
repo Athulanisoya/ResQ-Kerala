@@ -115,15 +115,13 @@
       if (!field.dataset.counterReady) { field.addEventListener('input', update); field.dataset.counterReady = 'true'; }
       update();
     });
-    fitChatWorkspace();
+    updateHeaderHeight();
   }
-  function fitChatWorkspace() {
-    const chat = document.querySelector('.chat-workspace');
-    if (!chat?.getBoundingClientRect) return;
-    const top = chat.getBoundingClientRect().top + window.scrollY;
-    chat.style.setProperty('--canopy-chat-offset', `${Math.ceil(top + 16)}px`);
+  function updateHeaderHeight() {
+    const header = document.querySelector('.canopy-shell-header');
+    if (header?.getBoundingClientRect) document.documentElement.style.setProperty('--site-header-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
   }
-  window.addEventListener('resize', fitChatWorkspace);
+  window.addEventListener('resize', updateHeaderHeight);
   document.addEventListener('DOMContentLoaded', () => {
     refreshPage();
     if (document.querySelector('[data-session-bootstrap]')) bootstrap();
@@ -150,12 +148,17 @@
     }
   });
   document.addEventListener('htmx:responseError', event => {
+    if (isWidgetRequest(event)) return;
     showNetworkError('The request could not be completed. Please try again.');
   });
+  function isWidgetRequest(event) {
+    return event.detail?.target?.id === 'assistant-widget-content' || !!event.detail?.elt?.closest?.('#assistant-widget');
+  }
   function isLogoutRequest(event) {
     return event.detail?.requestConfig?.path === '/ui/logout' || event.detail?.elt?.getAttribute('action') === '/ui/logout';
   }
   function connectionFailed(event) {
+    if (isWidgetRequest(event)) return;
     if (isLogoutRequest(event)) {
       signedOut('logout-unconfirmed');
     } else showNetworkError('Connection interrupted. Your form is still here; please try again.');

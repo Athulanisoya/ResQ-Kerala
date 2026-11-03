@@ -1,0 +1,21 @@
+<div class="management-section-heading"><div><h2>Response teams</h2><p>Keep names and availability up to date for coordinated assignments.</p></div><a class="button button-secondary" href="/management?tab=create-team" hx-get="/management?tab=create-team" hx-target="#main-content" hx-push-url="true">{{ icon('plus') }}Create a team</a></div>
+<div class="management-record-list">
+  {% for team in managed_teams %}
+  {% set editing = edited_team_id|default(none) == team.id %}
+  {% set form_values = team_values|default({}) if editing else {} %}
+  <details class="card management-record" {% if editing %}open{% endif %}>
+    <summary><span class="management-record-avatar">{{ icon('people') }}</span><span class="management-record-identity"><strong>{{ team.name }}</strong><span>{{ team.team_type|title }} team</span></span><span class="management-status management-status-{{ team.status|lower }}">{{ team.status|title }}</span>{{ icon('chevron', 'management-record-chevron') }}</summary>
+    {% if team.status == 'BUSY' %}<div class="management-record-body"><p class="management-inline-note">{{ icon('info') }}Finish or reassign active work before changing this team.</p></div>
+    {% else %}
+    <form method="post" action="/ui/management/teams/{{ team.id }}" hx-post="/ui/management/teams/{{ team.id }}" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form management-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="management-fields">
+        <div class="field"><label for="team-name-{{ team.id }}">Name</label><input id="team-name-{{ team.id }}" name="name" value="{{ form_values.get('name', team.name) }}" required minlength="2" maxlength="100"></div>
+        <div class="field"><label for="team-status-{{ team.id }}">Availability</label><select id="team-status-{{ team.id }}" name="status"><option value="AVAILABLE" {{ 'selected' if form_values.get('status', team.status) == 'AVAILABLE' }}>Available</option><option value="OFFLINE" {{ 'selected' if form_values.get('status', team.status) == 'OFFLINE' }}>Offline</option></select></div>
+      </div>
+      <div class="management-form-footer"><button class="button button-primary" type="submit"><span class="button-label">Save team</span><span class="button-loading">Saving team…</span></button></div>
+    </form>
+    {% endif %}
+  </details>
+  {% else %}<section class="card"><div class="empty-state"><span class="empty-icon">{{ icon('people') }}</span><h3>No response teams yet</h3><p>Create a team to start organising your response.</p><a class="button button-primary" href="/management?tab=create-team" hx-get="/management?tab=create-team" hx-target="#main-content" hx-push-url="true">{{ icon('plus') }}Create a team</a></div></section>{% endfor %}
+</div>

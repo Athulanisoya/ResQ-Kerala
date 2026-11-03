@@ -25,11 +25,11 @@ Setup writes the generated password and three account details to the ignored, lo
 
 Keep `.env`, `.runtime`, and `.venv` private and outside commits. `.runtime/pgpass.conf` contains the database password; `.env` contains the signing secret and the connection configuration.
 
-### Sign-in, account and permissions
+### Sign-in and account
 
 Each tab keeps its bearer session in `sessionStorage`, so citizens, administrators and response teams can sign in independently in separate tabs of the same browser. Reloads, direct links and history navigation revalidate that tab's session with the server. JavaScript is required. Tabs opened by duplicating an existing tab may initially inherit its session; sign out and sign in independently when demonstrating different accounts. The previous shared authentication cookie is ignored and removed, so existing cookie-based sign-ins require one fresh login after this update.
 
-**My account** shows the authenticated name, email, role, user ID and optional team ID. **Workspace permissions** checks all three protected role endpoints and displays their actual allowed/denied results, with a button to check again.
+**My account** shows the authenticated name, email, role, user ID and optional team ID. The header stays available while scrolling and exposes **Notifications** with the unread count directly. The workspace-permissions demonstration is no longer shown in navigation or account shortcuts; server role checks still protect every workspace.
 
 Expired sessions show a sign-in notice. Temporary service failures keep the saved tab session and offer **Try again** or **Sign in again**. Signing out revokes only that server session; if revocation cannot be confirmed, the app clears this tab's sign-in and explains that the previous server session may remain valid until expiry.
 
@@ -83,7 +83,11 @@ See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). Thes
 
 ## Additional integrated services
 
-Administrators can use **Shelters → Add shelter** with optional designation to an active Shelter team, and **Administration → Create team account** to provision a team member's login. Shelter listings refresh capacity, occupancy and available spaces every three seconds while the page is visible. Updates are available to administrators and the designated Shelter team; concurrent edits require reloading the latest values. Refreshes leave the separate capacity editor and creation form intact.
+Open the **Safety assistant** from the circular chat button at the bottom right of an authenticated page. The floating panel can be minimized without losing its current draft or conversation, including while a reply is pending. It stays open across HTMX page navigation and keeps conversation history private to the signed-in account. **Conversations** opens saved chats, and **New chat** starts a fresh conversation. Old assistant links open the dashboard with the chat panel rather than a full-page assistant. Failed requests keep the message available for retry.
+
+Administrators can use **Shelters → Add shelter** with optional designation to an active Shelter team. **Administration** has four sections: **Create a team** creates response teams and member logins; **Account management** edits account roles, team membership and access; **Response teams** manages team names and availability; and **Aggregate reports** shows activity, shelter and community totals with donation units kept separate. Each section supports direct links and retains its selection after saving or validation errors.
+
+Shelter listings refresh capacity, occupancy and available spaces every three seconds while the page is visible. Updates are available to administrators and the designated Shelter team; concurrent edits require reloading the latest values. Refreshes leave the separate capacity editor and creation form intact.
 
 The HTMX workspace includes shelter search and management, a safety assistant, investigation team assignments, duplicate-report review, community updates, donation pledges, private report attachments, and administrative user/team controls and reports. Donations are pledges that an administrator can reconcile; the application does not process online payments. Password recovery requires SMTP and sender configuration. See [citizen services](docs/CITIZEN-SERVICES.md) for setup and limits.
 

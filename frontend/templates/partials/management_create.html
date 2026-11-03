@@ -1,0 +1,34 @@
+{% set team_form = new_team_values|default({}) %}
+{% set member_form = new_account_values|default({}) %}
+{% set available_teams = managed_teams|rejectattr('status', 'equalto', 'OFFLINE')|list %}
+<div class="management-section-heading"><div><h2>Create a team</h2><p>Start with a response team, then give each member their own sign-in.</p></div></div>
+<div class="management-create-layout">
+  <section id="create-team" class="card management-form-card" aria-labelledby="create-team-heading">
+    <div class="card-heading"><div><span class="section-kicker">STEP 1 · ORGANISE YOUR RESPONSE</span><h2 id="create-team-heading">Create a response team</h2><p>Choose a team name and the work it will handle.</p></div><span class="management-card-icon">{{ icon('people') }}</span></div>
+    <form method="post" action="/ui/management/teams" hx-post="/ui/management/teams" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form management-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="team-name">Team name</label><input id="team-name" name="name" required minlength="2" maxlength="100" placeholder="For example, Aluva relief team" value="{{ team_form.get('name', '') }}"></div>
+      <div class="field"><label for="team-kind">Team type</label><select id="team-kind" name="team_type">{% for kind in ['Rescue','Relief','Shelter','Investigation'] %}<option {{ 'selected' if team_form.get('team_type', 'Rescue') == kind }}>{{ kind }}</option>{% endfor %}</select><p class="field-hint">The team type identifies its role in the response workflow.</p></div>
+      <div class="management-form-footer"><button class="button button-primary" type="submit">{{ icon('plus') }}<span class="button-label">Create team</span><span class="button-loading">Creating team…</span></button></div>
+    </form>
+    <div class="management-card-note">{{ icon('info') }}<p>New teams start as available. Change their availability in <a class="text-link" href="/management?tab=teams" hx-get="/management?tab=teams" hx-target="#main-content" hx-push-url="true">Response teams</a>.</p></div>
+  </section>
+  <section id="create-team-account" class="card management-form-card" aria-labelledby="create-team-account-heading">
+    <div class="card-heading"><div><span class="section-kicker">STEP 2 · CONNECT YOUR PEOPLE</span><h2 id="create-team-account-heading">Create a team account</h2><p>Each member gets a separate login for an existing team.</p></div><span class="management-card-icon">{{ icon('shield') }}</span></div>
+    <form action="/ui/management/team-accounts" method="post" hx-post="/ui/management/team-accounts" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form management-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="management-fields">
+        <div class="field"><label for="member-name">Team member name</label><input id="member-name" name="full_name" required minlength="3" maxlength="100" autocomplete="name" value="{{ member_form.get('full_name', '') }}"></div>
+        <div class="field"><label for="member-email">Team member email</label><input id="member-email" name="email" type="email" required maxlength="254" autocomplete="off" value="{{ member_form.get('email', '') }}"></div>
+      </div>
+      <div class="field"><label for="member-team">Assigned team</label><select id="member-team" name="team_id" required><option value="">Choose an active team</option>{% for team in available_teams %}<option value="{{ team.id }}" {{ 'selected' if member_form.get('team_id')|string == team.id|string }}>{{ team.name }} ({{ team.team_type }})</option>{% endfor %}</select></div>
+      <div class="management-fields">
+        <div class="field"><label for="member-password">Password</label><input id="member-password" name="password" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></div>
+        <div class="field"><label for="member-confirm-password">Confirm password</label><input id="member-confirm-password" name="confirm_password" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></div>
+      </div>
+      <p class="field-hint management-password-hint">Use 10–128 characters. Share sign-in details privately with the member.</p>
+      {% if not available_teams %}<p class="management-inline-note">Create an active response team using the form beside this one before adding a team account.</p>{% endif %}
+      <div class="management-form-footer"><button class="button button-primary" type="submit" {{ 'disabled' if not available_teams }}>{{ icon('plus') }}<span class="button-label">Create team account</span><span class="button-loading">Creating account…</span></button></div>
+    </form>
+  </section>
+</div>

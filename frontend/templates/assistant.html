@@ -1,14 +1,14 @@
 {% from 'icons.html' import icon %}
-<section class="chat-workspace" aria-label="Safety assistant workspace">
+<section class="chat-workspace" aria-label="Safety assistant workspace"{% if widget %} data-assistant-widget-response{% endif %}>
   <aside class="chat-history" aria-label="Conversation history">
-    <div class="chat-history-heading"><span>Your conversations</span><a class="chat-new" href="/assistant" hx-get="/assistant" hx-target="#main-content" hx-push-url="true">{{ icon('plus') }}New chat</a></div>
-    <nav class="chat-history-list" aria-label="Saved conversations">
-      {% for chat in sessions %}<a class="chat-history-item {{ 'is-selected' if selected_session == chat.id }}" href="/assistant?session_id={{ chat.id }}" hx-get="/assistant?session_id={{ chat.id }}" hx-target="#main-content" hx-push-url="true" {% if selected_session == chat.id %}aria-current="page"{% endif %}>{{ icon('reports') }}<span>{{ chat.title }}</span></a>{% else %}<p class="chat-history-empty">Your saved chats will appear here.</p>{% endfor %}
+    <div class="chat-history-heading">{% if widget %}<button type="button" class="widget-history-toggle" data-widget-history-toggle aria-expanded="false" aria-controls="assistant-widget-history">{{ icon('clock') }}Conversations</button>{% else %}<span>Your conversations</span>{% endif %}<a class="chat-new" href="/assistant{{ '?widget=1' if widget else '' }}" hx-get="/assistant{{ '?widget=1' if widget else '' }}" hx-target="{{ '#assistant-widget-content' if widget else '#main-content' }}" hx-push-url="{{ 'false' if widget else 'true' }}">{{ icon('plus') }}New chat</a></div>
+    <nav class="chat-history-list" aria-label="Saved conversations"{% if widget %} id="assistant-widget-history" hidden{% endif %}>
+      {% for chat in sessions %}<a class="chat-history-item {{ 'is-selected' if selected_session == chat.id }}" href="/assistant?session_id={{ chat.id }}{{ '&widget=1' if widget else '' }}" hx-get="/assistant?session_id={{ chat.id }}{{ '&widget=1' if widget else '' }}" hx-target="{{ '#assistant-widget-content' if widget else '#main-content' }}" hx-push-url="{{ 'false' if widget else 'true' }}" {% if selected_session == chat.id %}aria-current="page"{% endif %}>{{ icon('reports') }}<span>{{ chat.title }}</span></a>{% else %}<p class="chat-history-empty">Your saved chats will appear here.</p>{% endfor %}
     </nav>
     <p class="chat-history-note">Private to your account.</p>
   </aside>
   <div class="chat-main">
-    <header class="chat-heading"><div><span class="section-kicker">RESQ KERALA</span><h1>Safety assistant</h1></div><span class="chat-heading-status">{{ icon('shield') }}Guidance &amp; report help</span></header>
+    {% if not widget %}<header class="chat-heading"><div><span class="section-kicker">RESQ KERALA</span><h1>Safety assistant</h1></div><span class="chat-heading-status">{{ icon('shield') }}Guidance &amp; report help</span></header>{% endif %}
     <div class="chat-messages" aria-label="Conversation messages" tabindex="0">
       {% if error %}<div class="chat-error" role="alert">{{ error }}</div>{% endif %}
       {% if not messages %}
@@ -43,7 +43,8 @@
       {% endfor %}
     </div>
     <div class="chat-composer-area">
-      <form class="chat-form" data-chat-form method="post" action="/ui/assistant/chat" hx-post="/ui/assistant/chat" hx-target="#main-content" hx-indicator="this" hx-disabled-elt="find button[type='submit']">
+      <form class="chat-form" data-chat-form method="post" action="/ui/assistant/chat" hx-post="/ui/assistant/chat" hx-target="{{ '#assistant-widget-content' if widget else '#main-content' }}"{% if widget %} hx-push-url="false"{% endif %} hx-indicator="this" hx-disabled-elt="find button[type='submit']">
+        {% if widget %}<input type="hidden" name="widget" value="1">{% endif %}
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">{% if selected_session %}<input type="hidden" name="session_id" value="{{ selected_session }}">{% endif %}
         <div class="chat-thinking" role="status" aria-live="polite"><span></span>Thinking…</div>
         <div class="chat-composer">

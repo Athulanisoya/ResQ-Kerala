@@ -7,8 +7,8 @@ def test_shelters_assistant_bootstrap_and_forms(clients):
     login(citizen, 'citizen')
     dashboard = citizen.get('/dashboard')
     assert 'href="/shelters"' in dashboard.text
-    assert 'href="/assistant"' in dashboard.text
-    for path in ('/shelters', '/assistant'):
+    assert 'id="assistant-widget-launcher"' in dashboard.text
+    for path in ('/shelters', '/assistant?widget=1'):
         shell = citizen.get(path, headers={'X-ResQ-Page': ''})
         assert shell.status_code == 200 and 'data-session-bootstrap' in shell.text
         fragment = citizen.get(path, headers={'HX-Request': 'true'})

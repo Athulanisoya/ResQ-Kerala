@@ -85,5 +85,5 @@ def test_admin_management_htmx_page_and_team_creation(clients):
     page = administrator.get("/management")
     assert page.status_code == 200 and "Aggregate reports" in page.text
     result = post(administrator, "/ui/management/teams", name="Synthetic investigation team", team_type="Investigation")
-    assert result.status_code == 200 and result.headers["HX-Redirect"] == "/management"
+    assert result.status_code == 200 and result.headers["HX-Push-Url"] == "/management?tab=create-team"
     assert "Synthetic investigation team" in administrator.get("/management").text

@@ -756,6 +756,23 @@ async def update_shelter_page(request: Request, shelter_id: int):
 
 
 async def assistant_view(request: Request, user: dict, session_id: int | None = None, *, error=None, question="", status_code=200):
+    widget = request.query_params.get("widget") == "1" or getattr(request.state, "form", {}).get("widget") == "1"
+
+    def assistant_response(*, response_status=status_code, **context):
+        context = {"page_title": "Shelter & Safety Assistant", "active_nav": "assistant",
+                   "user": user, "widget": widget, **context}
+        if not widget:
+            return render(request, "assistant.html", status_code=response_status, **context)
+        token = request.cookies.get(CSRF_COOKIE) or secrets.token_urlsafe(32)
+        response = templates.TemplateResponse(request=request, name="assistant.html",
+                                              context={**context, "csrf_token": token},
+                                              status_code=response_status)
+        response.set_cookie(CSRF_COOKIE, token, httponly=True, samesite="strict", secure=request.url.scheme == "https")
+        response.headers["HX-Push-Url"] = "false"
+        response.headers["HX-Retarget"] = "#assistant-widget-content"
+        response.headers["HX-Reswap"] = "innerHTML"
+        return response
+
     sessions_response = await api_call(request, "GET", "/api/assistant/sessions")
     sessions = sessions_response.json() if sessions_response.status_code == 200 else []
     messages = []
@@ -764,13 +781,11 @@ async def assistant_view(request: Request, user: dict, session_id: int | None = 
     if session_id is not None:
         response = await api_call(request, "GET", f"/api/assistant/sessions/{session_id}")
         if response.status_code != 200:
-            return render(request, "assistant.html", page_title="Shelter & Safety Assistant", active_nav="assistant",
-                          user=user, sessions=sessions, messages=[], question=question,
-                          error=error_message(response), status_code=response.status_code)
+            return assistant_response(sessions=sessions, messages=[], question=question,
+                                      error=error_message(response), response_status=response.status_code)
         messages = response.json().get("messages", [])
-    return render(request, "assistant.html", page_title="Shelter & Safety Assistant", active_nav="assistant",
-                  user=user, sessions=sessions, selected_session=session_id, messages=messages,
-                  question=question, error=error, status_code=status_code)
+    return assistant_response(sessions=sessions, selected_session=session_id, messages=messages,
+                              question=question, error=error)
 
 
 @app.get("/assistant", response_class=HTMLResponse)
@@ -778,6 +793,15 @@ async def assistant_page(request: Request, session_id: int | None = None):
     user = await current_user(request)
     if not user:
         return redirect(request, "/login")
+    if (
+        request.headers.get("HX-Request") != "true"
+        or request.headers.get("X-ResQ-Bootstrap") == "true"
+        or request.headers.get("HX-History-Restore-Request") == "true"
+    ):
+        query = {"chat": "1"}
+        if session_id is not None:
+            query["session_id"] = session_id
+        return redirect(request, "/dashboard?" + urlencode(query))
     return await assistant_view(request, user, session_id)
 
 
@@ -802,7 +826,7 @@ async def submit_assistant_question(request: Request):
                                     status_code=response.status_code)
     session_id = response.json()["session_id"]
     result = await assistant_view(request, user, session_id)
-    if request.headers.get("HX-Request") == "true":
+    if request.headers.get("HX-Request") == "true" and str(form.get("widget", "")) != "1":
         result.headers["HX-Push-Url"] = f"/assistant?session_id={session_id}"
     return result
 

@@ -1,0 +1,32 @@
+{% macro status_report(title, identifier, rows, quantity_label, empty) %}
+<section class="card management-report-card" aria-labelledby="{{ identifier }}">
+  <div class="card-heading"><h2 id="{{ identifier }}">{{ title }}</h2>{{ icon('reports') }}</div>
+  {% if rows %}<table class="management-table"><caption class="sr-only">{{ title }}</caption><thead><tr><th scope="col">Status</th><th scope="col" class="management-number">{{ quantity_label }}</th></tr></thead><tbody>{% for status, count in rows.items() %}<tr><th scope="row">{{ status|replace('_',' ')|title }}</th><td class="management-number">{{ count }}</td></tr>{% endfor %}</tbody></table>
+  {% else %}<div class="management-report-empty">{{ empty }}</div>{% endif %}
+</section>
+{% endmacro %}
+<div class="management-section-heading"><div><h2>Aggregate reports</h2><p>A current overview of response activity, shelters and community support.</p></div></div>
+<div class="management-inline-note">{{ icon('info') }}<p>Relief ledgers, items and donation units stay separate. A donation pledge is not proof of payment.</p></div>
+{% if error and not report %}
+<section class="card"><div class="empty-state"><span class="empty-icon">{{ icon('reports') }}</span><h3>Reports are temporarily unavailable</h3><p>Try loading this section again.</p><a class="button button-secondary" href="/management?tab=reports" hx-get="/management?tab=reports" hx-target="#main-content" hx-push-url="true">Reload reports</a></div></section>
+{% else %}
+<div class="management-report-grid">
+  {{ status_report('Incidents by status', 'aggregate-incidents', report.get('incidents_by_status', {}), 'Reports', 'No incidents recorded yet.') }}
+  {{ status_report('Operations relief by status', 'aggregate-relief', report.get('operations_relief_by_status', {}), 'Requests', 'No operations relief requests recorded yet.') }}
+  {{ status_report('Teams by availability', 'aggregate-teams', report.get('teams_by_status', {}), 'Teams', 'No response teams recorded yet.') }}
+  {{ status_report('Campaigns', 'aggregate-campaigns', report.get('campaigns_by_status', {}), 'Campaigns', 'No campaigns recorded yet.') }}
+  <section class="card management-report-card management-report-wide" aria-labelledby="aggregate-shelters">
+    <div class="card-heading"><div><h2 id="aggregate-shelters">Shelters</h2><p>Recorded occupancy and total capacity across shelter records.</p></div>{{ icon('house') }}</div>
+    {% set shelter_totals = report.get('shelters', {}) %}
+    <dl class="management-stat-grid"><div><dt>Shelters</dt><dd>{{ shelter_totals.get('count', 0) }}</dd></div><div><dt>Occupied places</dt><dd>{{ shelter_totals.get('occupied', 0) }}</dd></div><div><dt>Total capacity</dt><dd>{{ shelter_totals.get('capacity', 0) }}</dd></div></dl>
+  </section>
+  <section class="card management-report-card management-report-wide" aria-labelledby="aggregate-items">
+    <div class="card-heading"><div><h2 id="aggregate-items">Item relief</h2><p>Requested and fulfilled quantities are shown separately for each item.</p></div>{{ icon('package') }}</div>
+    {% if report.get('item_relief') %}<div class="table-scroll" tabindex="0" aria-label="Item relief totals"><table class="management-table management-item-table"><caption class="sr-only">Item relief quantities and request counts</caption><thead><tr><th scope="col">Item</th><th scope="col" class="management-number">Requested</th><th scope="col" class="management-number">Fulfilled</th><th scope="col" class="management-number">Requests</th></tr></thead><tbody>{% for item in report.get('item_relief', []) %}<tr><th scope="row">{{ item.item|replace('_',' ')|title }}</th><td class="management-number">{{ item.requested }}</td><td class="management-number">{{ item.fulfilled }}</td><td class="management-number">{{ item.requests }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="management-report-empty">No item relief requests recorded yet.</div>{% endif %}
+  </section>
+  <section class="card management-report-card management-report-wide" aria-labelledby="aggregate-donations">
+    <div class="card-heading"><div><h2 id="aggregate-donations">Donation pledges by kind, status and unit</h2><p>Different units are never combined into one donation total.</p></div>{{ icon('hand') }}</div>
+    {% if report.get('donations') %}<div class="table-scroll" tabindex="0" aria-label="Donation pledge totals"><table class="management-table management-donation-table"><caption class="sr-only">Donation pledges grouped by kind, status and unit</caption><thead><tr><th scope="col">Kind</th><th scope="col">Status</th><th scope="col" class="management-number">Quantity</th><th scope="col">Unit</th><th scope="col" class="management-number">Pledges</th></tr></thead><tbody>{% for donation in report.get('donations', []) %}<tr><th scope="row">{{ donation.kind|replace('_',' ')|title }}</th><td>{{ donation.status|replace('_',' ')|title }}</td><td class="management-number">{{ donation.quantity }}</td><td>{{ donation.unit }}</td><td class="management-number">{{ donation.count }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="management-report-empty">No donation pledges recorded yet.</div>{% endif %}
+  </section>
+</div>
+{% endif %}

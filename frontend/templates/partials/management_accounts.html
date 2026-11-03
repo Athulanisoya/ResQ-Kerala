@@ -1,0 +1,21 @@
+<div class="management-section-heading"><div><h2>Account management</h2><p>Choose an account to manage its role, team and access.</p></div><a class="button button-secondary" href="/management?tab=create-team#create-team-account" hx-get="/management?tab=create-team" hx-target="#main-content" hx-push-url="/management?tab=create-team#create-team-account">{{ icon('plus') }}Create team account</a></div>
+<div class="management-inline-note">{{ icon('shield') }}<p>Role, team and activation changes revoke the affected account’s current sessions.</p></div>
+<div class="management-record-list">
+  {% for account in accounts %}
+  {% set editing = edited_account_id|default(none) == account.id %}
+  {% set form_values = account_values|default({}) if editing else {} %}
+  <details class="card management-record" {% if editing %}open{% endif %}>
+    <summary><span class="management-record-avatar">{{ account.full_name[:1]|upper }}</span><span class="management-record-identity"><strong>{{ account.full_name }}</strong><span>{{ account.email }}</span></span><span class="management-record-tags"><span class="management-type">{{ account.role|replace('_',' ')|title }}</span><span class="management-status {{ 'management-status-available' if account.active else 'management-status-offline' }}">{{ 'Active' if account.active else 'Inactive' }}</span></span>{{ icon('chevron', 'management-record-chevron') }}</summary>
+    <form method="post" action="/ui/management/users/{{ account.id }}" hx-post="/ui/management/users/{{ account.id }}" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form management-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="management-fields management-fields-three">
+        <div class="field"><label for="role-{{ account.id }}">Role</label><select id="role-{{ account.id }}" name="role">{% for role in ['citizen','response_team','admin'] %}<option value="{{ role }}" {{ 'selected' if form_values.get('role', account.role) == role }}>{{ role|replace('_',' ')|title }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="team-{{ account.id }}">Team</label><select id="team-{{ account.id }}" name="team_id" aria-describedby="team-hint-{{ account.id }}"><option value="">No team</option>{% for team in managed_teams %}<option value="{{ team.id }}" {{ 'selected' if form_values.get('team_id', account.team_id)|string == team.id|string }}>{{ team.name }} ({{ team.status|title }})</option>{% endfor %}</select><p class="field-hint" id="team-hint-{{ account.id }}">Response team accounts only</p></div>
+        <div class="field"><label for="active-{{ account.id }}">Account status</label><select id="active-{{ account.id }}" name="active">{% set active_value = form_values.get('active', 'yes' if account.active else 'no') %}<option value="yes" {{ 'selected' if active_value == 'yes' }}>Active</option><option value="no" {{ 'selected' if active_value == 'no' }}>Inactive</option></select></div>
+      </div>
+      {% if account.id == user.id %}<p class="field-hint">This is your signed-in account. Your administrator access must remain active.</p>{% endif %}
+      <div class="management-form-footer"><button class="button button-primary" type="submit"><span class="button-label">Save account</span><span class="button-loading">Saving account…</span></button></div>
+    </form>
+  </details>
+  {% else %}<section class="card"><div class="empty-state"><span class="empty-icon">{{ icon('people') }}</span><h3>No accounts to display</h3><p>Account records will appear here when available.</p></div></section>{% endfor %}
+</div>

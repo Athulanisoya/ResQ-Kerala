@@ -1,0 +1,12 @@
+{% from 'icons.html' import icon %}
+<div id="assistant-widget" class="assistant-widget" data-widget-load-state="empty">
+  <section id="assistant-widget-panel" class="assistant-widget-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-widget-title" hidden>
+    <header class="assistant-widget-heading">
+      <div class="assistant-widget-title"><span class="assistant-widget-mark" aria-hidden="true">{{ icon('chat') }}</span><div><h2 id="assistant-widget-title">Safety assistant</h2><p>Here to help you prepare</p></div></div>
+      <button type="button" class="assistant-widget-minimize" data-widget-minimize aria-label="Minimize chat"><span aria-hidden="true">−</span></button>
+    </header>
+    <div class="assistant-widget-notice" data-widget-notice role="status" hidden><span data-widget-notice-text></span><button type="button" data-widget-retry>Try again</button></div>
+    <div id="assistant-widget-content" class="assistant-widget-content"><div class="assistant-widget-loading" role="status">Opening your conversations…</div></div>
+  </section>
+  <button id="assistant-widget-launcher" class="assistant-widget-launcher" type="button" data-widget-launcher aria-label="Open safety assistant" aria-controls="assistant-widget-panel" aria-expanded="false">{{ icon('chat') }}<span class="sr-only">Chatbot</span></button>
+</div>
