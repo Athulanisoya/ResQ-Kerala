@@ -41,7 +41,8 @@ def get_location_analysis(incident_id: int, db: Session = Depends(get_db),
 async def run_location_analysis(incident_id: int, data: LocationAnalysisRequest,
                                 db: Session = Depends(get_db), user: User = Depends(require_roles(Role.ADMIN))):
     incident = require_incident(db, incident_id)
-    result = await analyze_location(db, incident.message, incident.location, use_agent=data.use_agent)
+    from backend.services.review_assistance import confirmed_analysis
+    result = confirmed_analysis(db, incident) or await analyze_location(db, incident.message, incident.location, use_agent=data.use_agent)
     try:
         row = save_location_analysis(db, incident, result, user.id)
         db.commit()

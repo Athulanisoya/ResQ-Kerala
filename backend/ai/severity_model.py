@@ -1,6 +1,8 @@
 """Run the Week 2 flood severity model without blocking application startup."""
 
 from functools import lru_cache
+import hashlib
+from io import BytesIO
 import logging
 from pathlib import Path
 import re
@@ -29,7 +31,22 @@ def get_pipeline():
     # the model artifact or one of its scientific dependencies is missing.
     import joblib
 
-    return joblib.load(MODEL_PATH)
+    # Hash exactly the bytes loaded, so replacing the artifact while this
+    # process retains its cached model cannot mislabel later suggestions.
+    artifact = MODEL_PATH.read_bytes()
+    pipeline = joblib.load(BytesIO(artifact))
+    pipeline._resq_model_version = "sha256:" + hashlib.sha256(artifact).hexdigest()
+    return pipeline
+
+
+def get_model_version() -> str:
+    try:
+        version = getattr(get_pipeline(), "_resq_model_version", None)
+        if not version:
+            raise ValueError("The loaded severity model has no artifact identity")
+        return version
+    except Exception as error:
+        raise SeverityUnavailable("The severity model version could not be verified.") from error
 
 
 def clean_text(text: str) -> str:

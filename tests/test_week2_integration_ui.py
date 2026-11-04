@@ -32,10 +32,15 @@ def test_merged_severity_assessment_and_investigation_through_html(week2_report)
 
     predicted = post(admin, f"/ui/reports/{incident_id}/severity")
     assert predicted.status_code == 200, predicted.text
-    assert "Severity prediction saved" in predicted.text
+    assert "Severity suggestion saved" in predicted.text
     assessment = admin.get(analysis_path).json()
-    assert assessment["severity"] == "HIGH"
-    assert assessment["source"] == "AI_MODULE"
+    assert assessment is None
+    suggestions = admin.get(f"/api/ai/incidents/{incident_id}/severity-predictions").json()
+    assert suggestions[0]["predicted_severity"] == "HIGH" and suggestions[0]["decision"] is None
+    accepted = post(admin, f"/ui/reports/{incident_id}/severity-suggestions/{suggestions[0]['id']}/review", action="accept")
+    assert accepted.status_code == 200, accepted.text
+    assessment = admin.get(analysis_path).json()
+    assert assessment["severity"] == "HIGH" and assessment["source"] == "MANUAL_DEMO"
     assert assessment["requires_investigation"] is True
 
     manual = post(admin, f"/ui/reports/{incident_id}/analysis", analysis_form="yes",
@@ -50,7 +55,8 @@ def test_merged_severity_assessment_and_investigation_through_html(week2_report)
 
     assert post(admin, f"/ui/reports/{incident_id}/severity").status_code == 200
     updated = admin.get(analysis_path).json()
-    assert updated["severity"] == "HIGH"
+    assert updated["severity"] == "LOW"
+    assert updated["reviewed_by_user_id"] == reviewed["reviewed_by_user_id"]
     for field in ("id", "extracted_location", "alert_match", "summary", "requires_investigation"):
         assert updated[field] == reviewed[field]
 

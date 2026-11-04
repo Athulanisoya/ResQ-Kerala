@@ -1,17 +1,118 @@
-<div class="card-heading"><h2>Integrated analysis</h2></div>
-<p>Draft analysis is advisory. Review the original report and all results before acting.</p>
-{% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
-<form method="post" action="/ui/reports/{{ report.id }}/week4-analysis" hx-post="/ui/reports/{{ report.id }}/week4-analysis" hx-target="#week4-analysis" hx-swap="innerHTML" hx-indicator="#request-progress" hx-disabled-elt="find button">
+{% from 'macros.html' import date %}
+{% from 'icons.html' import icon %}
+{% macro display_review_value(value, key) -%}
+  {%- if key == 'severity' -%}{{ value|title }}
+  {%- elif key == 'alert_match' -%}{{ {'MATCH': 'Matching active alerts', 'NO_MATCH': 'No matching active alert', 'UNCERTAIN': 'Needs review'}.get(value, value) }}
+  {%- else -%}{{ value }}{%- endif -%}
+{%- endmacro %}
+<div class="card-heading review-panel-heading">
+  <div><span class="section-kicker">REVIEW &amp; RESPONSE</span><h2>Evidence &amp; analysis review</h2><p>Draft analysis is advisory. Compare each suggestion with its supporting text before recording a decision.</p></div>
+  <span class="review-section-icon">{{ icon('reports') }}</span>
+</div>
+<div class="review-workspace">
+{% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+{% if notice %}<div class="alert alert-success" role="status">{{ notice }}</div>{% endif %}
+<div class="review-overview">
+  <section class="review-section" aria-labelledby="review-original-heading">
+    <div class="review-section-heading"><div><span class="section-kicker">ORIGINAL CITIZEN REPORT</span><h3 id="review-original-heading">{{ report.get('reference') or 'Report #' ~ report.id }}</h3></div><span class="review-section-icon">{{ icon('reports') }}</span></div>
+    {% if report.get('message') %}
+    <blockquote id="review-original-message" class="review-source-text">{{ report.message }}</blockquote>
+    <dl class="review-facts">
+      <div id="review-reported-location"><dt>Reported location</dt><dd>{{ report.location }}</dd></div>
+      <div id="review-reported-people"><dt>People affected</dt><dd>{{ report.people_affected if report.people_affected is not none else 'Not provided' }}</dd></div>
+      <div id="review-reported-help"><dt>Requested help</dt><dd>{{ report.help_required or 'Not provided' }}</dd></div>
+      <div><dt>Submitted</dt><dd>{{ date(report.created_at) }}</dd></div>
+    </dl>
+    <p class="field-hint">The original report stays as submitted. Reviewed notes below are stored separately.</p>
+    {% else %}<p class="review-empty-state">The original report could not be loaded.</p>{% endif %}
+  </section>
+  <section class="review-section" aria-labelledby="review-reporter-heading">
+    <div class="review-section-heading"><div><span class="section-kicker">REPORTING ACCOUNT · ADMINISTRATORS ONLY</span><h3 id="review-reporter-heading">Reporter account details</h3></div><span class="review-section-icon">{{ icon('people') }}</span></div>
+    {% if reporter %}
+    <dl class="review-facts">
+      <div><dt>Name</dt><dd>{{ reporter.full_name }}</dd></div>
+      <div><dt>Email</dt><dd>{{ reporter.email }}</dd></div>
+      <div><dt>Account ID</dt><dd>{{ reporter.id }}</dd></div>
+      <div><dt>Role</dt><dd>{{ reporter.role|replace('_', ' ')|title }}</dd></div>
+      <div><dt>Account status</dt><dd>{{ 'Active' if reporter.active else 'Inactive' }}</dd></div>
+      <div><dt>Account created</dt><dd>{{ date(reporter.created_at) }}</dd></div>
+      {% if reporter.team_id %}<div><dt>Team ID</dt><dd>{{ reporter.team_id }}</dd></div>{% endif %}
+    </dl>
+    <p class="field-hint">These are the account's current details. Access is limited to administrators reviewing this report.</p>
+    {% else %}<p class="review-empty-state">Reporter account details are unavailable.</p>{% endif %}
+  </section>
+</div>
+<form class="review-run-form review-toolbar" method="post" action="/ui/reports/{{ report.id }}/week4-analysis" hx-post="/ui/reports/{{ report.id }}/week4-analysis" hx-target="#week4-analysis" hx-swap="innerHTML" hx-indicator="#request-progress" hx-disabled-elt="find button">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-  <label><input type="checkbox" name="use_ai" value="true"> Use the configured local model for draft translation, summary and tool orchestration</label>
-  <button type="submit" class="button">Run integrated analysis</button>
+  <div class="review-toolbar-copy">
+    <span class="section-kicker">PREPARE THE NEXT REVIEW</span><h3>Create a new analysis revision</h3><p class="field-hint">Each run keeps the previous draft and its review history available below.</p>
+    <label class="checkbox-label"><input type="checkbox" name="use_ai" value="true"> Use the configured local model for provisional translation, summary and tool orchestration</label>
+  </div>
+  <div class="review-form-footer"><button type="submit" class="button button-secondary">{{ icon('plus') }}Run integrated analysis</button></div>
 </form>
 {% if revisions %}{% set latest = revisions[0] %}
-<p>Revision {{ latest.revision }} · {{ latest.result.status }} · {{ latest.result.orchestration_mode }}</p>
-{% if latest.result.warning %}<p class="notice">{{ latest.result.warning }}</p>{% endif %}
-{% if latest.result.translation %}<h3>Provisional English translation</h3><p>{{ latest.result.translation }}</p>{% endif %}
-{% if latest.result.generative_summary %}<h3>Provisional generated summary</h3><p>{{ latest.result.generative_summary }}</p>{% endif %}
-{% if latest.result.results.get('tool_3_predict_severity') %}<h3>Severity</h3><p>{{ latest.result.results.get('tool_3_predict_severity').get('predicted_severity') or 'Unavailable or uncertain' }}</p>{% if latest.result.results.get('tool_3_predict_severity').get('reason') %}<p>{{ latest.result.results.get('tool_3_predict_severity').get('reason') }}</p>{% endif %}{% endif %}
-<details><summary>Tool results and sources</summary><pre>{{ latest.result.results | tojson(indent=2) }}</pre></details>
-<details><summary>Revision history</summary><ol>{% for item in revisions %}<li>Revision {{ item.revision }} · {{ item.created_at }} · {{ item.result.status }}</li>{% endfor %}</ol></details>
-{% else %}<p>No integrated analysis has been run for this report.</p>{% endif %}
+<div class="review-revision-heading review-section-heading">
+  <div><span class="section-kicker">SAVED ANALYSIS SNAPSHOT</span><h3>Revision {{ latest.revision }}</h3><p class="review-meta"><span>{{ latest.result.status|replace('_', ' ')|title }}</span><span>{{ date(latest.created_at) }}</span>{% if latest.result.model %}<span class="evidence-code">{{ latest.result.model }}</span>{% endif %}</p></div>
+  <span class="review-badge">Human review required</span>
+</div>
+{% if latest.result.warning %}<p class="review-notice">{{ latest.result.warning }}</p>{% endif %}
+<p class="review-notice">Accept, edit or reject each available suggestion. Decisions create reviewed analysis notes for this revision; they do not change the citizen's report, send messages or apply an operational assessment. Set the operational severity in <a href="#report-analysis">Reviewed assessment</a>.</p>
+<div class="review-suggestions">
+{% for suggestion in suggestions %}{% set decision = suggestion.review %}{% set editing = review_values.get('suggestion_key') == suggestion.key %}
+  <article class="review-suggestion" aria-labelledby="review-suggestion-{{ suggestion.key }}">
+    <div class="review-suggestion-heading"><h3 id="review-suggestion-{{ suggestion.key }}">{{ suggestion.label }}</h3><span class="review-badge {{ 'review-badge-' ~ decision.decision if decision else '' }}">{{ decision.decision|title if decision else 'Awaiting review' }}</span></div>
+    <p class="field-hint">Proposed value</p>
+    <p class="review-proposed-value{{ ' review-long-value' if suggestion.key in ['safety_guidance', 'shelter_options'] }}"{% if suggestion.key in ['safety_guidance', 'shelter_options'] %} tabindex="0" role="region" aria-label="{{ suggestion.label }} proposed value"{% endif %}>{{ display_review_value(suggestion.value, suggestion.key) }}</p>
+    {% if suggestion.model_version %}<details class="review-model-details"><summary>Prediction version and time</summary><p class="evidence-code field-hint">{{ suggestion.model_version }}</p>{% if suggestion.generated_at %}<time class="field-hint" datetime="{{ suggestion.generated_at }}">Generated {{ suggestion.generated_at|local_time }}</time>{% endif %}</details>{% endif %}
+    {% if suggestion.reason %}<p class="field-hint">{{ suggestion.reason }}</p>{% endif %}
+    <a class="text-link" href="#{{ suggestion.evidence_anchor }}">Read supporting text {{ icon('arrow') }}</a>
+    {% if decision %}
+    <div class="review-saved-decision"><strong>{{ 'Reviewed value' if decision.decision != 'rejected' else 'Suggestion rejected' }}</strong>{% if decision.decision != 'rejected' %}<p>{{ display_review_value(decision.reviewed_value, suggestion.key) }}</p>{% endif %}<p class="field-hint">{{ decision.reviewer_name }} · {{ date(decision.created_at) }}</p>{% if decision.note %}<p>{{ decision.note }}</p>{% endif %}</div>
+    {% endif %}
+    {% if suggestion.review_history %}<details class="review-decision-history"><summary>Decision history ({{ suggestion.review_history|length }})</summary><ol>{% for entry in suggestion.review_history %}<li><strong>{{ entry.decision|title }}</strong> by {{ entry.reviewer_name }} · {{ date(entry.created_at) }}{% if entry.reviewed_value is not none %}<p>{{ display_review_value(entry.reviewed_value, entry.suggestion_key) }}</p>{% endif %}{% if entry.note %}<p>{{ entry.note }}</p>{% endif %}</li>{% endfor %}</ol></details>{% endif %}
+    <form class="review-decision-form" method="post" action="/ui/reports/{{ report.id }}/week4-analysis/{{ latest.revision }}/review" hx-post="/ui/reports/{{ report.id }}/week4-analysis/{{ latest.revision }}/review" hx-target="#week4-analysis" hx-swap="innerHTML" hx-indicator="#request-progress" hx-disabled-elt="find button">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="suggestion_key" value="{{ suggestion.key }}"><input type="hidden" name="expected_review_id" value="{{ decision.id if decision else 0 }}">
+      <details {{ 'open' if editing }}><summary>Edit value or add a decision note</summary>
+        <div class="field"><label for="review-value-{{ suggestion.key }}">Reviewed value</label><textarea id="review-value-{{ suggestion.key }}" name="value" rows="3" maxlength="5000">{{ review_values.get('value', '') if editing else decision.reviewed_value if decision and decision.decision != 'rejected' else suggestion.value }}</textarea>{% if suggestion.key == 'severity' %}<p class="field-hint">Use LOW, MEDIUM, HIGH or UNKNOWN.</p>{% elif suggestion.key == 'alert_match' %}<p class="field-hint">Use MATCH, NO_MATCH or UNCERTAIN.</p>{% elif suggestion.key == 'people_affected' %}<p class="field-hint">Use a whole number from 0 to 100000.</p>{% endif %}</div>
+        <div class="field"><label for="review-note-{{ suggestion.key }}">Decision note <span class="optional">Required for rejection</span></label><textarea id="review-note-{{ suggestion.key }}" name="note" rows="2" maxlength="1000">{{ review_values.get('note','') if editing else '' }}</textarea></div>
+      </details>
+      <p class="field-hint review-action-hint">Open the editor to change a value or add a rejection reason.</p>
+      <div class="review-decision-actions review-form-footer"><button type="submit" name="decision" value="accepted" class="button button-primary">Accept</button><button type="submit" name="decision" value="edited" class="button button-secondary">Save edit</button><button type="submit" name="decision" value="rejected" class="button button-secondary">Reject</button></div>
+    </form>
+  </article>
+{% else %}<p class="review-empty-state">No available suggestions were returned. Review the missing evidence below.</p>{% endfor %}
+</div>
+<div class="review-section-heading review-evidence-heading"><div><span class="section-kicker">SUPPORTING EVIDENCE</span><h3>Source records &amp; supporting text</h3><p class="field-hint">Use these saved records to check each suggestion. Current shelter records remain available from their links.</p></div><span class="review-section-icon">{{ icon('shield') }}</span></div>
+<div class="review-evidence-grid">
+  <section class="review-section" id="review-location-evidence" aria-labelledby="review-location-heading">
+    <div class="review-section-heading"><div><span class="section-kicker">LOCATION CHECK</span><h3 id="review-location-heading">Location evidence</h3></div><span class="review-section-icon">{{ icon('pin') }}</span></div>
+    <p><strong>Reported text:</strong> {{ evidence.facts.get('location') or 'Not provided' }}</p><p>{{ evidence.location.get('reason') or 'No location extraction evidence was returned.' }}</p>
+    {% if evidence.location.get('matched_text') %}<p><strong>Matched text:</strong> {% for text in evidence.location.matched_text %}<q>{{ text }}</q>{{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+    {% if evidence.location.get('candidates') %}<ul>{% for place in evidence.location.candidates %}<li>{{ place.name }} · {{ place.district }} · {{ place.source }}</li>{% endfor %}</ul>{% endif %}
+    <a class="text-link" href="#review-reported-location">Original reported location</a>
+  </section>
+  <section class="review-section" id="review-alert-evidence" aria-labelledby="review-alert-heading">
+    <div class="review-section-heading"><div><span class="section-kicker">SAVED ALERT CHECK</span><h3 id="review-alert-heading">Alert matches</h3></div><span class="review-section-icon">{{ icon('bell') }}</span></div>
+    <p>{{ evidence.alerts.get('reason') or 'No alert match evidence was returned.' }}</p>
+    {% if evidence.alerts.get('checked_at') %}<p class="field-hint review-meta">Checked {{ date(evidence.alerts.checked_at) }}. This is a saved snapshot.</p>{% endif %}
+    {% for alert in evidence.alerts.get('alerts', []) %}<article class="review-evidence-item"><strong>{{ alert.title }}</strong><p>{{ alert.message }}</p><p class="field-hint">{{ alert.level|title }} · {{ alert.place_name }} · Expires {{ date(alert.expires_at) }}</p></article>{% else %}<p class="field-hint review-empty-state">No matching alert records are attached. Absence of a match does not establish safety.</p>{% endfor %}
+  </section>
+  <section class="review-section" id="review-safety-evidence" aria-labelledby="review-safety-heading">
+    <div class="review-section-heading"><div><span class="section-kicker">REFERENCE LIBRARY</span><h3 id="review-safety-heading">Safety reference passages</h3></div><span class="review-section-icon">{{ icon('lifebuoy') }}</span></div>
+    {% for passage in evidence.passages %}
+    <article class="review-evidence-item"><h4>{{ passage.title }}</h4><blockquote class="review-source-text">{{ passage.text }}</blockquote><p class="field-hint">{{ passage.source_name }} · Passage {{ passage.chunk_number }} · {{ passage.approval_status|replace('_',' ') }}{% if passage.review_required %} · Owner verification required{% endif %}</p>{% if passage.source_url %}<a class="text-link" href="{{ passage.source_url }}" target="_blank" rel="noopener noreferrer">Open supporting source {{ icon('arrow') }}</a>{% else %}<p class="field-hint">A supporting source link was not supplied.</p>{% endif %}</article>
+    {% else %}<p class="review-empty-state">No supporting safety passages were returned.</p>{% endfor %}
+    {% if evidence.safety_reason %}<p class="field-hint">{{ evidence.safety_reason }}</p>{% endif %}
+  </section>
+  <section class="review-section" id="review-shelter-evidence" aria-labelledby="review-shelter-heading">
+    <div class="review-section-heading"><div><span class="section-kicker">SAVED SHELTER RECORDS</span><h3 id="review-shelter-heading">Shelter record snapshots</h3></div><span class="review-section-icon">{{ icon('house') }}</span></div>
+    {% if evidence.shelter_query %}<p class="field-hint">Search text: {{ evidence.shelter_query }}</p>{% endif %}
+    {% for shelter in evidence.shelters %}
+    <article class="review-evidence-item"><strong>{{ shelter.name }}</strong><p>{{ shelter.address or shelter.location }}{% if shelter.district %} · {{ shelter.district }}{% endif %}</p><p>{{ shelter.available_capacity }} recorded places available · {{ shelter.status|title }}</p><p class="field-hint">Record updated: {{ date(shelter.updated_at) }} · {{ shelter.source_name or 'Source not provided' }}</p><a class="text-link" href="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">Check current shelter records</a></article>
+    {% else %}<p class="review-empty-state">No shelter records were attached. This does not establish that no shelter exists.</p>{% endfor %}
+    {% if evidence.shelter_reason %}<p class="field-hint">{{ evidence.shelter_reason }}</p>{% endif %}
+  </section>
+</div>
+<details class="review-revision-history"><summary>Revision history ({{ revisions|length }})</summary><ol>{% for item in revisions %}<li><strong>Revision {{ item.revision }}</strong> · {{ date(item.created_at) }} · {{ item.result.status|title }} · {{ item.reviews|length }} review decisions{% if item.reviews %}<ul>{% for entry in item.reviews %}<li>{{ entry.suggestion_key|replace('_',' ')|title }}: {{ entry.decision|title }} · {{ entry.reviewer_name }} · {{ date(entry.created_at) }}{% if entry.reviewed_value is not none %}<p>{{ display_review_value(entry.reviewed_value, entry.suggestion_key) }}</p>{% endif %}{% if entry.note %}<p>{{ entry.note }}</p>{% endif %}</li>{% endfor %}</ul>{% endif %}</li>{% endfor %}</ol></details>
+{% else %}<p class="review-notice review-empty-state">No integrated analysis has been run for this report.</p>{% endif %}
+</div>

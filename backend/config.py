@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     ollama_model: str = Field(default="gemma4:e4b-it-q4_K_M", min_length=1, max_length=100)
     agent_timeout_seconds: float = Field(default=120, ge=1, le=300)
     agent_max_turns: int = Field(default=6, ge=2, le=12)
+    shelter_stale_after_minutes: int = Field(default=30, ge=1, le=1440)
 
     def read_gemini_key(self) -> str | None:
         if self.gemini_api_key and self.gemini_api_key.get_secret_value().strip():

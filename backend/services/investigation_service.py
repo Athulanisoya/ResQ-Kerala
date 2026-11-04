@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from backend.models.incident import Incident
 from backend.models.investigation import (IncidentAnalysis, InvestigationReport, InvestigationTeamAssignment)
 from backend.models import Role, Team
+from backend.models.severity_prediction import SeverityPrediction, SeverityPredictionDecision
+from backend.schemas.severity_prediction_schema import SeverityDecisionResponse, SeverityPredictionResponse
 def require_incident(db:Session,incident_id:int, *, lock=False):
     query = select(Incident).where(Incident.id == incident_id)
     if lock:
@@ -31,22 +33,72 @@ def save_analysis(db:Session,incident_id:int,user_id:int,data):
     return record
 
 
-def save_predicted_severity(db: Session, incident_id: int, user_id: int, severity: str):
-    """Change only severity using the latest locked assessment, never a UI snapshot."""
-    require_incident(db, incident_id, lock=True)
-    record = db.scalar(select(IncidentAnalysis).where(
-        IncidentAnalysis.incident_id == incident_id).with_for_update())
-    if record is None:
-        record = IncidentAnalysis(incident_id=incident_id, severity=severity,
-                                  source="AI_MODULE", reviewed_by_user_id=user_id)
-        db.add(record)
-    else:
-        record.severity = severity
-        record.source = "AI_MODULE"
-        record.reviewed_by_user_id = user_id
+def save_predicted_severity(db: Session, incident_id: int, user_id: int, severity: str,
+                            *, model_version: str, input_hash: str):
+    """Append an unreviewed suggestion without touching any assessment field."""
+    require_incident(db, incident_id)
+    record = SeverityPrediction(incident_id=incident_id, predicted_severity=severity,
+                                requested_by_user_id=user_id, model_version=model_version,
+                                input_hash=input_hash)
+    db.add(record)
     db.commit()
     db.refresh(record)
-    return record
+    return severity_prediction_response(record)
+
+
+def severity_prediction_response(prediction, decision=None):
+    result = SeverityPredictionResponse.model_validate(prediction)
+    if decision is not None:
+        result.decision = SeverityDecisionResponse.model_validate(decision)
+    return result
+
+
+def severity_predictions(db: Session, incident_id: int):
+    require_incident(db, incident_id)
+    rows = db.execute(select(SeverityPrediction, SeverityPredictionDecision).outerjoin(
+        SeverityPredictionDecision, SeverityPredictionDecision.prediction_id == SeverityPrediction.id
+    ).where(SeverityPrediction.incident_id == incident_id).order_by(SeverityPrediction.id.desc()))
+    return [severity_prediction_response(prediction, decision) for prediction, decision in rows]
+
+
+def review_predicted_severity(db: Session, incident_id: int, prediction_id: int, user_id: int, data):
+    # An incident lock serializes all review decisions with ordinary assessment
+    # saves. Inference runs before persistence and never holds this lock.
+    incident = require_incident(db, incident_id, lock=True)
+    prediction = db.scalar(select(SeverityPrediction).where(
+        SeverityPrediction.id == prediction_id, SeverityPrediction.incident_id == incident_id))
+    if prediction is None:
+        raise HTTPException(status_code=404, detail="Severity suggestion not found")
+    reviewed_severity = (prediction.predicted_severity if data.action == "accept"
+                         else data.severity if data.action == "edit" else None)
+    existing = db.scalar(select(SeverityPredictionDecision).where(
+        SeverityPredictionDecision.prediction_id == prediction.id))
+    if existing is not None:
+        if (existing.action != data.action or existing.reviewed_severity != reviewed_severity
+                or existing.note != data.note):
+            raise HTTPException(status_code=409, detail="This suggestion has already been reviewed. Generate a new suggestion for a new decision.")
+        # A retried request must not reapply an older severity over a later review.
+        return severity_prediction_response(prediction, existing)
+    if incident.status in {"CLOSED", "CANCELLED", "REJECTED"}:
+        raise HTTPException(status_code=409, detail="A closed incident cannot receive a severity review")
+    assessment = db.scalar(select(IncidentAnalysis).where(
+        IncidentAnalysis.incident_id == incident_id).with_for_update())
+    from backend.schemas.investigation_schema import AnalysisResponse
+    snapshot = AnalysisResponse.model_validate(assessment).model_dump(mode="json") if assessment else None
+    decision = SeverityPredictionDecision(prediction_id=prediction.id, action=data.action,
+                                          reviewed_severity=reviewed_severity, reviewed_by_user_id=user_id,
+                                          note=data.note, previous_assessment=snapshot)
+    db.add(decision)
+    if data.action in {"accept", "edit"}:
+        if assessment is None:
+            assessment = IncidentAnalysis(incident_id=incident_id)
+            db.add(assessment)
+        assessment.severity = reviewed_severity
+        assessment.source = "MANUAL_DEMO"
+        assessment.reviewed_by_user_id = user_id
+    db.commit()
+    db.refresh(decision)
+    return severity_prediction_response(prediction, decision)
 def get_investigation(db:Session,incident_id:int):
     require_incident(db,incident_id)
     return db.scalar(select(InvestigationReport).where(InvestigationReport.incident_id==incident_id))

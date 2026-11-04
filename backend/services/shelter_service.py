@@ -1,6 +1,7 @@
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from backend.models.shelter import Shelter
+from backend.services.shelter_freshness import shelter_freshness
 def search_shelters(db: Session,query: str = "",district: str | None = None,available_only: bool = True,limit: int | None = 10,location: str | None = None):
     statement = select(Shelter)
     query = (query or "").strip()
@@ -59,6 +60,7 @@ from backend.models.shelter import Shelter, ShelterUpdate
 
 def shelter_view(row):
     return {
+        **shelter_freshness(row.updated_at),
         "id": row.id,
         "name": row.name,
         "location": row.location,

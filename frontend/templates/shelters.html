@@ -42,7 +42,7 @@
     </form>
   </section>{% endif %}
   <div id="shelter-editor" aria-live="polite"></div>
-  <div id="shelter-live" hx-get="/ui/shelters/live?{{ live_query }}" hx-trigger="every 3s [document.visibilityState === 'visible'], resq:shelters-changed from:body" hx-target="this" hx-swap="innerHTML" aria-label="Live shelter availability">
+  <div id="shelter-live" hx-get="/ui/shelters/live?{{ live_query }}" hx-trigger="every 3s [document.visibilityState === 'visible'], resq:shelters-changed from:body" hx-target="this" hx-swap="innerHTML" aria-label="Shelter availability records">
     {% include 'partials/shelter_results.html' %}
   </div>
 </section>

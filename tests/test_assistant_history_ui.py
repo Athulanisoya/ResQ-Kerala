@@ -11,12 +11,14 @@ def test_assistant_history_htmx_roundtrip_and_privacy(clients, monkeypatch):
     first=post(citizen,'/ui/assistant/chat',question='Where can I find shelter?')
     assert first.status_code == 200, first.text
     assert 'Synthetic answer: Where can I find shelter?' in first.text
+    assert 'This saved reply has no recorded evidence checks.' in first.text
     location=first.headers['HX-Push-Url']; session_id=location.split('=')[-1]
     assert 'No live model.' in first.text and f'name="session_id" value="{session_id}"' in first.text
     next_turn=post(citizen,'/ui/assistant/chat',question='More details please',session_id=session_id)
     assert next_turn.status_code == 200 and 'Where can I find shelter?' in next_turn.text and 'More details please' in next_turn.text
     restored=citizen.get(location,headers={'HX-Request':'true'})
     assert restored.status_code == 200 and 'Synthetic answer: More details please' in restored.text
+    assert 'Treat it as unverified and ask again for current source records.' in restored.text
     assert admin.get(location,headers={'HX-Request':'true'}).status_code == 404
     assert 'Synthetic answer' not in admin.get('/assistant',headers={'HX-Request':'true'}).text
 

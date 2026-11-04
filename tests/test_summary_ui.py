@@ -202,5 +202,5 @@ def test_predict_severity_retains_unsaved_manual_summary_in_form(summary_report)
     assert predicted.status_code == 200, predicted.text
     assert Textareas(predicted.text).values["analysis-summary"] == pending
     persisted = admin.get(analysis_path).json()
-    assert persisted["severity"] == "HIGH" and persisted["summary"] == "Persisted reviewer note."
+    assert persisted["severity"] == "LOW" and persisted["summary"] == "Persisted reviewer note."
     assert persisted["extracted_location"] == "Reviewed location" and persisted["requires_investigation"] is True

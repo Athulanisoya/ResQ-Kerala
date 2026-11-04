@@ -7,7 +7,8 @@ from backend.models.week4_analysis import Week4AnalysisRevision
 from backend.ai.week4_orchestrator import run_week4_workflow
 from backend.database.connection import get_db
 from backend.models import Role, User
-from backend.schemas.week4_schema import Week4WorkflowResponse
+from backend.schemas.week4_schema import Week4WorkflowResponse, Week4ReviewRequest
+from backend.services.analysis_review_service import context_for, save_review
 from backend.services.incident_service import get_incident_by_id
 from backend.utils.permissions import require_roles
 router = APIRouter(prefix="/api/incidents",tags=["Week 4 AI Orchestration"])
@@ -57,6 +58,8 @@ async def analyze_incident_week4(
     revision = (db.scalar(select(func.max(Week4AnalysisRevision.revision)).where(
         Week4AnalysisRevision.incident_id == incident_id)) or 0) + 1
     result["revision"] = revision
+    result["reported_facts"] = {"message": incident.message, "location": incident.location,
+                                "people_affected": incident.people_affected, "help_required": incident.help_required}
     validated = Week4WorkflowResponse.model_validate(result)
     db.add(Week4AnalysisRevision(incident_id=incident_id, revision=revision,
                                  created_by=user.id, result=validated.model_dump(mode="json")))
@@ -73,3 +76,21 @@ def analysis_history(incident_id: int, db: Session = Depends(get_db),
         Week4AnalysisRevision.incident_id == incident_id).order_by(Week4AnalysisRevision.revision.desc()))
     return [{"revision": row.revision, "created_at": row.created_at,
              "created_by": row.created_by, "result": row.result} for row in rows]
+
+
+@router.get("/{incident_id}/review-context")
+def review_context(incident_id: int, db: Session = Depends(get_db),
+                   user: User = Depends(require_roles(Role.ADMIN))):
+    incident = get_incident_by_id(db, incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found.")
+    return context_for(db, incident)
+
+
+@router.post("/{incident_id}/week4-analysis/{revision}/reviews", status_code=201)
+def review_suggestion(incident_id: int, revision: int, request: Week4ReviewRequest,
+                      db: Session = Depends(get_db), user: User = Depends(require_roles(Role.ADMIN))):
+    incident = get_incident_by_id(db, incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found.")
+    return save_review(db, incident, revision, request, user.id)

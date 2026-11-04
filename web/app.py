@@ -332,6 +332,9 @@ async def detail_page(request, incident_id, *, error=None, status_code=200, valu
     from web.operations import operation_detail_context
     communication = await communication_context(request, incident_id)
     operations = await operation_detail_context(request, user, incident_id)
+    from web.review_assistance import location_context
+    location_info = await location_context(request, incident_id)
+    severity_info = {}
     history = await api_call(request, "GET", f"/api/incidents/{incident_id}/history")
     summary_response = await api_call(request, "GET", f"/api/incidents/{incident_id}/summary")
     report_summary = summary_response.json() if summary_response.status_code == 200 else None
@@ -348,12 +351,14 @@ async def detail_page(request, incident_id, *, error=None, status_code=200, valu
                 report["assigned_team"] = assigned["name"]
         analysis, analysis_error, agent_status = await location_analysis_context(request, incident_id)
         report_analysis, investigation, investigation_error = await investigation_context(request, incident_id)
+        from web.severity_review import severity_context
+        severity_info = await severity_context(request, incident_id)
     return render(request, "detail.html", user=user, report=report, timeline=history.json() if history.status_code == 200 else [],
                   teams=teams, values=values or {}, error=error or (error_message(history) if history.status_code != 200 else None),
                   analysis=analysis, analysis_error=analysis_error, agent_status=agent_status,
                   report_analysis=report_analysis, investigation=investigation, investigation_error=investigation_error,
                   report_summary=report_summary, summary_error=summary_error,
-                  **communication, **operations,
+                  **communication, **operations, **location_info, **severity_info,
                   notice=notice,
                   active_nav="reports", page_title=report["reference"], status_code=status_code)
 
@@ -568,10 +573,8 @@ async def predict_report_severity(request: Request, incident_id: int):
     form = dict(request.state.form)
     response = await api_call(request, "POST", f"/api/ai/incidents/{incident_id}/predict-severity")
     if response.status_code == 200:
-        if form.get("analysis_form"):
-            form["severity"] = response.json()["severity"]
         return await detail_page(request, incident_id, values=form,
-                                 notice="Severity prediction saved. Review the result and save any other assessment edits.")
+                                 notice="Severity suggestion saved. Your reviewed assessment has not changed.")
     return await detail_page(request, incident_id, error=error_message(response),
                              status_code=response.status_code, values=form)
 
@@ -854,5 +857,9 @@ app.include_router(duplicates_ui)
 app.include_router(dashboard_info_ui)
 from web.shelter_live import router as shelter_live_ui
 app.include_router(shelter_live_ui)
+from web.severity_review import router as severity_review_ui
+from web.review_assistance import router as review_assistance_ui
+app.include_router(severity_review_ui)
+app.include_router(review_assistance_ui)
 app.add_middleware(AttachmentRequestLimit)
 app.mount("/", api)

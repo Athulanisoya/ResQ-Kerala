@@ -1,0 +1,9 @@
+<form id="clarification-compose" action="/ui/reports/{{ report.id }}/clarifications" method="post" hx-post="/ui/reports/{{ report.id }}/clarifications" hx-target="#main-content" hx-disabled-elt="find button" class="compact-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  {% if drafted %}<p class="review-helper" role="status">Suggested question inserted. Review and edit it before sending; nothing has been sent to the citizen.</p>{% endif %}
+  <div class="field"><label for="clarification-question">Ask the citizen</label><textarea id="clarification-question" name="question" rows="3" required maxlength="1000" placeholder="What information is needed to continue?">{{ values.get('question','') }}</textarea></div>
+  <div class="review-form-footer">
+    <label class="checkbox-label"><input type="checkbox" name="required" value="yes" {{ 'checked' if values.get('required') == 'yes' or 'question' not in values }}> Reply required before case closure</label>
+    <button class="button button-secondary" type="submit">Request clarification</button>
+  </div>
+</form>

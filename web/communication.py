@@ -8,10 +8,17 @@ router = APIRouter()
 async def communication_context(request, incident_id):
     from web.app import api_call, error_message
     response = await api_call(request, "GET", f"/api/communication/incidents/{incident_id}/clarifications")
-    return {
+    context = {
         "clarifications": response.json() if response.status_code == 200 else [],
         "communication_error": error_message(response) if response.status_code != 200 else None,
     }
+    from web.app import current_user
+    user = await current_user(request)
+    if user and user['role'] == 'admin':
+        drafts = await api_call(request, 'GET', f'/api/communication/incidents/{incident_id}/clarification-suggestions')
+        context['clarification_suggestions'] = drafts.json().get('suggestions', []) if drafts.status_code == 200 else []
+        context['clarification_draft_error'] = error_message(drafts) if drafts.status_code != 200 else None
+    return context
 
 
 async def updates_view(request, *, error=None, status_code=200):

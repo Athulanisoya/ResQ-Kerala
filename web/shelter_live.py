@@ -78,6 +78,6 @@ async def update(request: Request, shelter_id: int):
     if response.status_code != 200:
         return await editor_view(request, shelter_id, error=ui.error_message(response),
                                  values=form, status_code=response.status_code)
-    result = await editor_view(request, shelter_id, notice='Shelter capacity updated. Live availability is refreshing.')
+    result = await editor_view(request, shelter_id, notice='Shelter capacity updated. Availability records are refreshing.')
     result.headers['HX-Trigger'] = json.dumps({'resq:shelters-changed': True})
     return result

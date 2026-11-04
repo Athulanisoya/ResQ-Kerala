@@ -66,6 +66,7 @@ async def chat(data: ChatRequest, db: Session = Depends(get_db), user: User = De
         session.updated_at = datetime.utcnow()
     db.add(AssistantMessage(session_id=session.id, role='user', content=question))
     db.add(AssistantMessage(session_id=session.id, role='assistant', content=str(result.get('answer', ''))[:12000],
-                            details={'mode': result.get('mode'), 'warning': result.get('warning'), 'sources': result.get('sources', [])}))
+                            details={'mode': result.get('mode'), 'warning': result.get('warning'), 'sources': result.get('sources', []),
+                                     'evidence': result.get('evidence', []), 'evidence_status': result.get('evidence_status')}))
     db.commit()
     return {**result, 'session_id': session.id}

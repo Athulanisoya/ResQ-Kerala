@@ -1,3 +1,5 @@
+{% from 'icons.html' import icon %}
 <section class="card" id="week4-analysis" hx-get="/ui/reports/{{ report.id }}/week4-analysis" hx-trigger="load" hx-swap="innerHTML">
-  <h2>Integrated analysis</h2><p>Loading analysis history…</p>
+  <div class="card-heading review-panel-heading"><div><span class="section-kicker">REVIEW &amp; RESPONSE</span><h2>Integrated analysis</h2></div><span class="review-section-icon">{{ icon('reports') }}</span></div>
+  <div class="review-workspace"><p class="field-hint">Loading analysis history…</p></div>
 </section>

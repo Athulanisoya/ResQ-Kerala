@@ -1,0 +1,25 @@
+{% from 'icons.html' import icon %}
+<section class="severity-suggestions" aria-labelledby="severity-suggestions-heading">
+  <div class="review-toolbar"><h3 id="severity-suggestions-heading">Model suggestions</h3>{{ icon('shield') }}</div>
+  <p class="review-helper">Predictions are provisional. Only an explicit accept or edit decision updates reviewed severity. Rejecting a suggestion preserves the assessment.</p>
+  {% if severity_error %}<p class="alert alert-error" role="alert">{{ severity_error }}</p>{% endif %}
+  {% for suggestion in severity_predictions|default([]) %}
+  {% set editing_suggestion = form_values.get('severity_prediction_id')|string == suggestion.id|string %}
+  <article class="severity-suggestion review-suggestion-card" aria-labelledby="severity-suggestion-{{ suggestion.id }}">
+    <div class="review-toolbar"><h4 id="severity-suggestion-{{ suggestion.id }}">{{ suggestion.predicted_severity|title }} suggestion</h4><span class="review-badge review-badge-{{ suggestion.decision.action if suggestion.decision else 'pending' }}">{{ suggestion.decision.action|title if suggestion.decision else 'Not reviewed' }}</span></div>
+    <p class="field-hint"><time datetime="{{ suggestion.created_at }}">Generated {{ suggestion.created_at|local_time }}</time> · Requested by account #{{ suggestion.requested_by_user_id }}</p>
+    <details><summary>Model version and source</summary><p class="field-hint">Classifier artifact <code class="evidence-code">{{ suggestion.model_version }}</code></p><p class="field-hint">Based on the original submitted report. Model scores are not calibrated measures of urgency.</p></details>
+    {% if suggestion.decision %}
+    <p class="field-hint">{{ suggestion.decision.action|title }} by administrator #{{ suggestion.decision.reviewed_by_user_id }} · {{ suggestion.decision.reviewed_at|local_time }}{% if suggestion.decision.reviewed_severity %} · Reviewed severity: {{ suggestion.decision.reviewed_severity|title }}{% endif %}</p>
+    {% if suggestion.decision.note %}<p>{{ suggestion.decision.note }}</p>{% endif %}
+    {% elif report.status not in ['CLOSED', 'CANCELLED', 'REJECTED'] %}
+    <form action="/ui/reports/{{ report.id }}/severity-suggestions/{{ suggestion.id }}/review" method="post" hx-post="/ui/reports/{{ report.id }}/severity-suggestions/{{ suggestion.id }}/review" hx-include="#analysis-review-form" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="severity-edit-{{ suggestion.id }}">Edited severity</label><select id="severity-edit-{{ suggestion.id }}" name="reviewed_severity">{% set edited_severity = form_values.get('reviewed_severity', suggestion.predicted_severity) if editing_suggestion else suggestion.predicted_severity %}{% for choice in ['LOW', 'MEDIUM', 'HIGH'] %}<option value="{{ choice }}" {{ 'selected' if edited_severity == choice }}>{{ choice|title }}</option>{% endfor %}</select><p class="field-hint">Choose a value here when saving an edited suggestion.</p></div>
+      <div class="field"><label for="severity-note-{{ suggestion.id }}">Review note <span class="optional">Optional</span></label><textarea id="severity-note-{{ suggestion.id }}" name="decision_note" rows="2" maxlength="1000">{{ form_values.get('decision_note', '') if editing_suggestion else '' }}</textarea></div>
+      <div class="review-form-footer"><button class="button button-primary" type="submit" name="action" value="accept">{{ icon('check') }}Accept suggestion</button><button class="button button-secondary" type="submit" name="action" value="edit">Save edited severity</button><button class="button button-secondary" type="submit" name="action" value="reject">Reject suggestion</button></div>
+    </form>
+    {% else %}<p class="field-hint">This case is closed. The suggestion is retained for history.</p>{% endif %}
+  </article>
+  {% else %}<p class="analysis-empty">No severity suggestions have been generated for this report.</p>{% endfor %}
+</section>

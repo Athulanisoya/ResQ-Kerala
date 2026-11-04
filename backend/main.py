@@ -13,6 +13,7 @@ from .database.connection import Base, engine, get_db, initialize_database
 from . import models  # Register all table metadata before creating the schema.
 from .routers import admin, alerts, assistant, auth, incidents, investigations, location_analysis, relief, severity, shelters, summaries, teams, users, workspaces, week4_workflow
 from .routers import communication, operations, community, attachments, recovery, duplicates, management
+from .routers import review_assistance
 
 settings = get_settings()
 
@@ -95,5 +96,6 @@ app.include_router(attachments.router)
 app.include_router(recovery.router)
 app.include_router(duplicates.router)
 app.include_router(management.router)
+app.include_router(review_assistance.router)
 
 app.add_middleware(AttachmentRequestLimit)

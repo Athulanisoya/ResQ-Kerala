@@ -13,6 +13,15 @@
   --line: #d5e2dc;
   --border: #d5e2dc;
   --paper: #f8f5ee;
+  --surface-inset: #fdfbf6;
+  --surface-sage: #edf1e8;
+  --surface-coast: #e8f0f1;
+  --surface-sand: #f4ead8;
+  --surface-rose: #f3e6df;
+  --status-green: #dce8d8;
+  --status-blue: #dce9ec;
+  --status-amber: #765b26;
+  --status-rose: #864d3c;
   --radius: 14px;
 }
 body { isolation: isolate; background: #bfd5cf; font-family: "Segoe UI", "Nirmala UI", Arial, sans-serif; }
@@ -22,12 +31,14 @@ h1 { letter-spacing: -.85px; }
 .button, .text-link, .field label, .brand { font-weight: 500; }
 .button { min-height: 44px; font-size: 13px; white-space: normal; text-align: center; border-radius: 9px; }
 .button-secondary { color: var(--coast); border-color: var(--line); background: #fff; }
+.compact-form .button { font-size: 13px; }
 .text-link { color: var(--coast); font-size: 12px; }
 .section-kicker, .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 1px; }
 .field label, .field-hint, .optional, .muted { color: var(--body); }
 .field label, .field-hint { font-size: 12px; }
 .optional { font-size: 11px; }
 .field input, .field select, .field textarea { font-size: 14px; border-color: var(--line); color: var(--ink); min-height: 45px; }
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .field select { height: 46px; }
 .field input::placeholder, .field textarea::placeholder { color: #6c807e; font-size: 13px; }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--coast); box-shadow: 0 0 0 3px #24647d20; }
 :focus-visible { outline: 3px solid #a9c8d3; outline-offset: 3px; }

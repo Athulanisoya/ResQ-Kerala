@@ -1,0 +1,20 @@
+{% from 'icons.html' import icon %}
+{% if location_follow_up_error %}<div class="alert alert-error" role="alert">Location clarification could not load: {{ location_follow_up_error }}</div>{% endif %}
+{% if location_follow_up and (location_follow_up.requires_clarification or location_follow_up.confirmation) %}
+<section class="card review-assistance" id="location-follow-up" aria-labelledby="location-follow-up-heading">
+  <div class="card-heading"><div><h2 id="location-follow-up-heading">Confirm the incident location</h2><p>The original location stays exactly as reported.</p></div>{{ icon('pin') }}</div>
+  <div class="detail-card-body">
+    {% if location_follow_up.confirmation %}<div class="review-toolbar"><p><strong>Human-confirmed location:</strong> {{ location_follow_up.confirmation.locality or location_follow_up.extraction.place.name }} · {{ location_follow_up.extraction.place.district }}</p><span class="review-badge">Confirmed</span></div><p class="review-helper">Confirmed {{ location_follow_up.confirmation.created_at|local_time }} by account #{{ location_follow_up.confirmation.confirmed_by }}. {{ location_follow_up.extraction.reason }}</p>{% else %}<div class="review-toolbar"><h3>{{ location_follow_up.question }}</h3><span class="review-badge review-badge-pending">Needs confirmation</span></div><p class="review-helper">{{ location_follow_up.extraction.reason }}</p>{% endif %}
+    {% if location_follow_up.candidates %}<ul class="review-matched-places">{% for place in location_follow_up.candidates %}<li><strong>{{ place.name }} · {{ place.district }}</strong><span class="field-hint">{{ place.source }}</span></li>{% endfor %}</ul>{% else %}<p class="review-helper">No matched place names are available in the current gazetteer.</p>{% endif %}
+    {% if user.role in ['citizen','admin'] %}<form action="/ui/reports/{{ report.id }}/location-confirmations" method="post" hx-post="/ui/reports/{{ report.id }}/location-confirmations" hx-target="#main-content" hx-disabled-elt="find button" class="compact-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="input_hash" value="{{ location_follow_up.input_hash }}">
+      <div class="review-form-grid">
+        <div class="field"><label for="confirmed-place">Matched place or district</label><select id="confirmed-place" name="place_id" required aria-describedby="confirmed-place-hint"><option value="">Choose the incident's place or district</option><optgroup label="Matched place names">{% for place in location_follow_up.candidates %}<option value="{{ place.id }}" {{ 'selected' if values.get('place_id', location_follow_up.confirmation.place_id if location_follow_up.confirmation else '') == place.id }}>{{ place.name }} · {{ place.district }}</option>{% endfor %}</optgroup><optgroup label="Confirm a district">{% for place in location_follow_up.districts %}<option value="{{ place.id }}" {{ 'selected' if values.get('place_id', location_follow_up.confirmation.place_id if location_follow_up.confirmation else '') == place.id }}>{{ place.name }} district</option>{% endfor %}</optgroup></select><p class="field-hint" id="confirmed-place-hint">Choose a matched place name, or confirm the district.</p></div>
+        <div class="field"><label for="confirmed-locality">Locality or landmark</label><input id="confirmed-locality" name="confirmed_locality" maxlength="255" value="{{ values.get('confirmed_locality','') }}" aria-describedby="confirmed-locality-hint"><p class="field-hint" id="confirmed-locality-hint">For district-only confirmation. A district selection confirms only the district, not an unrecognised locality or coordinates.</p></div>
+      </div>
+      <div class="field"><label for="location-note">Confirmation note <span class="optional">Optional</span></label><input id="location-note" name="location_note" maxlength="1000" value="{{ values.get('location_note','') }}"></div>
+      <div class="review-form-footer"><button class="button button-primary" type="submit">{{ icon('check') }}Confirm location</button></div>
+    </form>{% endif %}
+  </div>
+</section>
+{% endif %}

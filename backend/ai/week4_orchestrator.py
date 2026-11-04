@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 import inspect
 import uuid
+from datetime import datetime, timezone
 
 from agents.tool import ToolContext
 from agents import (
@@ -37,10 +38,11 @@ from backend.ai.gemini_live_model import GeminiLiveError, GeminiLiveModel
 from backend.ai.location_extractor import extract_location
 from backend.ai.rag_retriever import retrieve
 from backend.ai.report_summarizer import summarize_report
-from backend.ai.severity_model import SeverityUnavailable, SeverityUncertain, predict_severity
+from backend.ai.severity_model import SeverityUnavailable, SeverityUncertain, predict_severity, get_model_version
 from backend.config import get_settings
 from backend.services.alert_service import match_alerts
 from backend.services.shelter_service import search_shelters
+from backend.services.review_assistance import confirmed_extraction
 
 
 @dataclass
@@ -68,13 +70,15 @@ def _record(ctx: Week4Context, name: str, result: dict) -> dict:
 def tool_1_extract_location(
     ctx: RunContextWrapper[Week4Context],
 ) -> dict:
-    """Extract a verified place from the original incident report."""
+    """Use explicit human location confirmation or conservative gazetteer extraction."""
     c = ctx.context
 
-    result = extract_location(
+    confirmed = confirmed_extraction(c.db, c.incident) if c.db is not None else None
+    result = (confirmed or extract_location(
         c.original_text,
         c.reported_location,
-    ).model_dump(mode="json")
+    )).model_dump(mode="json")
+    result["source"] = "human_confirmation" if confirmed else "gazetteer"
 
     return _record(c, "tool_1_extract_location", result)
 
@@ -95,7 +99,9 @@ def tool_2_check_alerts(
 
     from backend.schemas.location_schema import LocationExtraction
 
-    extraction = LocationExtraction.model_validate(location)
+    # Source is workflow provenance; the extraction contract stays strict.
+    extraction_data = {key: value for key, value in location.items() if key != "source"}
+    extraction = LocationExtraction.model_validate(extraction_data)
     result = match_alerts(c.db, extraction).model_dump(mode="json")
 
     return _record(c, "tool_2_check_alerts", result)
@@ -114,6 +120,9 @@ def tool_3_predict_severity(
             "status": "completed",
             "predicted_severity": severity,
             "source": "existing_severity_model",
+            "model_version": get_model_version(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "requires_manual_review": True,
         }
     except SeverityUncertain as exc:
         result = {"status": "uncertain", "predicted_severity": None,

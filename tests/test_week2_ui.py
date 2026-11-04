@@ -18,7 +18,7 @@ def workspace(monkeypatch):
     calls = []
     state = {"validation_error": False, "analysis": None, "configured": True,
              "report_analysis": None, "investigation": None, "predicted_severity": "Moderate",
-             "assessment_error": False, "severity_error": False}
+             "assessment_error": False, "severity_error": False, "severity_predictions": []}
     place = {"id": "locality:chengannur", "name": "Chengannur", "district": "Alappuzha", "kind": "locality"}
     alert = {"id": 3, "title": "River warning", "message": "Keep clear of the river.", "level": "ORANGE",
              "place_id": place["id"], "starts_at": "2026-10-15T04:30:00Z", "expires_at": "2026-10-16T09:30:00Z",
@@ -29,6 +29,10 @@ def workspace(monkeypatch):
         role = request.headers.get("Authorization", "").removeprefix("Bearer ")
         if path == "/api/users/me":
             return httpx.Response(200, json={"id": 1, "role": role, "full_name": "Test User"})
+        if path.endswith('/location-clarification'):
+            return httpx.Response(200, json={"requires_clarification": False, "confirmation": None})
+        if path.endswith('/clarification-suggestions'):
+            return httpx.Response(200, json={"method": "local_missing_fact_rules", "suggestions": []})
         if method == "GET" and (path.endswith("/clarifications") or path == "/api/operations/tasks"):
             return httpx.Response(200, json=[])
         if method == "GET" and path == "/api/operations/incidents/7/task":
@@ -57,19 +61,20 @@ def workspace(monkeypatch):
             if state["severity_error"]:
                 return httpx.Response(503, json={"detail": "The severity model is temporarily unavailable."})
             return httpx.Response(200, json={"predicted_severity": state["predicted_severity"]})
+        if path == "/api/ai/incidents/7/severity-predictions":
+            return httpx.Response(200, json=state["severity_predictions"])
         if path == "/api/ai/incidents/7/predict-severity":
             if state["severity_error"]:
                 return httpx.Response(503, json={"detail": "The severity model is temporarily unavailable."})
             severity = {"High": "HIGH", "Moderate": "MEDIUM", "Low": "LOW"}.get(state["predicted_severity"])
             if severity is None:
                 return httpx.Response(502, json={"detail": "The severity model returned an unsupported result."})
-            previous = state["report_analysis"] or {
-                "extracted_location": None, "alert_match": "NOT_CHECKED", "summary": None,
-                "requires_investigation": True,
-            }
-            state["report_analysis"] = {"id": 4, "incident_id": 7, "updated_at": "2026-10-15T05:00:00Z",
-                                        **previous, "severity": severity, "source": "AI_MODULE"}
-            return httpx.Response(200, json=state["report_analysis"])
+            suggestion = {"id": len(state["severity_predictions"]) + 1, "incident_id": 7,
+                          "created_at": "2026-10-15T05:00:00Z", "predicted_severity": severity,
+                          "model_version": "sha256:synthetic-model-for-test", "requested_by_user_id": 1,
+                          "decision": None, "requires_manual_review": True}
+            state["severity_predictions"].insert(0, suggestion)
+            return httpx.Response(200, json=suggestion)
         if path == "/api/admin/incidents/7/investigation":
             if method == "POST":
                 state["investigation"] = {"id": 8, "incident_id": 7, "status": "IN_PROGRESS", "findings": None,
@@ -231,9 +236,10 @@ def test_severity_prediction_preserves_assessment_and_normalizes_model_labels(wo
     }
     result = submit(client, "/ui/reports/7/severity")
     assert result.status_code == 200
-    assert "Severity prediction saved" in result.text
+    assert "Severity suggestion saved" in result.text
     assert ("POST", "/api/ai/incidents/7/predict-severity", None) in calls
-    assert state["report_analysis"]["severity"] == "MEDIUM"
+    assert state["report_analysis"]["severity"] == "HIGH"
+    assert state["severity_predictions"][0]["predicted_severity"] == "MEDIUM"
     assert state["report_analysis"]["summary"] == "A reviewer must confirm the street."
     assert state["report_analysis"]["extracted_location"] == "Chengannur"
     assert state["report_analysis"]["requires_investigation"] is False
