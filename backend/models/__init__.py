@@ -37,3 +37,4 @@ from .community import CommunityNews, DonationCampaign, DonationPledge
 from .attachments import IncidentAttachment
 from .recovery import PasswordResetToken
 from .assistant_history import AssistantSession, AssistantMessage
+from .shelter_registration import ShelterRegistration, ShelterRegistrationEvent

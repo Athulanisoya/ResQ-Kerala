@@ -178,6 +178,12 @@ def update_shelter(db, shelter_id, user, data):
             "Shelter changed; reload before updating",
         )
 
+    # Reservations and confirmed arrivals share this count with walk-in guests.
+    # Every registration writer holds the same shelter lock, so the floor is stable.
+    from backend.services.shelter_registration_service import active_registered_spaces
+    if data.occupied < active_registered_spaces(db, shelter_id):
+        raise HTTPException(409, "Occupied or reserved spaces cannot be lower than active registrations. Record departures or cancellations first.")
+
     row.capacity = data.capacity
 
     row.occupied = data.occupied

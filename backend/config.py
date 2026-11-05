@@ -3,7 +3,7 @@ import hashlib
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     gemini_api_key_file: Path = Field(default_factory=default_gemini_key_file)
     gemini_model: str = Field(default="gemini-3.1-flash-live-preview", min_length=1, max_length=100)
+    ollama_allow_docker_host: bool = False
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = Field(default="gemma4:e4b-it-q4_K_M", min_length=1, max_length=100)
     agent_timeout_seconds: float = Field(default=120, ge=1, le=300)
@@ -47,14 +48,17 @@ class Settings(BaseSettings):
 
     @field_validator("ollama_base_url")
     @classmethod
-    def validate_ollama_url(cls, value: str) -> str:
-        """This setup sends model requests only to the local Ollama server."""
+    def validate_ollama_url(cls, value: str, info: ValidationInfo) -> str:
+        """Allow loopback, or the exact internal Compose service by opt-in."""
         parsed = urlsplit(value)
+        allowed_hosts = {"localhost", "127.0.0.1", "::1"}
+        if info.data.get("ollama_allow_docker_host") is True:
+            allowed_hosts.add("ollama")
         if (parsed.scheme not in {"http", "https"}
-                or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+                or parsed.hostname not in allowed_hosts
                 or parsed.username is not None or parsed.password is not None
                 or parsed.path not in {"", "/"} or parsed.query or parsed.fragment):
-            raise ValueError("OLLAMA_BASE_URL must be a local http(s) server URL without credentials or a path")
+            raise ValueError("OLLAMA_BASE_URL must use loopback or the explicitly enabled ollama Docker host, without credentials or a path")
         # Accessing port rejects malformed values before making a request.
         if parsed.port is not None and not 1 <= parsed.port <= 65535:
             raise ValueError("OLLAMA_BASE_URL must use a valid server port")

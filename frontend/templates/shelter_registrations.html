@@ -1,0 +1,3 @@
+<header class="page-heading"><div><span class="section-kicker">YOUR SHELTER SUPPORT</span><h1>My shelter registrations</h1><p>Your reserved spaces and reception updates across all shelters.</p></div><a class="button button-secondary" href="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">Browse shelters</a></header>
+{% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+{% include 'partials/shelter_registration_records.html' %}

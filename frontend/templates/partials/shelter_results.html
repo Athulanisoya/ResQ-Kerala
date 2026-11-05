@@ -9,7 +9,7 @@
     {% if shelter.address %}<p>{{ shelter.address }}</p>{% endif %}
     {% if shelter.locality or shelter.district %}<p>{{ shelter.locality or '' }}{{ ', ' if shelter.locality and shelter.district else '' }}{{ shelter.district or '' }}</p>{% endif %}
     {% if shelter.distance_km is defined %}<p class="field-hint">{{ shelter.distance_km }} km from your search coordinates</p>{% endif %}
-    <dl class="shelter-counts"><div><dt>Capacity</dt><dd data-capacity>{{ shelter.capacity }}</dd></div><div><dt>Occupied</dt><dd data-occupied>{{ shelter.occupied }}</dd></div><div><dt>{{ 'Recorded spaces' if shelter.status == 'CLOSED' else 'Available spaces' }}</dt><dd data-available>{{ shelter.available_capacity }}</dd></div></dl>
+    <dl class="shelter-counts"><div><dt>Capacity</dt><dd data-capacity>{{ shelter.capacity }}</dd></div><div><dt>Occupied or reserved</dt><dd data-occupied>{{ shelter.occupied }}</dd></div><div><dt>{{ 'Recorded spaces' if shelter.status == 'CLOSED' else 'Available spaces' }}</dt><dd data-available>{{ shelter.available_capacity }}</dd></div></dl>
     {% if shelter.status == 'CLOSED' %}<p class="field-hint">This shelter is closed. Recorded spaces do not indicate available accommodation.</p>{% endif %}
     {% if shelter.facilities %}<p><strong>Facilities:</strong> {{ shelter.facilities }}</p>{% endif %}
     <div class="shelter-record-freshness shelter-freshness-{{ shelter.freshness_status|default('unknown') }}" data-freshness="{{ shelter.freshness_status|default('unknown') }}">
@@ -19,8 +19,10 @@
     </div>
     <p><strong>Contact:</strong> {{ shelter.contact or 'Not provided — contact the local response office to confirm this record.' }}</p>
     <p class="field-hint">Source: {{ shelter.source_name or 'Not provided' }}</p>
+    {% if user.role == 'citizen' %}<a class="button {{ 'button-primary' if shelter.status == 'OPEN' and shelter.available_capacity > 0 else 'button-secondary' }}" href="/shelters/{{ shelter.id }}/join" hx-get="/shelters/{{ shelter.id }}/join" hx-target="#main-content" hx-push-url="true">{{ 'Register to join' if shelter.status == 'OPEN' and shelter.available_capacity > 0 else 'View shelter / my registration' }}</a>{% endif %}
     {% if user.role == 'admin' or (user.role == 'response_team' and user.team_id and user.team_id == shelter.team_id) %}
     <button type="button" class="button button-secondary" hx-get="/ui/shelters/{{ shelter.id }}/editor" hx-target="#shelter-editor" hx-swap="innerHTML show:#shelter-editor:top">Update capacity</button>
+    <a class="button button-secondary" href="/shelters/{{ shelter.id }}/join" hx-get="/shelters/{{ shelter.id }}/join" hx-target="#main-content" hx-push-url="true">Manage registrations</a>
     {% endif %}
   </div>
 </article>

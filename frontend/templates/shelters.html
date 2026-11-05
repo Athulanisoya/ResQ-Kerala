@@ -1,7 +1,7 @@
 <section class="shelters-workspace">
   <header class="page-heading">
     <div><span class="section-kicker">SHELTER AVAILABILITY</span><h1>Shelters</h1><p>Capacity and available spaces refresh automatically every 3 seconds.</p></div>
-    {% if user.role == 'admin' %}<a class="button button-primary" href="#add-shelter">Add shelter</a>{% endif %}
+    {% if user.role == 'admin' %}<a class="button button-primary" href="#add-shelter">Add shelter</a>{% elif user.role == 'citizen' %}<a class="button button-secondary" href="/shelter-registrations" hx-get="/shelter-registrations" hx-target="#main-content" hx-push-url="true">My shelter registrations</a>{% endif %}
   </header>
   <section class="card operations-section" aria-label="Search shelters">
     <form method="get" action="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true" class="compact-form shelter-search-form">
@@ -32,7 +32,7 @@
       <div class="field"><label for="shelter-address">Address <span class="optional">Optional</span></label><input id="shelter-address" name="address" minlength="3" maxlength="300" value="{{ shelter_values.get('address', '') }}"></div>
       <div class="field"><label for="shelter-team">Shelter team <span class="optional">Optional</span></label><select id="shelter-team" name="team_id"><option value="">Unassigned — administrators manage this shelter</option>{% for team in teams %}<option value="{{ team.id }}" {{ 'selected' if shelter_values.get('team_id')|string == team.id|string }}>{{ team.name }}</option>{% endfor %}</select><p class="field-hint">{% if teams %}A designated shelter team can update occupancy and capacity.{% else %}You can add this shelter without a team. Create a Shelter team in Administration to designate one on a new shelter.{% endif %}</p></div>
       <div class="field"><label for="shelter-capacity">Capacity</label><input id="shelter-capacity" type="number" name="capacity" min="1" max="1000000" value="{{ shelter_values.get('capacity', '') }}" required></div>
-      <div class="field"><label for="shelter-occupied">Occupied</label><input id="shelter-occupied" type="number" name="occupied" min="0" max="1000000" value="{{ shelter_values.get('occupied', '0') }}" required></div>
+      <div class="field"><label for="shelter-occupied">Occupied or reserved</label><input id="shelter-occupied" type="number" name="occupied" min="0" max="1000000" value="{{ shelter_values.get('occupied', '0') }}" required></div>
       <div class="field"><label for="shelter-facilities">Facilities <span class="optional">Optional</span></label><input id="shelter-facilities" name="facilities" maxlength="1000" value="{{ shelter_values.get('facilities', '') }}"></div>
       <div class="field"><label for="shelter-contact">Contact <span class="optional">Optional</span></label><input id="shelter-contact" name="contact" maxlength="60" value="{{ shelter_values.get('contact', '') }}"></div>
       <div class="field"><label for="shelter-source">Source <span class="optional">Optional</span></label><input id="shelter-source" name="source_name" minlength="2" maxlength="200" value="{{ shelter_values.get('source_name', '') }}"></div>

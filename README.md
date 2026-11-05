@@ -4,6 +4,17 @@ This integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-
 
 Each submitted report receives a sourced Kerala geography check and a saved local summary draft. On the admin report detail page, **Analyze location** checks current alerts, **Predict severity** runs Vidya's bundled classifier, and **Save assessment** records the reviewed severity, location, alert match, summary and investigation decision. Older reports expose **Generate summary**, and **Refresh summary** updates the generated draft without changing a reviewed assessment. Investigators can be assigned and their findings updated or completed. The original citizen report and its status/team workflow are preserved.
 
+## Run with Docker
+
+Docker Compose runs the FastAPI/HTMX application, PostgreSQL and local Ollama together. The first start installs the same `gemma4:e4b-it-q4_K_M` model in a persistent Docker volume; no provider API key is needed. Install Docker Desktop with Linux containers, then run from this directory:
+
+```powershell
+python -m scripts.configure_docker
+docker compose --env-file .env.docker up -d --build
+```
+
+Open [ResQ Kerala](http://127.0.0.1:8013). Initial model installation downloads about 6.6 GB and can take several minutes. Docker uses a fresh database and separate model storage; it preserves the existing Windows setup. See [Docker setup, demo accounts, optional GPU support and verification](docs/DOCKER.md). Keep the generated `.env.docker` private. If the Windows app already uses port 8013, change `WEB_PORT` in `.env.docker` before starting Docker.
+
 ## Run on this computer
 
 From this project directory in PowerShell:
@@ -82,6 +93,8 @@ Gemma 4 must fit the computer's available memory. The setup command verifies an 
 See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). These features use the existing FastAPI/HTMX application and add the small shared contracts required by Athul's screens. Shelter search, the safety assistant and optional provisional Malayalam translation are available in the integrated workspace. Curated Malayalam place aliases remain available in the geography tool.
 
 ## Additional integrated services
+
+**Overview** includes an interactive Kerala alert and shelter map for citizens, administrators and teams. Active admin alerts colour districts red/orange/yellow; green means no active app alert. Zoom reveals sourced locality centres. Citizens can open a shelter pin to reserve spaces, while administrators and designated Shelter teams record arrivals and departures. Shelters also link to registration and private history. See [map coverage, shelter registration and verification](docs/OVERVIEW-MAP.md).
 
 Open the **Safety assistant** from the circular chat button at the bottom right of an authenticated page. The floating panel can be minimized without losing its current draft or conversation, including while a reply is pending. It stays open across HTMX page navigation and keeps conversation history private to the signed-in account. **Conversations** opens saved chats, and **New chat** starts a fresh conversation. Old assistant links open the dashboard with the chat panel rather than a full-page assistant. Failed requests keep the message available for retry.
 

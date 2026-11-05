@@ -100,7 +100,8 @@
       '/assignments-history': 'history', '/updates': 'updates', '/alerts': 'alerts',
       '/account': 'account', '/management': 'management', '/permissions': 'permissions',
     };
-    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports' : navRoutes[path];
+    const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports'
+      : path.startsWith('/shelters/') || path === '/shelter-registrations' ? 'shelters' : navRoutes[path];
     document.querySelectorAll('[data-nav]').forEach(link => {
       const selected = link.dataset.nav === active;
       link.classList.toggle('active', selected);

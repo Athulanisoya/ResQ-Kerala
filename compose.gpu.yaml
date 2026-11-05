@@ -1,0 +1,11 @@
+# Optional NVIDIA GPU acceleration; CPU-only is the portable default.
+# docker compose --env-file .env.docker -f compose.yaml -f compose.gpu.yaml up -d --build
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

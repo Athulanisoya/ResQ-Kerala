@@ -15,10 +15,14 @@
   <link rel="stylesheet" href="/static/review.css">
   <link rel="stylesheet" href="/static/review-assistance.css">
   <link rel="stylesheet" href="/static/assistant-widget.css">
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/overview-map.css">
+  <script src="/static/vendor/leaflet/leaflet.js" defer></script>
   <script src="/static/vendor/htmx.min.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/recovery.js" defer></script>
   <script src="/static/assistant.js" defer></script>
+  <script src="/static/overview-map.js" defer></script>
 </head>
 <body class="{{ 'workspace' if user else 'auth-page' }}" hx-history="false">
   <div id="app-root" data-authenticated="{{ 'true' if user else 'false' }}">

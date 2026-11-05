@@ -1,0 +1,19 @@
+<section class="card operations-section" aria-labelledby="shelter-registrations-heading"><div class="card-heading"><div><h2 id="shelter-registrations-heading">{{ 'Reception register' if can_manage else 'Your registrations' }}</h2><p>{{ 'Only administrators and this shelter’s designated Shelter team can view this register.' if can_manage else 'Your location and contact details are private to you, administrators and the designated Shelter team.' }}</p></div></div>
+{% for registration in registrations %}
+<article class="operation-history-item" id="registration-{{ registration.id }}"><div class="operations-row"><div><span class="section-kicker">Registration #{{ registration.id }}</span><h3><a href="/shelters/{{ registration.shelter_id }}/join" hx-get="/shelters/{{ registration.shelter_id }}/join" hx-target="#main-content" hx-push-url="true">{{ registration.shelter.name }}</a></h3></div><span class="status">{{ registration.status|title }}</span></div>
+<dl class="operations-facts"><div><dt>People</dt><dd>{{ registration.party_size }}</dd></div><div><dt>Current locality</dt><dd>{{ registration.origin_locality }}, {{ registration.origin_district }}</dd></div><div><dt>Registered</dt><dd>{{ registration.created_at|local_time }}</dd></div></dl>
+{% if can_manage and registration.citizen %}<p>{{ registration.citizen.full_name }} · {{ registration.citizen.email }}</p>{% endif %}
+{% if registration.contact %}<p>Contact: {{ registration.contact }}</p>{% endif %}
+{% if registration.origin_latitude is not none %}<p class="field-hint">Citizen-provided coordinates: {{ registration.origin_latitude }}, {{ registration.origin_longitude }}. Location has not been independently verified.</p>{% endif %}
+{% if registration.note %}<p>Support needs: {{ registration.note }}</p>{% endif %}
+{% if registration.status == 'RESERVED' %}<p class="field-hint">Spaces reserved. Arrival has not been confirmed.</p>{% endif %}
+{% if registration.status == 'RESERVED' or (can_manage and registration.status == 'ARRIVED') %}
+<form method="post" action="/ui/shelters/{{ registration.shelter_id }}/registrations/{{ registration.id }}/status" hx-post="/ui/shelters/{{ registration.shelter_id }}/registrations/{{ registration.id }}/status" hx-target="#main-content" hx-disabled-elt="find button[type='submit']" class="compact-form operations-inline-form">
+<input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="expected_version" value="{{ registration.version }}">
+{% if can_manage %}<div class="field"><label for="registration-update-note-{{ registration.id }}">Reception note <span class="optional">Optional</span></label><input id="registration-update-note-{{ registration.id }}" name="note" maxlength="500"></div>{% endif %}
+<div class="review-toolbar">{% if can_manage and registration.status == 'RESERVED' %}<button class="button button-primary" name="status" value="ARRIVED" type="submit">Confirm arrival</button>{% endif %}{% if can_manage and registration.status == 'ARRIVED' %}<button class="button button-primary" name="status" value="DEPARTED" type="submit">Record departure and release spaces</button>{% endif %}{% if registration.status == 'RESERVED' %}<button class="button button-secondary" name="status" value="CANCELLED" type="submit">Cancel reservation and release spaces</button>{% endif %}</div>
+</form>{% endif %}
+<details class="operations-deliveries"><summary>Registration history</summary>{% for event in registration.history %}<p>{{ event.status|title }} · {{ event.created_at|local_time }}{% if event.note %} · {{ event.note }}{% endif %}</p>{% endfor %}</details>
+</article>
+{% else %}<div class="empty-state"><h3>No registrations yet</h3><p>{{ 'Citizen reservations will appear here.' if can_manage else 'Choose an open shelter with available spaces to register your group.' }}</p></div>{% endfor %}
+</section>

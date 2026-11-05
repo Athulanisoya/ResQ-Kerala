@@ -1,0 +1,27 @@
+{% from 'icons.html' import icon %}
+<header class="page-heading"><div><span class="section-kicker">SHELTER SUPPORT</span><h1>{{ 'Register for a shelter' if user.role == 'citizen' else 'Shelter reception' }}</h1><p>{{ 'Reserve spaces for your group, then confirm your arrival with reception.' if user.role == 'citizen' else 'Review private registrations and record arrivals and departures.' }}</p></div><a class="button button-secondary" href="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">Browse shelters</a></header>
+{% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+{% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
+{% if shelter %}
+<section class="card operations-section" aria-labelledby="registration-shelter-name"><div class="card-heading"><div><h2 id="registration-shelter-name">{{ shelter.name }}</h2><p>{{ shelter.address or shelter.location or shelter.locality or '' }}{{ ', ' ~ shelter.district if shelter.district else '' }}</p></div><span class="status shelter-status-{{ shelter.status|lower }}">{{ shelter.status|title }}</span></div>
+<div class="operation-history-item"><dl class="shelter-counts"><div><dt>Capacity</dt><dd>{{ shelter.capacity }}</dd></div><div><dt>Occupied or reserved</dt><dd>{{ shelter.occupied }}</dd></div><div><dt>Available spaces</dt><dd>{{ shelter.available_capacity if shelter.status != 'CLOSED' else 'Closed' }}</dd></div></dl><p>Contact: {{ shelter.contact or 'Not provided — contact the local response office before travelling.' }}</p><p class="field-hint">Last record update: {{ shelter.updated_at|local_time if shelter.updated_at else 'Unknown' }}. {{ shelter.freshness_note }} A reservation does not confirm a safe travel route.</p></div></section>
+{% if user.role == 'citizen' %}
+{% set active = registrations|selectattr('status', 'in', ['RESERVED','ARRIVED'])|list %}
+{% if not active and shelter.status == 'OPEN' and shelter.available_capacity > 0 %}
+<section class="card operations-section" aria-labelledby="shelter-registration-title"><div class="card-heading"><div><h2 id="shelter-registration-title">Reserve your group’s spaces</h2><p>Use your current district and locality. Coordinates are optional and are shared only with this shelter’s reception team and administrators.</p></div></div>
+<form method="post" action="/ui/shelters/{{ shelter.id }}/registrations" hx-post="/ui/shelters/{{ shelter.id }}/registrations" hx-target="#main-content" hx-disabled-elt="find button[type='submit']" class="compact-form review-form-grid">
+<input type="hidden" name="_csrf" value="{{ csrf_token }}"><input type="hidden" name="request_key" value="{{ values.get('request_key','') }}">
+<div class="field"><label for="registration-party-size">People in your group, including you</label><input id="registration-party-size" name="party_size" type="number" min="1" max="{{ [1000,shelter.available_capacity]|min }}" required value="{{ values.get('party_size','1') }}"></div>
+<div class="field"><label for="registration-district">Your current district</label><select id="registration-district" name="origin_district" required><option value="">Select district</option>{% for district in districts %}<option value="{{ district.id }}" {% if values.get('origin_district','')|lower in [district.id|lower,district.name|lower] %}selected{% endif %}>{{ district.name }}</option>{% endfor %}</select></div>
+<div class="field"><label for="registration-locality">Your current locality or landmark</label><input id="registration-locality" name="origin_locality" minlength="2" maxlength="120" required value="{{ values.get('origin_locality','') }}"></div>
+<div class="field"><label for="registration-contact">Contact phone or email <span class="optional">Optional</span></label><input id="registration-contact" name="contact" maxlength="100" value="{{ values.get('contact','') }}"></div>
+<div class="field"><label for="registration-latitude">Your latitude <span class="optional">Optional</span></label><input id="registration-latitude" name="origin_latitude" type="number" step="any" min="-90" max="90" value="{{ values.get('origin_latitude','') }}"></div>
+<div class="field"><label for="registration-longitude">Your longitude <span class="optional">Optional</span></label><input id="registration-longitude" name="origin_longitude" type="number" step="any" min="-180" max="180" value="{{ values.get('origin_longitude','') }}"></div>
+<div class="field"><label for="registration-note">Support needs <span class="optional">Optional</span></label><textarea id="registration-note" name="note" maxlength="500" rows="3" placeholder="For example, step-free access or assistance for an older person">{{ values.get('note','') }}</textarea></div>
+<div class="review-form-footer"><p class="field-hint">Submitting reserves capacity immediately. Cancel below if your plans change. Reception records your arrival separately.</p><button class="button button-primary" type="submit">{{ icon('house') }}Reserve shelter spaces</button></div>
+</form></section>
+{% elif not active %}<div class="notice" role="status">This shelter is {{ shelter.status|lower }} and cannot accept a new reservation now. Browse other shelters or contact reception.</div>{% endif %}
+<p><a class="text-link" href="/shelter-registrations" hx-get="/shelter-registrations" hx-target="#main-content" hx-push-url="true">My registrations at all shelters {{ icon('arrow') }}</a></p>
+{% endif %}
+{% include 'partials/shelter_registration_records.html' %}
+{% endif %}

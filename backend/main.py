@@ -14,6 +14,7 @@ from . import models  # Register all table metadata before creating the schema.
 from .routers import admin, alerts, assistant, auth, incidents, investigations, location_analysis, relief, severity, shelters, summaries, teams, users, workspaces, week4_workflow
 from .routers import communication, operations, community, attachments, recovery, duplicates, management
 from .routers import review_assistance
+from .routers import overview_map
 
 settings = get_settings()
 
@@ -97,5 +98,8 @@ app.include_router(recovery.router)
 app.include_router(duplicates.router)
 app.include_router(management.router)
 app.include_router(review_assistance.router)
+app.include_router(overview_map.router)
+from backend.routers.shelter_registration import router as shelter_registration_router
+app.include_router(shelter_registration_router)
 
 app.add_middleware(AttachmentRequestLimit)

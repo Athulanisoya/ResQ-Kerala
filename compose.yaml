@@ -1,0 +1,93 @@
+name: resq-kerala
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: resq_week1
+      POSTGRES_USER: resq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run python -m scripts.configure_docker first, then use --env-file .env.docker}
+    volumes:
+      # PostgreSQL 18 stores its versioned data directory below this path.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resq -d resq_week1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [database]
+
+  ollama:
+    image: ollama/ollama:0.40.14
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks: [models]
+
+  ollama-pull:
+    image: ollama/ollama:0.40.14
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:e4b-it-q4_K_M}
+    entrypoint: ["/bin/sh", "-ec"]
+    # Keep the installed model on subsequent starts; no repeated model upgrades.
+    command: ['ollama show "$$OLLAMA_MODEL" >/dev/null 2>&1 || ollama pull "$$OLLAMA_MODEL"']
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks: [models]
+
+  app:
+    image: resq-kerala:local
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    init: true
+    environment:
+      DATABASE_URL: postgresql+psycopg://resq:${POSTGRES_PASSWORD:?Run python -m scripts.configure_docker first}@db:5432/resq_week1
+      DATABASE_SCHEMA: resq_week1
+      JWT_SECRET: ${JWT_SECRET:?Run python -m scripts.configure_docker first}
+      CORS_ORIGINS: http://127.0.0.1:${WEB_PORT:-8013},http://localhost:${WEB_PORT:-8013}
+      WEEK4_LLM_PROVIDER: ollama
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_ALLOW_DOCKER_HOST: "true"
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:e4b-it-q4_K_M}
+      AGENT_TIMEOUT_SECONDS: "300"
+      SHELTER_STALE_AFTER_MINUTES: ${SHELTER_STALE_AFTER_MINUTES:-30}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8013}:8013"
+    volumes:
+      - app_runtime:/app/.runtime
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [database, models]
+
+volumes:
+  postgres_data:
+  ollama_data:
+  app_runtime:
+
+networks:
+  database:
+    internal: true
+  models:

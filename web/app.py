@@ -90,7 +90,8 @@ def render(request, content_template, *, status_code=200, **context):
 async def browser_security(request: Request, call_next):
     path = request.url.path
     ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions", "/alerts", "/updates", "/operations", "/assignments-history", "/shelters", "/assistant", "/community", "/investigations", "/management"} or (
-        path.startswith("/reports/") and path.rsplit("/", 1)[-1].isdigit())
+        path.startswith("/reports/") and path.rsplit("/", 1)[-1].isdigit()) or path == "/shelter-registrations" or (
+        path.startswith("/shelters/") and path.endswith("/join") and path.split("/")[-2].isdigit())
     # Document navigation cannot attach a bearer header. The public shell loads
     # the requested page through HTMX using only this tab's saved session.
     if (request.method == "GET" and ui_page and request.headers.get("HX-Request") != "true"
@@ -861,5 +862,7 @@ from web.severity_review import router as severity_review_ui
 from web.review_assistance import router as review_assistance_ui
 app.include_router(severity_review_ui)
 app.include_router(review_assistance_ui)
+from web.shelter_registration import router as shelter_registration_ui
+app.include_router(shelter_registration_ui)
 app.add_middleware(AttachmentRequestLimit)
 app.mount("/", api)
