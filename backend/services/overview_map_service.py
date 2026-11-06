@@ -17,7 +17,7 @@ from backend.ai.location_extractor import list_places
 from backend.models import Role, Team
 from backend.models.shelter import Shelter
 from backend.services.alert_service import list_alerts, utc
-from backend.services.shelter_freshness import shelter_freshness
+from backend.services.shelter_freshness import shelter_freshness, capacity_freshness
 
 
 MAP_DATA = Path(__file__).resolve().parents[2] / "data" / "map"
@@ -109,6 +109,7 @@ def map_payload(db, user, *, now=None):
             "available_capacity": row.available_capacity, "capacity": row.capacity, "occupied": row.occupied,
             "contact": row.contact, "updated_at": row.updated_at,
             **shelter_freshness(row.updated_at, now=checked),
+            **capacity_freshness(row, now=checked),
             "can_register": user.role == Role.CITIZEN and row.status == "OPEN" and row.available_capacity > 0,
             "can_manage_registrations": bool(can_manage), "registration_url": f"/shelters/{row.id}/join",
         })

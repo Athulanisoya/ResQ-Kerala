@@ -13,3 +13,5 @@
 <div class="field shelter-edit-note"><label for="edit-note">Update note</label><input id="edit-note" name="note" minlength="3" maxlength="1000" required value="{{ values.get('note', '') }}" placeholder="For example, arrivals recorded at reception"></div>
 <button class="button button-primary" type="submit">Save capacity update</button>
 </form></section>
+
+{% include 'partials/shelter_facility_editor.html' %}

@@ -26,3 +26,15 @@ def shelter_freshness(updated_at, *, now=None, stale_after_minutes=None):
             "freshness_note": (f"Record is at least {threshold} minutes old. Contact the shelter to confirm availability."
                                if stale else "Recently updated record. Availability can change; contact the shelter before travelling."),
             "stale_after_minutes": threshold}
+
+
+def capacity_freshness(shelter, *, now=None):
+    confirmed = getattr(shelter, "capacity_confirmed_at", None)
+    result = shelter_freshness(confirmed, now=now)
+    status = result["freshness_status"]
+    return {"capacity_confirmed_at": confirmed,
+            "capacity_freshness_status": status,
+            "capacity_freshness_note": (
+                "Capacity confirmation time is unknown. Contact reception before travelling." if status == "unknown" else
+                f"Staff capacity confirmation is at least {result['stale_after_minutes']} minutes old. Contact reception before travelling." if status == "stale" else
+                "Staff recently confirmed capacity. Reservations and arrivals can change availability.")}

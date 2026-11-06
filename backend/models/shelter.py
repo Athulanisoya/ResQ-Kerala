@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Float, Text
 from backend.database.connection import Base
+from sqlalchemy.orm import relationship
 
 
 def utc_now():
@@ -31,6 +32,8 @@ class Shelter(Base):
     team_id = Column(Integer, ForeignKey("response_teams.id"))
     version = Column(Integer, nullable=False, default=1)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+    capacity_confirmed_at = Column(DateTime(timezone=True), nullable=True)
+    facility_profile = relationship('ShelterFacilities', uselist=False)
 
     @property
     def available_capacity(self):
@@ -45,5 +48,5 @@ class ShelterUpdate(Base):
     occupied = Column(Integer, nullable=False)
     version = Column(Integer, nullable=False)
     note = Column(String(1000), nullable=False)
-    changed_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    changed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

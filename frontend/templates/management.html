@@ -10,6 +10,7 @@
     {% for key, label, symbol in sections %}<a class="management-tab {{ 'selected' if current_tab == key }}" href="/management?tab={{ key }}" hx-get="/management?tab={{ key }}" hx-target="#main-content" hx-push-url="true" hx-indicator="#request-progress" {% if current_tab == key %}aria-current="page"{% endif %}>{{ icon(symbol) }}<span>{{ label }}</span></a>{% endfor %}
   </nav>
   {% include 'partials/alerts.html' %}
+  <p><a class="text-link" href="/automation-settings" hx-get="/automation-settings" hx-target="#main-content" hx-push-url="true">Manage automation timing and check status {{ icon('arrow') }}</a></p>
   <div id="management-panel" data-management-tab="{{ current_tab }}">
     {% if current_tab == 'accounts' %}{% include 'partials/management_accounts.html' %}
     {% elif current_tab == 'teams' %}{% include 'partials/management_teams.html' %}

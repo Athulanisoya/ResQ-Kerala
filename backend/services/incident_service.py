@@ -1,9 +1,12 @@
 from datetime import datetime
-from uuid import uuid4
+from hashlib import sha256
+import json
+from uuid import UUID, uuid4
 from backend.models.notification import Notification
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.models.incident import Incident, IncidentStatusHistory
 from backend.models.report_analysis import ReportAnalysis
@@ -23,10 +26,33 @@ def create_incident(
     people_affected=None,
     help_required=None,
     disaster_type="Flood",
+    client_submission_id=None,
 ):
+    submission_id = str(UUID(str(client_submission_id))) if client_submission_id is not None else None
+    payload_fingerprint = sha256(json.dumps({
+        "message": message, "location": location, "people_affected": people_affected,
+        "help_required": help_required, "disaster_type": disaster_type,
+    }, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest() if submission_id else None
+
+    def existing_submission():
+        if submission_id is None:
+            return None
+        existing = db.scalar(select(Incident).where(
+            Incident.user_id == user_id, Incident.client_submission_id == submission_id,
+        ))
+        if existing is not None and existing.submission_fingerprint != payload_fingerprint:
+            raise HTTPException(status_code=409, detail="This saved report has already been submitted with different details. Open the submitted report or create a new report.")
+        return existing
+
+    existing = existing_submission()
+    if existing is not None:
+        return existing
+
     incident = Incident(
         report_reference=generate_report_reference(db),
         user_id=user_id,
+        client_submission_id=submission_id,
+        submission_fingerprint=payload_fingerprint,
         message=message,
         location=location,
         people_affected=people_affected,
@@ -79,6 +105,14 @@ def create_incident(
 
         db.commit()
 
+    except IntegrityError:
+        # The unique key arbitrates simultaneous tabs/retries in the database.
+        # A rollback also removes every side effect from the losing attempt.
+        db.rollback()
+        existing = existing_submission()
+        if existing is not None:
+            return existing
+        raise
     except Exception:
         db.rollback()
         raise

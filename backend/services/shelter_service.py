@@ -1,8 +1,11 @@
 from sqlalchemy import or_, select
+from datetime import datetime, timedelta, timezone
+from backend.services.shelter_facilities_service import from_shelter, LABELS
+from backend.models.shelter_facilities import ShelterFacilities
 from sqlalchemy.orm import Session
 from backend.models.shelter import Shelter
-from backend.services.shelter_freshness import shelter_freshness
-def search_shelters(db: Session,query: str = "",district: str | None = None,available_only: bool = True,limit: int | None = 10,location: str | None = None):
+from backend.services.shelter_freshness import shelter_freshness, capacity_freshness
+def search_shelters(db: Session,query: str = "",district: str | None = None,available_only: bool = True,limit: int | None = 10,location: str | None = None, required_facilities=None):
     statement = select(Shelter)
     query = (query or "").strip()
     district = (district or "").strip()
@@ -34,6 +37,13 @@ def search_shelters(db: Session,query: str = "",district: str | None = None,avai
             Shelter.occupied < Shelter.capacity
         )
 
+    if required_facilities:
+        if any(key not in LABELS for key in required_facilities):
+            raise HTTPException(422, 'Choose a supported shelter facility filter.')
+        statement = statement.join(ShelterFacilities).where(
+            ShelterFacilities.confirmed_at >= datetime.now(timezone.utc)-timedelta(days=30),
+            ShelterFacilities.confirmed_at <= datetime.now(timezone.utc)+timedelta(minutes=5),
+            *(getattr(ShelterFacilities, key) == 'YES' for key in set(required_facilities)))
     statement = statement.order_by(Shelter.district, Shelter.locality, Shelter.name)
     if limit is not None:
         statement = statement.limit(max(1, min(limit, 25)))
@@ -43,6 +53,8 @@ def get_shelter(db: Session, shelter_id: int):
     return db.get(Shelter, shelter_id)
 def create_shelter(db: Session, values: dict, user=None):
     shelter = Shelter(**values)
+    if user is not None and user.role in {Role.ADMIN, Role.RESPONSE_TEAM}:
+        shelter.capacity_confirmed_at = datetime.now(timezone.utc)
     db.add(shelter)
     db.flush()
     if user is not None:
@@ -61,6 +73,8 @@ from backend.models.shelter import Shelter, ShelterUpdate
 def shelter_view(row):
     return {
         **shelter_freshness(row.updated_at),
+        **capacity_freshness(row),
+        **from_shelter(row),
         "id": row.id,
         "name": row.name,
         "location": row.location,
@@ -132,7 +146,7 @@ def save_snapshot(db, row, user, note):
             capacity=row.capacity,
             occupied=row.occupied,
             version=row.version,
-            changed_by=user.id,
+            changed_by=user.id if user is not None else None,
             note=note,
         )
     )
@@ -145,6 +159,7 @@ def create_managed_shelter(db, user, data):
             raise HTTPException(409, "Select an active Shelter team, or leave the shelter unassigned")
 
     row = Shelter(**data.model_dump())
+    row.capacity_confirmed_at = datetime.now(timezone.utc)
     if row.occupied >= row.capacity:
         row.status = "FULL"
 
@@ -182,7 +197,7 @@ def update_shelter(db, shelter_id, user, data):
     # Every registration writer holds the same shelter lock, so the floor is stable.
     from backend.services.shelter_registration_service import active_registered_spaces
     if data.occupied < active_registered_spaces(db, shelter_id):
-        raise HTTPException(409, "Occupied or reserved spaces cannot be lower than active registrations. Record departures or cancellations first.")
+        raise HTTPException(409, "Occupied, reserved or held spaces cannot be lower than active registrations and waiting-list offers. Record departures or cancellations first.")
 
     row.capacity = data.capacity
 
@@ -198,6 +213,7 @@ def update_shelter(db, shelter_id, user, data):
         row.status = "FULL" if row.occupied >= row.capacity else "OPEN"
 
     row.version += 1
+    row.capacity_confirmed_at = datetime.now(timezone.utc)
 
     save_snapshot(
         db,

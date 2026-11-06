@@ -2,6 +2,7 @@
 {% set form_values = values|default({}) %}
 {% set is_admin = user.role == 'admin' %}
 {% include 'partials/alerts.html' %}
+<p><a class="button button-secondary" href="/alert-subscriptions" hx-get="/alert-subscriptions" hx-target="#main-content" hx-push-url="true">{{ icon('bell') }}Follow district and locality alerts</a></p>
 <div class="page-heading"><div><span class="section-kicker">KERALA · OFFICIAL UPDATES</span><h1>Official alerts</h1><p>{{ 'Create, schedule and maintain alerts for recognised Kerala locations.' if is_admin else 'Current alerts published by your disaster response administrators.' }}</p></div>{% if is_admin %}<a href="#alert-form" class="button button-primary">{{ icon('plus') }}{{ 'Edit alert' if editing else 'Create alert' }}</a>{% endif %}</div>
 <div class="alerts-layout {{ 'alerts-layout-admin' if is_admin }}">
   <section class="card official-alerts-card" aria-labelledby="official-alerts-heading">

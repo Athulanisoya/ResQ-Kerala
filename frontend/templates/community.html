@@ -19,6 +19,7 @@
     <button class="button button-primary" type="submit"><span class="button-label">Add donation pledge</span><span class="button-loading">Saving pledge...</span></button>
   </form>
 </section>
+{% if user.role in ['citizen', 'admin'] %}<section class="card operations-section" aria-labelledby="volunteer-community-heading"><div class="card-heading"><div><span class="section-kicker">GIVE YOUR TIME, SHARE YOUR SKILLS</span><h2 id="volunteer-community-heading">Volunteer with your community</h2><p>{{ 'Review volunteer applications and organise local support shifts.' if user.role == 'admin' else 'Apply to volunteer, share your availability, and join approved local support shifts.' }}</p></div><a class="button button-secondary" href="/volunteers" hx-get="/volunteers" hx-target="#main-content" hx-push-url="true">{{ icon('people') }}Open volunteer hub</a></div></section>{% endif %}
 <section class="card operations-section" aria-labelledby="community-news-heading">
   <div class="card-heading"><h2 id="community-news-heading">Community news</h2></div>
   {% for item in news %}

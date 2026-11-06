@@ -10,6 +10,7 @@ from backend.models.shelter import Shelter, ShelterUpdate
 from backend.schemas.shelter_schema import ShelterCreate, ManagedShelterCreate, ShelterPatch
 from backend.services import shelter_service as service
 from backend.utils.permissions import get_current_user, require_roles
+from backend.services.shelter_facilities_service import FacilityKey
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/shelters", tags=["Shelters"])
@@ -24,12 +25,13 @@ def list_shelters(
     limit: int | None = Query(default=None, ge=1, le=25),
     latitude: float | None = Query(default=None, ge=-90, le=90),
     longitude: float | None = Query(default=None, ge=-180, le=180),
+    facility: list[FacilityKey] | None = Query(default=None, max_length=5),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     if (latitude is None) != (longitude is None):
         raise HTTPException(422, "Latitude and longitude must be supplied together")
-    rows = service.search_shelters(db, query=q, district=district, location=location, available_only=available_only, limit=None if latitude is not None else limit)
+    rows = service.search_shelters(db, query=q, district=district, location=location, available_only=available_only, limit=None if latitude is not None else limit, required_facilities=facility)
     if latitude is None:
         return [service.shelter_view(row) for row in rows]
     def distance(row):

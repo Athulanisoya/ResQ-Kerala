@@ -3,6 +3,7 @@
 {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
 {% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
 {% if shelter %}
+<p><a class="button button-secondary" href="/shelters/{{ shelter.id }}/waitlist" hx-get="/shelters/{{ shelter.id }}/waitlist" hx-target="#main-content" hx-push-url="true">{{ 'Waiting list and offers' if user.role == 'citizen' else 'Manage waiting list' }}</a></p>
 <section class="card operations-section" aria-labelledby="registration-shelter-name"><div class="card-heading"><div><h2 id="registration-shelter-name">{{ shelter.name }}</h2><p>{{ shelter.address or shelter.location or shelter.locality or '' }}{{ ', ' ~ shelter.district if shelter.district else '' }}</p></div><span class="status shelter-status-{{ shelter.status|lower }}">{{ shelter.status|title }}</span></div>
 <div class="operation-history-item"><dl class="shelter-counts"><div><dt>Capacity</dt><dd>{{ shelter.capacity }}</dd></div><div><dt>Occupied or reserved</dt><dd>{{ shelter.occupied }}</dd></div><div><dt>Available spaces</dt><dd>{{ shelter.available_capacity if shelter.status != 'CLOSED' else 'Closed' }}</dd></div></dl><p>Contact: {{ shelter.contact or 'Not provided — contact the local response office before travelling.' }}</p><p class="field-hint">Last record update: {{ shelter.updated_at|local_time if shelter.updated_at else 'Unknown' }}. {{ shelter.freshness_note }} A reservation does not confirm a safe travel route.</p></div></section>
 {% if user.role == 'citizen' %}

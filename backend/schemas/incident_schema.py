@@ -1,11 +1,14 @@
 from datetime import datetime
 from typing import Literal, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class IncidentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    client_submission_id: UUID | None = None
 
     disaster_type: str = Field(default="Flood", min_length=2, max_length=50)
 
@@ -46,6 +49,8 @@ class IncidentResponse(BaseModel):
     report_reference: str
 
     user_id: int
+
+    client_submission_id: UUID | None = None
     
     team_id: int | None = None
 

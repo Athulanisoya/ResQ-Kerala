@@ -22,7 +22,9 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     initialize_database()
-    yield
+    from backend.services.automation_runner import automation_lifespan
+    async with automation_lifespan(settings):
+        yield
     engine.dispose()
 
 
@@ -101,5 +103,18 @@ app.include_router(review_assistance.router)
 app.include_router(overview_map.router)
 from backend.routers.shelter_registration import router as shelter_registration_router
 app.include_router(shelter_registration_router)
+from backend.routers import alert_subscriptions, shelter_waitlist, team_recommendations, automations
+app.include_router(alert_subscriptions.router)
+app.include_router(shelter_waitlist.router)
+app.include_router(team_recommendations.router)
+app.include_router(automations.router)
+from backend.routers import volunteers
+app.include_router(volunteers.router)
+from backend.routers import family_safety
+app.include_router(family_safety.router)
+from backend.routers import shelter_facilities
+app.include_router(shelter_facilities.router)
+from backend.routers import preparedness
+app.include_router(preparedness.router)
 
 app.add_middleware(AttachmentRequestLimit)

@@ -10,6 +10,7 @@
       <div class="field"><label for="search-longitude">Longitude (optional)</label><input id="search-longitude" name="longitude" type="number" min="-180" max="180" step="any" value="{{ longitude or '' }}"></div>
       <label class="shelter-filter"><input type="checkbox" name="available_only" value="true" {% if available_only %}checked{% endif %}> Show only open shelters with space</label>
       <p class="field-hint">Nearby search uses the coordinates you enter and lists shelters with recorded coordinates.</p>
+      <fieldset class="volunteer-fieldset facility-filter"><legend>Required facilities · staff confirmed within 30 days</legend><div class="volunteer-checks">{% for key, label in facility_labels.items() %}<label><input type="checkbox" name="facility" value="{{ key }}" {% if key in selected_facilities|default([]) %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div><p class="field-hint">All selected facilities must match. Unknown and stale details do not match. Confirm current suitability with reception.</p></fieldset>
       <button type="submit" class="button button-primary">Search</button>
     </form>
   </section>

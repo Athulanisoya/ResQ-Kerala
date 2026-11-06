@@ -68,7 +68,7 @@ def notification_payload(record: Notification):
             "title": record.title, "message": record.message,
             "is_read": record.read_at is not None, "created_at": iso(record.created_at),
             "read_at": iso(record.read_at),
-            "target_url": "/operations" if operational else f"/reports/{record.incident_id}"}
+            "target_url": record.target_url or ("/operations" if operational else f"/reports/{record.incident_id}")}
 
 
 def list_notifications(db: Session, user_id: int, limit: int = 30, before_id: int | None = None):

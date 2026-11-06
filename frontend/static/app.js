@@ -61,7 +61,7 @@
   document.addEventListener('resq:signed-out', event => signedOut(event.detail.notice));
   document.addEventListener('click', event => {
     const serviceMenu = event.target.closest('.canopy-more');
-    if (serviceMenu && event.target.closest('a[data-nav]')) serviceMenu.open = false;
+    if (serviceMenu && event.target.closest('a[href]')) serviceMenu.open = false;
     if (!serviceMenu) document.querySelectorAll('.canopy-more[open]').forEach(menu => { menu.open = false; });
     if (event.target.closest('[data-sign-in-again]')) {
       clearToken(); window.location.assign('/login');
@@ -74,6 +74,14 @@
       menu.querySelector('summary')?.focus();
     });
   });
+  document.addEventListener('focusin', event => {
+    document.querySelectorAll('.canopy-more[open]').forEach(menu => {
+      if (!menu.contains(event.target)) menu.open = false;
+    });
+  });
+  document.addEventListener('toggle', event => {
+    if (event.target?.matches?.('.canopy-more')) updateHeaderHeight();
+  }, true);
   window.addEventListener('pageshow', event => {
     if (event.persisted) {
       const root = document.getElementById('app-root');
@@ -99,9 +107,14 @@
       '/community': 'community', '/operations': 'operations', '/investigations': 'investigations',
       '/assignments-history': 'history', '/updates': 'updates', '/alerts': 'alerts',
       '/account': 'account', '/management': 'management', '/permissions': 'permissions',
+      '/volunteers': 'volunteers',
+      '/family-safety': 'family',
+      '/preparedness': 'preparedness',
     };
     const active = path === '/reports/new' ? 'new' : path.startsWith('/reports') ? 'reports'
-      : path.startsWith('/shelters/') || path === '/shelter-registrations' ? 'shelters' : navRoutes[path];
+      : path.startsWith('/shelters/') || path === '/shelter-registrations' ? 'shelters'
+      : path === '/alert-subscriptions' ? 'subscriptions' : path === '/shelter-waitlist' ? 'waitlist'
+      : path === '/automation-settings' ? 'automations' : path.startsWith('/team-coverage/') ? 'management' : navRoutes[path];
     document.querySelectorAll('[data-nav]').forEach(link => {
       const selected = link.dataset.nav === active;
       link.classList.toggle('active', selected);
@@ -116,13 +129,32 @@
       if (!field.dataset.counterReady) { field.addEventListener('input', update); field.dataset.counterReady = 'true'; }
       update();
     });
+    observeHeader();
+  }
+  let observedHeader = null;
+  let headerObserver = null;
+  function observeHeader() {
+    const header = document.querySelector('.canopy-shell-header');
+    if (header !== observedHeader) {
+      headerObserver?.disconnect();
+      observedHeader = header;
+      if (header && typeof ResizeObserver === 'function') {
+        headerObserver = new ResizeObserver(updateHeaderHeight);
+        headerObserver.observe(header);
+      }
+    }
     updateHeaderHeight();
   }
   function updateHeaderHeight() {
     const header = document.querySelector('.canopy-shell-header');
-    if (header?.getBoundingClientRect) document.documentElement.style.setProperty('--site-header-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    if (header?.getBoundingClientRect) {
+      const bounds = header.getBoundingClientRect();
+      document.documentElement.style.setProperty('--site-header-height', `${Math.ceil(bounds.height)}px`);
+      document.documentElement.style.setProperty('--site-header-bottom', `${Math.max(0, Math.ceil(bounds.bottom))}px`);
+    }
   }
   window.addEventListener('resize', updateHeaderHeight);
+  window.addEventListener('scroll', updateHeaderHeight, { passive: true });
   document.addEventListener('DOMContentLoaded', () => {
     refreshPage();
     if (document.querySelector('[data-session-bootstrap]')) bootstrap();

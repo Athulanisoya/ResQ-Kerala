@@ -24,16 +24,18 @@ async def availability(request: Request, q: str = '', available_only: bool = Fal
     if not user:
         return ui.redirect(request, '/login')
     params = {'q': q[:160], 'available_only': str(available_only).lower()}
+    if request.query_params.getlist('facility'):
+        params['facility'] = request.query_params.getlist('facility')
     if latitude or longitude:
         params.update(latitude=latitude, longitude=longitude)
-    response = await ui.api_call(request, 'GET', '/api/shelters?' + urlencode(params))
+    response = await ui.api_call(request, 'GET', '/api/shelters?' + urlencode(params, doseq=True))
     return ui.render(request, 'partials/shelter_results.html', user=user,
         shelters=response.json() if response.status_code == 200 else [],
         live_error=None if response.status_code == 200 else ui.error_message(response),
         refreshed_at=datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=5, minutes=30))).strftime('%H:%M:%S'))
 
 
-async def editor_view(request, shelter_id, *, error=None, notice=None, values=None, status_code=200):
+async def editor_view(request, shelter_id, *, error=None, notice=None, values=None, facility_values=None, status_code=200):
     ui = web()
     user = await ui.current_user(request)
     if not user:
@@ -46,13 +48,31 @@ async def editor_view(request, shelter_id, *, error=None, notice=None, values=No
     if response.status_code != 200:
         return HTMLResponse(escape(ui.error_message(response)), status_code=response.status_code)
     return ui.render(request, 'partials/shelter_editor.html', user=user, shelter=response.json(),
-                     error=error, notice=notice, values=values or {}, conflict=status_code == 409,
+                     error=error, notice=notice, values=values or {}, facility_values=facility_values or {}, conflict=status_code == 409,
                      status_code=status_code)
 
 
 @router.get('/ui/shelters/{shelter_id}/editor', response_class=HTMLResponse)
 async def edit(request: Request, shelter_id: int):
     return await editor_view(request, shelter_id)
+
+@router.post('/ui/shelters/{shelter_id}/facilities', response_class=HTMLResponse)
+async def update_facilities(request: Request, shelter_id: int):
+    ui = web()
+    if not await ui.current_user(request): return ui.redirect(request, '/login')
+    from backend.services.shelter_facilities_service import LABELS
+    form = request.state.form
+    try:
+        payload = {key: form.get(key, 'UNKNOWN') for key in LABELS}
+        payload.update(expected_version=int(form.get('expected_version', '0')), confirmed=form.get('confirmed') == 'true', note=form.get('note', ''))
+    except (TypeError, ValueError):
+        return await editor_view(request, shelter_id, error='Reload current facility details before confirming.', status_code=422)
+    response = await ui.api_call(request, 'PATCH', f'/api/shelters/{shelter_id}/facilities', payload)
+    result = await editor_view(request, shelter_id, error=ui.error_message(response) if response.status_code != 200 else None,
+        notice='Facility details confirmed. Capacity confirmation time is unchanged.' if response.status_code == 200 else None,
+        facility_values=form if response.status_code != 200 else {}, status_code=response.status_code)
+    if response.status_code == 200: result.headers['HX-Trigger'] = json.dumps({'resq:shelters-changed': True})
+    return result
 
 
 @router.post('/ui/shelters/{shelter_id}/capacity', response_class=HTMLResponse)

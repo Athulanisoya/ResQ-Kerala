@@ -36,6 +36,8 @@ def local_time(value):
 
 
 templates.env.filters["local_time"] = local_time
+from backend.services.shelter_facilities_service import LABELS as facility_labels
+templates.env.globals['facility_labels'] = facility_labels
 
 
 def input_time(value):
@@ -91,7 +93,9 @@ async def browser_security(request: Request, call_next):
     path = request.url.path
     ui_page = path in {"/", "/login", "/register", "/dashboard", "/reports", "/reports/new", "/account", "/permissions", "/alerts", "/updates", "/operations", "/assignments-history", "/shelters", "/assistant", "/community", "/investigations", "/management"} or (
         path.startswith("/reports/") and path.rsplit("/", 1)[-1].isdigit()) or path == "/shelter-registrations" or (
-        path.startswith("/shelters/") and path.endswith("/join") and path.split("/")[-2].isdigit())
+        path.startswith("/shelters/") and path.rsplit("/", 1)[-1] in {"join", "waitlist"} and path.split("/")[-2].isdigit()) or path in {
+        "/alert-subscriptions", "/shelter-waitlist", "/automation-settings", "/volunteers", "/family-safety", "/preparedness"} or (
+        path.startswith("/team-coverage/") and path.rsplit("/", 1)[-1].isdigit())
     # Document navigation cannot attach a bearer header. The public shell loads
     # the requested page through HTMX using only this tab's saved session.
     if (request.method == "GET" and ui_page and request.headers.get("HX-Request") != "true"
@@ -377,6 +381,8 @@ async def submit_report(request: Request):
     form = request.state.form
     payload = {key: form.get(key) or None for key in ("message", "location", "people_affected", "help_required")}
     payload["disaster_type"] = form.get("disaster_type") or "Flood"
+    if form.get("client_submission_id"):
+        payload["client_submission_id"] = form["client_submission_id"]
     response = await api_call(request, "POST", "/api/incidents/", payload)
     if response.status_code == 201:
         return redirect(request, f"/reports/{response.json()['id']}")
@@ -651,19 +657,22 @@ async def shelters_page(
         "q": q[:160],
         "available_only": str(available_only).lower(),
     }
+    selected_facilities = request.query_params.getlist('facility')
+    if selected_facilities:
+        params['facility'] = selected_facilities
 
     if latitude or longitude:
         if not latitude or not longitude:
             return render(request, "shelters.html", page_title="Shelter Search", active_nav="shelters",
                           user=user, shelters=[], query=q, available_only=available_only,
-                          latitude=latitude, longitude=longitude, creation_values=creation_values or {},
+                          latitude=latitude, longitude=longitude, creation_values=creation_values or {}, selected_facilities=selected_facilities,
                           live_query=urlencode({**params, "latitude": latitude, "longitude": longitude}),
                           status_code=422, error="Provide both latitude and longitude for nearby search.")
         params.update(latitude=latitude, longitude=longitude)
     response = await api_call(
         request,
         "GET",
-        "/api/shelters?" + urlencode(params),
+        "/api/shelters?" + urlencode(params, doseq=True),
     )
 
     if response.status_code != 200:
@@ -676,8 +685,8 @@ async def shelters_page(
             user=user,
             query=q,
             available_only=available_only,
-            latitude=latitude, longitude=longitude, live_query=urlencode(params),
-            creation_values=creation_values or {},
+            latitude=latitude, longitude=longitude, live_query=urlencode(params, doseq=True),
+            creation_values=creation_values or {}, selected_facilities=selected_facilities,
             shelters=[],
             error=error_message(response),
         )
@@ -692,7 +701,8 @@ async def shelters_page(
         request,
         "shelters.html",
         teams=teams,
-        live_query=urlencode(params),
+        live_query=urlencode(params, doseq=True),
+        selected_facilities=selected_facilities,
         creation_values=creation_values or {},
         status_code=status_code,
         notice=notice,
@@ -864,5 +874,19 @@ app.include_router(severity_review_ui)
 app.include_router(review_assistance_ui)
 from web.shelter_registration import router as shelter_registration_ui
 app.include_router(shelter_registration_ui)
+from web import alert_subscriptions as alert_subscription_ui, shelter_waitlist as shelter_waitlist_ui
+from web import team_recommendations as team_recommendation_ui, automations as automation_ui
+app.include_router(alert_subscription_ui.router)
+app.include_router(shelter_waitlist_ui.router)
+app.include_router(team_recommendation_ui.router)
+app.include_router(automation_ui.router)
+from web.offline import router as offline_ui
+app.include_router(offline_ui)
+from web.volunteers import router as volunteers_ui
+app.include_router(volunteers_ui)
+from web.family_safety import router as family_safety_ui
+app.include_router(family_safety_ui)
+from web.preparedness import router as preparedness_ui
+app.include_router(preparedness_ui)
 app.add_middleware(AttachmentRequestLimit)
 app.mount("/", api)

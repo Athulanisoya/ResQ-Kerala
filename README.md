@@ -4,6 +4,20 @@ This integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-
 
 Each submitted report receives a sourced Kerala geography check and a saved local summary draft. On the admin report detail page, **Analyze location** checks current alerts, **Predict severity** runs Vidya's bundled classifier, and **Save assessment** records the reviewed severity, location, alert match, summary and investigation decision. Older reports expose **Generate summary**, and **Refresh summary** updates the generated draft without changing a reviewed assessment. Investigators can be assigned and their findings updated or completed. The original citizen report and its status/team workflow are preserved.
 
+## Community and household support
+
+- [Offline incident drafts and retry-safe submission](docs/OFFLINE-REPORTING.md): **New report → Save draft** (built into incident reporting).
+- [Reviewed volunteer applications and capacity-safe duty shifts](docs/VOLUNTEERS.md): **Community → Open volunteer hub** or **More services → Volunteer hub**.
+- [Private, consent-based family safety circles](docs/FAMILY-SAFETY.md): **More services → Family safety**.
+- [Staff-confirmed shelter accessibility and facility filters](docs/SHELTER-FACILITIES.md): **Shelters → Required facilities / Update facility details**.
+- [Private English/Malayalam household plans and printable checklists](docs/PREPAREDNESS.md): **More services → Household preparedness**.
+
+These features use the existing FastAPI, PostgreSQL and HTMX application. Family
+and household information has no administrator access override. Donations remain
+pledge-only; email delivery remains unconfigured. Run `python -m pytest` for the
+isolated regression suite. New browser workflows are in `tests/*_browser.cjs`;
+PostgreSQL concurrency checks use random disposable schemas.
+
 ## Run with Docker
 
 Docker Compose runs the FastAPI/HTMX application, PostgreSQL and local Ollama together. The first start installs the same `gemma4:e4b-it-q4_K_M` model in a persistent Docker volume; no provider API key is needed. Install Docker Desktop with Linux containers, then run from this directory:
@@ -93,6 +107,8 @@ Gemma 4 must fit the computer's available memory. The setup command verifies an 
 See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). These features use the existing FastAPI/HTMX application and add the small shared contracts required by Athul's screens. Shelter search, the safety assistant and optional provisional Malayalam translation are available in the integrated workspace. Curated Malayalam place aliases remain available in the geography tool.
 
 ## Additional integrated services
+
+**Automation:** follow district/locality alerts in Notifications, receive staff capacity-confirmation reminders, join shelter waiting lists with expiring capacity holds, and review suggested response teams using declared operating areas and capabilities. Administrators control timing in Automation settings; team assignment stays explicit. See [automation workflows and operation](docs/AUTOMATIONS.md).
 
 **Overview** includes an interactive Kerala alert and shelter map for citizens, administrators and teams. Active admin alerts colour districts red/orange/yellow; green means no active app alert. Zoom reveals sourced locality centres. Citizens can open a shelter pin to reserve spaces, while administrators and designated Shelter teams record arrivals and departures. Shelters also link to registration and private history. See [map coverage, shelter registration and verification](docs/OVERVIEW-MAP.md).
 

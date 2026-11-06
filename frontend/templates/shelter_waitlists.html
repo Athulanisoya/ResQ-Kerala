@@ -1,0 +1,3 @@
+<header class="page-heading"><div><span class="section-kicker">YOUR SHELTER SUPPORT</span><h1>My shelter waiting lists</h1><p>Review offers, acceptance deadlines and your waiting-list history.</p></div><a class="button button-secondary" href="/shelters" hx-get="/shelters" hx-target="#main-content" hx-push-url="true">Browse shelters</a></header>
+{% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+<div id="shelter-waitlist-records" hx-get="/ui/shelter-waitlist/records" hx-trigger="load, every 15s [document.visibilityState === 'visible'], resq:shelters-changed from:body" hx-target="this" hx-swap="innerHTML">{% include 'partials/shelter_waitlist_records.html' %}</div>

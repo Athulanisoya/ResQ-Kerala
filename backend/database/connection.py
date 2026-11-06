@@ -75,6 +75,10 @@ def initialize_database():
     # Reject incompatible legacy feature tables before creating any tables.
     with engine.begin() as connection:
         migrate_feature_tables(connection, Base.metadata)
+        from .automation_migrations import migrate_automations
+        migrate_automations(connection, Base.metadata)
+        from .offline_report_migrations import migrate_offline_reports
+        migrate_offline_reports(connection, Base.metadata)
         validate_feature_tables(connection, Base.metadata)
         Base.metadata.create_all(connection)
 

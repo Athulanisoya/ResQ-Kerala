@@ -5,6 +5,7 @@
   {% set form_values = team_values|default({}) if editing else {} %}
   <details class="card management-record" {% if editing %}open{% endif %}>
     <summary><span class="management-record-avatar">{{ icon('people') }}</span><span class="management-record-identity"><strong>{{ team.name }}</strong><span>{{ team.team_type|title }} team</span></span><span class="management-status management-status-{{ team.status|lower }}">{{ team.status|title }}</span>{{ icon('chevron', 'management-record-chevron') }}</summary>
+    <div class="management-record-body"><a class="button button-secondary" href="/team-coverage/{{ team.id }}" hx-get="/team-coverage/{{ team.id }}" hx-target="#main-content" hx-push-url="true">Operating areas &amp; capabilities</a></div>
     {% if team.status == 'BUSY' %}<div class="management-record-body"><p class="management-inline-note">{{ icon('info') }}Finish or reassign active work before changing this team.</p></div>
     {% else %}
     <form method="post" action="/ui/management/teams/{{ team.id }}" hx-post="/ui/management/teams/{{ team.id }}" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form management-form">

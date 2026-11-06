@@ -304,6 +304,8 @@
       content.append(element('p', 'map-record-note', 'Record updated: ' + (shelter.freshness_status === 'unknown' ? 'Unknown' : time(shelter.updated_at))
         + ' · ' + (shelter.freshness_status === 'recent' ? 'Recent' : shelter.freshness_status === 'stale' ? 'Stale' : 'Unknown freshness')));
       content.append(element('p', '', 'Contact: ' + (shelter.contact || 'Not recorded. Confirm with a local response office.')));
+      content.append(element('p', 'map-record-note', 'Staff capacity confirmation: ' + time(shelter.capacity_confirmed_at)
+        + '. ' + (shelter.capacity_freshness_note || 'Confirm availability with reception.')));
       if (shelter.freshness_status !== 'recent') content.append(element('p', '', 'Contact the shelter before travelling; this capacity has not been confirmed recently.'));
       if (!coordinates(shelter)) content.append(element('p', '', 'Coordinates not recorded · available in this list without a map pin.'));
       let href = '/shelters?q=' + encodeURIComponent(shelter.name);
@@ -320,6 +322,7 @@
         href = '/shelters/' + Number(shelter.id) + '/join'; label = 'Manage registrations';
       }
       content.append(link(label, href, this.role === 'citizen' && available));
+      if (this.role === 'citizen') content.append(link('Waiting list / offers', '/shelters/' + Number(shelter.id) + '/waitlist'));
       return content;
     }
 

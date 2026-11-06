@@ -8,7 +8,8 @@ from agents.models.interface import Model
 from sqlalchemy.orm import Session
 from backend.ai.rag_retriever import retrieve
 from backend.services.shelter_service import search_shelters
-from backend.services.shelter_freshness import shelter_freshness
+from backend.services.shelter_facilities_service import from_shelter
+from backend.services.shelter_freshness import shelter_freshness, capacity_freshness
 from backend.ai.location_extractor import extract_location
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
@@ -21,7 +22,9 @@ class AryaAgentContext:
     user: object | None = None
 def _shelter_payload(shelter) -> dict:
     return {
+        **from_shelter(shelter),
         **shelter_freshness(shelter.updated_at),
+        **{key: (value.isoformat() if isinstance(value, datetime) else value) for key, value in capacity_freshness(shelter).items()},
         "id": shelter.id,
         "name": shelter.name,
         "district": shelter.district,
@@ -320,8 +323,12 @@ def _evidence_answer(context: AryaAgentContext, required: set[str] | None = None
                     f"Locality: {item.get('locality') or 'not provided'}; district: {item.get('district') or 'not provided'}. "
                     f"Contact: {item.get('contact') or 'not provided'}. "
                     f"Last record update: {item.get('updated_at') or 'unknown'}. "
+                    f"Staff capacity confirmation: {item.get('capacity_confirmed_at') or 'unknown'}. {item.get('capacity_freshness_note', '')} "
                     f"Record freshness: {item['freshness_status']}. {item['freshness_note']} "
                     f"Source: {item.get('source_name') or 'not provided'}.")
+                facts = item.get('facility_details', {})
+                messages.append('  Staff-recorded facilities: ' + '; '.join(key.replace('_', ' ') + ': ' + value.lower() for key, value in facts.items())
+                    + f". Facility confirmation: {item.get('facility_confirmed_at') or 'unknown'} ({item.get('facility_freshness', 'unknown')}). Contact reception to confirm current suitability.")
         elif kind == "contacts":
             if not records:
                 messages.append("Emergency-contact evidence is missing. I cannot provide a verified contact number from the available records.")

@@ -17,8 +17,10 @@ ACTIVE = ("RESERVED", "ARRIVED")
 
 
 def active_registered_spaces(db, shelter_id):
-    return db.scalar(select(func.coalesce(func.sum(ShelterRegistration.party_size), 0)).where(
+    from backend.services.shelter_waitlist_service import offered_spaces
+    registered = db.scalar(select(func.coalesce(func.sum(ShelterRegistration.party_size), 0)).where(
         ShelterRegistration.shelter_id == shelter_id, ShelterRegistration.status.in_(ACTIVE))) or 0
+    return registered + offered_spaces(db, shelter_id)
 
 
 def districts():
@@ -93,7 +95,19 @@ def reserve(db, user, shelter_id, data):
     if db.scalar(select(ShelterRegistration.id).where(ShelterRegistration.shelter_id == shelter_id,
             ShelterRegistration.citizen_id == user.id, ShelterRegistration.status.in_(ACTIVE))) is not None:
         raise HTTPException(409, "You already have an active registration at this shelter. View it below before making another request.")
+    # Offer queue members any newly available space before a new direct booking.
+    # An offer holds the same counter and cannot be overbooked by this path.
+    from backend.models.shelter_waitlist import ShelterWaitlist
+    from backend.services.shelter_waitlist_service import process_shelter_waitlist
+    process_shelter_waitlist(db, shelter)
+    if db.scalar(select(ShelterWaitlist.id).where(ShelterWaitlist.shelter_id == shelter_id,
+            ShelterWaitlist.citizen_id == user.id, ShelterWaitlist.status.in_(("WAITING", "OFFERED")))) is not None:
+        db.commit()
+        raise HTTPException(409, "You have an active waiting-list entry. Open the shelter waiting list to accept an offer or cancel the entry.")
     if shelter.status != "OPEN" or shelter.available_capacity < data.party_size:
+        # Retain any offers just issued to older queue members even though this
+        # newcomer's direct booking could not be fulfilled.
+        db.commit()
         raise HTTPException(409, "This shelter cannot reserve that many spaces now. Refresh availability or choose another shelter.")
     row = ShelterRegistration(shelter_id=shelter_id, citizen_id=user.id, **values,
                               request_fingerprint=fingerprint, status="RESERVED", version=1)

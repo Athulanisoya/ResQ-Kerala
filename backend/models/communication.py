@@ -17,7 +17,8 @@ class Notification(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    incident_id = Column(Integer, ForeignKey("incident_reports.id", ondelete="CASCADE"), nullable=False, index=True)
+    incident_id = Column(Integer, ForeignKey("incident_reports.id", ondelete="CASCADE"), nullable=True, index=True)
+    target_url = Column(String(600), nullable=True)
     title = Column(String(120), nullable=False)
     message = Column(Text, nullable=False)
     event_key = Column(String(255), nullable=True)

@@ -38,3 +38,12 @@ from .attachments import IncidentAttachment
 from .recovery import PasswordResetToken
 from .assistant_history import AssistantSession, AssistantMessage
 from .shelter_registration import ShelterRegistration, ShelterRegistrationEvent
+from .automation import AutomationPolicy, ShelterReminderState, AutomationRuntime
+from .alert_subscription import AlertSubscription, AlertSubscriptionDelivery
+from .shelter_waitlist import ShelterWaitlist, ShelterWaitlistEvent
+from .team_coverage import TeamOperationalProfile
+from .family_safety import FamilyCircle, FamilyMember, FamilyInvitation, FamilyEvent
+from .shelter_facilities import ShelterFacilities, ShelterFacilitiesEvent
+from .preparedness import PreparednessPlan
+from .volunteer import (VolunteerApplication, VolunteerApplicationEvent, VolunteerShift, VolunteerShiftEvent,
+                        VolunteerSignup, VolunteerSignupEvent)

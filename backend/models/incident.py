@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
 
 
 from backend.database.connection import Base
@@ -8,6 +8,7 @@ from backend.database.connection import Base
 
 class Incident(Base):
     __tablename__ = "incident_reports"
+    __table_args__ = (UniqueConstraint("user_id", "client_submission_id", name="uq_incident_user_client_submission"),)
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -16,6 +17,11 @@ class Incident(Base):
     )
 
     user_id = Column(Integer, nullable=False, index=True)
+
+    # A browser-generated UUID makes replay after a lost response safe. Keep
+    # the original payload fingerprint immutable even if staff later add reviews.
+    client_submission_id = Column(String(36), nullable=True)
+    submission_fingerprint = Column(String(64), nullable=True)
 
     team_id = Column(Integer, ForeignKey("response_teams.id"), nullable=True)
 
