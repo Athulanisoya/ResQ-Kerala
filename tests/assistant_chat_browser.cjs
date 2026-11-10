@@ -1,25 +1,19 @@
 /* Run with the local app/demo accounts and Playwright available on NODE_PATH. */
-const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { setup } = require('./features_browser_helpers.cjs');
 
 async function main() {
   const root = path.resolve(__dirname, '..');
-  const demo = JSON.parse(fs.readFileSync(path.join(root, '.runtime', 'demo-accounts.json'), 'utf8'));
-  const base = process.env.RESQ_TEST_URL || 'http://127.0.0.1:8013';
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', headless: true });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  page.setDefaultTimeout(15000);
-  const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  process.env.BASE_URL ||= process.env.RESQ_TEST_URL || 'http://127.0.0.1:8013';
+  process.env.RESQ_DEMO_ACCOUNTS ||= path.join(root, '.runtime',
+    new URL(process.env.BASE_URL).port === '8014' ? 'docker-demo-accounts.json' : 'demo-accounts.json');
+  const app = await setup();
+  const { base, errors } = app;
   let release;
   try {
-    await page.goto(base + '/login');
-    await page.getByLabel('Email address').fill(demo.accounts.find(item => item.role === 'citizen').email);
-    await page.getByLabel('Password', { exact: true }).fill(demo.password);
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await page.waitForURL(base + '/dashboard');
+    const page = await app.page(await app.citizen('Synthetic assistant browser test'));
     const launcher = page.getByRole('button', { name: 'Open safety assistant', exact: true });
     const panel = page.locator('#assistant-widget-panel');
     const notifications = page.locator('[data-nav="updates"]');
@@ -69,6 +63,9 @@ async function main() {
     await page.route('**/ui/assistant/chat', async route => { await gate; await route.continue(); });
     await field.press('Enter');
     await page.getByText('Thinking…', { exact: true }).waitFor();
+    await page.locator('.chat-message-user').getByText(question, { exact: true }).waitFor();
+    assert.equal(await field.evaluate(element => element.readOnly), true);
+    assert.equal(await page.locator('.chat-message-assistant').count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Send message', exact: true }).isDisabled(), true);
     await page.getByRole('button', { name: 'Minimize chat', exact: true }).click();
     await page.getByRole('link', { name: 'Community', exact: true }).click();
@@ -78,10 +75,46 @@ async function main() {
     await launcher.click();
     await page.locator('.chat-message-user').getByText(question, { exact: true }).waitFor();
     await page.locator('.chat-message-assistant').first().waitFor();
+    assert.equal(await page.locator('.chat-message-user').count(), 1);
+    assert.equal(await field.evaluate(element => element.readOnly), false);
     assert.equal(page.url(), underlyingPage, 'Chat responses must not navigate the underlying page');
     assert.equal(await field.inputValue(), '');
     const sessionId = await page.locator('[data-chat-form] input[name="session_id"]').inputValue();
     await page.unroute('**/ui/assistant/chat');
+
+    async function send(message, expectedReplies) {
+      await field.fill(message);
+      await field.press('Enter');
+      await page.locator('.chat-message-assistant').nth(expectedReplies - 1).waitFor();
+      assert.equal(await page.locator('.chat-message-user').count(), expectedReplies);
+      return page.locator('.chat-message-assistant').last();
+    }
+    const greeting = await send('Hi', 2);
+    assert.match(await greeting.locator('.chat-message-content').innerText(), /shelter/i);
+    assert.equal(await greeting.locator('.chat-evidence, .chat-message-notice').count(), 0);
+    const shelterQuestion = await send('Can you find an available shelter?', 3);
+    assert.match(await shelterQuestion.locator('.chat-message-content').innerText(), /district|locality/i);
+    const locationReply = await send('Ernakulam', 4);
+    await locationReply.locator('summary', { hasText: 'Sources and evidence' }).click();
+    assert.match(await locationReply.locator('.chat-evidence').innerText(), /Shelter records/);
+    const preparation = await send('How can I prepare for flooding?', 5);
+    assert.match(await preparation.locator('.chat-message-content').innerText(), /Pack an emergency kit/i);
+    assert.equal(await preparation.locator('.chat-evidence').isVisible(), false);
+    const timing = await send('when should I seek emergency shelter?', 6);
+    const timingText = await timing.locator('.chat-message-content').innerText();
+    assert.match(timingText, /When local officials tell you to evacuate/i);
+    assert.doesNotMatch(timingText, /Emergency contacts|Shelter evidence is missing|Excerpt from|https:\/\//i);
+    assert.equal(await timing.locator('.chat-evidence').isVisible(), false);
+    await timing.locator('summary', { hasText: 'Sources and evidence' }).click();
+    assert.match(await timing.innerText(), /KSDMA Flood Evacuation and Relief Camps/);
+    assert.match(await timing.locator('.chat-evidence').innerText(), /Safety reference passages/);
+    assert.doesNotMatch(await timing.locator('.chat-evidence').innerText(), /Shelter records|Emergency-contact directory/);
+    assert.equal(await page.locator('[data-chat-form] input[name="session_id"]').inputValue(), sessionId);
+    await page.reload();
+    await launcher.click();
+    await page.locator('.chat-message-assistant').nth(5).waitFor();
+    assert.equal(await page.locator('[data-chat-form] input[name="session_id"]').inputValue(), sessionId);
+    assert.equal(page.url(), underlyingPage);
 
     await page.getByRole('link', { name: 'New chat', exact: true }).click();
     await page.getByRole('heading', { name: 'How can I help you today?', exact: true }).waitFor();
@@ -94,15 +127,21 @@ async function main() {
     fs.mkdirSync(qa, { recursive: true });
     for (const [width, height] of [[1440, 900], [800, 600], [390, 844], [320, 568]]) {
       await page.setViewportSize({ width, height });
+      // Chromium can update the viewport before recalculating vw and dvh sizes.
+      await page.waitForFunction(({ width, height }) => {
+        const box = document.getElementById('assistant-widget-panel')?.getBoundingClientRect();
+        return innerWidth === width && innerHeight === height && box?.width > 0
+          && box.left >= 0 && box.top >= 0 && box.right <= width && box.bottom <= height;
+      }, { width, height }, { timeout: 3000 });
       const layout = await panel.evaluate(element => {
         const box = element.getBoundingClientRect();
         const composer = element.querySelector('[data-chat-composer]').getBoundingClientRect();
-        return { overflow: document.documentElement.scrollWidth > innerWidth,
+        return { panel: box.toJSON(), overflow: document.documentElement.scrollWidth > innerWidth,
                  panelInView: box.top >= 0 && box.left >= 0 && box.right <= innerWidth && box.bottom <= innerHeight,
                  composerInView: composer.bottom <= innerHeight && composer.top >= 0 };
       });
       assert.equal(layout.overflow, false, `Horizontal overflow at ${width}x${height}`);
-      assert.equal(layout.panelInView, true, `Panel offscreen at ${width}x${height}`);
+      assert.equal(layout.panelInView, true, `Panel offscreen at ${width}x${height}: ${JSON.stringify(layout.panel)}`);
       assert.equal(layout.composerInView, true, `Composer offscreen at ${width}x${height}`);
       if (width === 1440 || width === 320) await page.screenshot({ path: path.join(qa, `chat-widget-${width}.png`) });
       await page.getByRole('button', { name: 'Minimize chat', exact: true }).click();
@@ -146,6 +185,7 @@ async function main() {
     await page.unroute('**/ui/assistant/chat');
     await page.getByRole('button', { name: 'Try again', exact: true }).click();
     await page.locator('.chat-message-user').getByText(serverDraft, {exact:true}).waitFor();
+    await page.waitForFunction(() => document.querySelector('[data-chat-composer]')?.value === '');
     assert.equal(await field.inputValue(), '');
     assert.equal(page.url(), underlyingPage);
 
@@ -159,10 +199,10 @@ async function main() {
     await page.waitForURL(/\/login\?notice=signed-out$/);
     assert.equal(await page.locator('#assistant-widget').count(), 0, 'Signing out removes the private widget');
     assert.deepEqual(errors, []);
-    console.log('PASS: header notifications, floating launcher, draft/history persistence, minimize during requests, unchanged workspace URL, network retry, deep links, logout privacy and desktop/mobile layout.');
+    console.log('PASS: immediate messages, contextual follow-ups, concise flood preparation and evacuation guidance, expandable evidence, saved chat resume, retries, privacy and responsive layout.');
   } finally {
     if (release) release();
-    await browser.close();
+    await app.close();
   }
 }
 main().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

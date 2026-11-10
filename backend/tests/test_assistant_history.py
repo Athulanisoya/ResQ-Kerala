@@ -4,7 +4,7 @@ from backend.models.user import Role, User
 from backend.routers import assistant
 
 
-def test_private_sessions_and_owned_model_context(api, monkeypatch):
+def test_private_sessions_and_owned_context(api, monkeypatch):
     seen=[]
     async def answer(db, question, user=None, history=None):
         seen.append(history or [])
@@ -21,7 +21,7 @@ def test_private_sessions_and_owned_model_context(api, monkeypatch):
     assert third.status_code == 200
     fourth=api.client.post('/api/assistant/chat',headers=citizen,json={'question':'Tell me more about shelter','session_id':session})
     assert fourth.status_code == 200
-    assert all('report status' not in entry['content'] for entry in seen[-1])
+    assert seen[-1] == [], 'A report turn must reset earlier public context without sharing the report details'
     messages=api.client.get(f'/api/assistant/sessions/{session}',headers=citizen).json()['messages']
     assert len(messages) == 8 and messages[-1]['content'] == 'Answer to Tell me more about shelter'
     assert api.client.get(f'/api/assistant/sessions/{session}',headers=admin).status_code == 404

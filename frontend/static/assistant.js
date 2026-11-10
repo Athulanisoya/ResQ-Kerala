@@ -2,7 +2,8 @@
   let restoreComposerFocus = false;
   let retryForm = null;
   let pendingForm = null;
-  let lastLoadUrl = '/assistant?widget=1';
+  const resumeUrl = '/assistant?widget=1&resume=1';
+  let lastLoadUrl = resumeUrl;
   let loading = false;
   function widget() { return document.getElementById('assistant-widget'); }
   function panel() { return document.getElementById('assistant-widget-panel'); }
@@ -19,6 +20,37 @@
     field.style.height = 'auto';
     const maximum = field.closest('#assistant-widget') ? 120 : 180;
     field.style.height = `${Math.min(maximum, Math.max(48, field.scrollHeight))}px`;
+  }
+  function showPendingTurn(form) {
+    const field = form.querySelector('[data-chat-composer]');
+    const messages = form.closest('.chat-workspace')?.querySelector('.chat-messages');
+    if (!field || !messages || messages.querySelector('[data-chat-pending-turn]')) return;
+    field.readOnly = true;
+    const turn = document.createElement('article');
+    turn.className = 'chat-message chat-message-user';
+    turn.dataset.chatPendingTurn = '';
+    turn.setAttribute('aria-label', 'Your pending message');
+    const body = document.createElement('div');
+    body.className = 'chat-message-body';
+    const author = document.createElement('div');
+    author.className = 'chat-message-author';
+    author.textContent = 'You';
+    const content = document.createElement('div');
+    content.className = 'chat-message-content';
+    content.textContent = field.value.trim();
+    body.append(author, content);
+    turn.append(body);
+    messages.append(turn);
+    messages.classList.add('chat-messages-sending');
+    messages.scrollTop = messages.scrollHeight;
+  }
+  function finishPendingTurn(form) {
+    if (!form) return;
+    const field = form.querySelector('[data-chat-composer]');
+    if (field) field.readOnly = false;
+    const messages = form.closest('.chat-workspace')?.querySelector('.chat-messages');
+    messages?.querySelector('[data-chat-pending-turn]')?.remove();
+    messages?.classList.remove('chat-messages-sending');
   }
   function showNotice(message, form = null, retryable = true) {
     const root = widget();
@@ -77,6 +109,7 @@
   function initializeChat() {
     document.querySelectorAll('[data-chat-composer]').forEach(sizeComposer);
     document.querySelectorAll('.chat-messages:not([data-chat-ready])').forEach(messages => {
+      if (!messages.getClientRects().length) return;
       messages.dataset.chatReady = 'true';
       if (messages.querySelector('.chat-message')) messages.scrollTop = messages.scrollHeight;
     });
@@ -86,7 +119,8 @@
     if (query.get('chat') !== '1') return;
     root.dataset.widgetAutoOpened = 'true';
     const sessionId = query.get('session_id');
-    openWidget('/assistant?widget=1' + (/^[1-9]\d*$/.test(sessionId || '') ? `&session_id=${encodeURIComponent(sessionId)}` : ''));
+    openWidget(/^[1-9]\d*$/.test(sessionId || '')
+      ? `/assistant?widget=1&session_id=${encodeURIComponent(sessionId)}` : resumeUrl);
   }
   // Capture legacy assistant links before HTMX navigates the main workspace.
   document.addEventListener('click', event => {
@@ -132,7 +166,7 @@
     const prompt = event.target.closest('[data-chat-prompt]');
     if (!prompt) return;
     const field = prompt.closest('.chat-workspace')?.querySelector('[data-chat-composer]');
-    if (!field) return;
+    if (!field || field.readOnly) return;
     field.value = prompt.dataset.chatPrompt;
     sizeComposer(field); field.focus();
   });
@@ -146,7 +180,13 @@
     if (!event.target.matches('[data-chat-composer]') || event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     const form = event.target.form;
-    if (event.target.value.trim().length >= 2 && !form.classList.contains('htmx-request')) form.requestSubmit();
+    if (!event.target.readOnly && event.target.value.trim().length >= 2 && !form.classList.contains('htmx-request')) form.requestSubmit();
+  });
+  document.addEventListener('htmx:configRequest', event => {
+    if (isWidgetRequest(event) || event.detail.elt?.matches('[data-chat-form]')) event.detail.timeout ||= 60000;
+  });
+  document.addEventListener('htmx:beforeSend', event => {
+    if (event.detail.elt?.matches('[data-chat-form]')) showPendingTurn(event.detail.elt);
   });
   document.addEventListener('htmx:beforeRequest', event => {
     if (event.detail.elt?.matches('[data-chat-form]')) restoreComposerFocus = true;
@@ -172,6 +212,7 @@
     showNotice(xhr.status === 403 ? 'Your form could not be verified. Your message is still here; reopen the conversation or sign in again.' : 'The assistant could not complete that request. Your message is still here.', form);
   });
   document.addEventListener('htmx:afterRequest', event => {
+    if (event.detail.elt?.matches('[data-chat-form]')) finishPendingTurn(event.detail.elt);
     if (!isWidgetRequest(event)) return;
     loading = false;
     const root = widget();
@@ -189,10 +230,12 @@
   }
   document.addEventListener('htmx:sendError', connectionFailed);
   document.addEventListener('htmx:timeout', connectionFailed);
+  document.addEventListener('htmx:sendAbort', connectionFailed);
   document.addEventListener('htmx:afterSettle', event => {
     if (!['main-content', 'app-root', 'assistant-widget-content'].includes(event.detail.target.id)) return;
     initializeChat();
     if (event.detail.target.id === 'assistant-widget-content') {
+      clearNotice();
       pendingForm = null;
       const root = widget();
       if (root) {

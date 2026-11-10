@@ -8,10 +8,10 @@ from agents.models.interface import Model
 from sqlalchemy.orm import Session
 from backend.ai.rag_retriever import retrieve
 from backend.services.shelter_service import search_shelters
-from backend.services.shelter_facilities_service import from_shelter
+from backend.services.shelter_facilities_service import LABELS, from_shelter
 from backend.services.shelter_freshness import shelter_freshness, capacity_freshness
 from backend.ai.location_extractor import extract_location
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 GEMINI_BASE_URL = ("https://generativelanguage.googleapis.com/v1beta/openai/")
 @dataclass
@@ -115,25 +115,28 @@ def _emergency_contacts(query: str) -> dict:
         },
     ]
 
-    # Return all contacts for general emergency-number questions.
-    query_lower = query.lower()
-
-    if any(word in query_lower for word in [
-        "all", "emergency", "contact", "number",
-        "helpline", "flood", "disaster", "സഹായം",
-        "നമ്പർ", "അടിയന്തര",
-    ]):
+    text = query.casefold()
+    aliases = (
+        ("112", "erss", "general emergency"),
+        ("1070", "1079", "state emergency operations", "state control room"),
+        ("1077", "district emergency operations", "district control room"),
+        ("101", "fire and rescue", "fire service"),
+        ("108", "ambulance", "ആംബുല"),
+        ("1098", "child helpline"),
+        ("181", "women helpline"),
+    )
+    specific = [contact for contact, terms in zip(contacts, aliases) if any(term in text for term in terms)]
+    if re.search(r"\b(?:all|numbers|contacts|helplines)\b", text):
+        matches = specific or contacts
+    elif specific:
+        matches = specific
+    elif any(term in text for term in ("emergency", "contact", "phone", "number", "helpline", "call ",
+                                       "dial", "police", "സഹായം", "നമ്പ", "ബന്ധപ്പെട", "വിളിക്ക", "അടിയന്തര")):
+        matches = contacts[:1]
+    elif any(term in text for term in ("flood", "disaster")):
         matches = contacts
     else:
-        matches = [
-            contact for contact in contacts
-            if any(
-                word in (
-                    contact["service"] + " " + contact["number"]
-                ).lower()
-                for word in query_lower.split()
-            )
-        ]
+        matches = []
 
     result = {
         "count": len(matches),
@@ -187,27 +190,169 @@ def build_arya_agent(model: Model) -> Agent[AryaAgentContext]:
         model=model,
         tools=[search_shelters_tool,search_approved_documents_tool,search_emergency_contacts_tool],
         model_settings=ModelSettings(tool_choice="auto",parallel_tool_calls=False,max_tokens=1400),)
-def _required_evidence(question: str) -> set[str]:
-    """Route from the current user question, never from model output or history."""
+_EVACUATION_DECISION = re.compile(
+    r"(?<!where )\b(?:when|should (?:i|we)|do (?:i|we) need to)\b[^.?!,;]{0,80}?\b"
+    r"(?:evacuat\w*|(?:seek|find|go to|move to|head to|leave for|use)\s+"
+    r"(?:(?:a|an|the)\s+)?(?:(?:emergency|relief)\s+)?(?:shelters?|camps?))\b"
+)
+_FLOOD = re.compile(r"\b(?:flood\w*|heavy rain|rising (?:river )?water)\b|വെള്ളപ്പൊക്ക|കനത്ത മഴ")
+_OTHER_HAZARD = re.compile(
+    r"\b(?:cyclones?|hurricanes?|tornado(?:es)?|storms?|earthquakes?|tsunamis?|landslides?|fire(?! service| and rescue)|wildfires?|"
+    r"smoke|explosions?|chemical|gas leak|blizzards?|snow|accidents?|heatwaves?)\b|ചുഴലിക്കാറ്റ്|ഭൂകമ്പ|ഉരുൾ|മണ്ണിടിച്ചിൽ|തീപിട"
+)
+_EVACUATION_DOCUMENT = "ksdma-flood-evacuation"
+
+
+def _flood_scope(question: str) -> bool:
     text = question.casefold()
+    return bool(_FLOOD.search(text) and not _OTHER_HAZARD.search(text))
+
+
+def _names_hazard(question: str) -> bool:
+    text = question.casefold()
+    return bool(_FLOOD.search(text) or _OTHER_HAZARD.search(text)
+                or re.search(r"\b(?:during|because of|due to|in case of|if|in a|in an)\b", text))
+
+
+def _required_evidence(question: str) -> set[str]:
+    """Identify explicitly requested evidence from user text."""
+    text = question.casefold()
+    timing = _EVACUATION_DECISION.search(text)
+    # Remove only the timing phrase so a separate shelter lookup or phone
+    # request still gets its own evidence. "Emergency shelter" names a place.
+    lookup = _EVACUATION_DECISION.sub("", text)
+    contact_text = re.sub(r"\bemergency (?=(?:shelters?|camps?|kits?|plans?|supplies|preparedness|evacuation)\b)", "", lookup)
     required = set()
-    if any(term in text for term in (
+    if any(term in lookup for term in (
         "shelter", "capacity", "accommodation", "available space", "relief camp", "camp",
         "stay", "അഭയ", "ദുരിതാശ്വാസ", "ക്യാമ്പ", "താമസ", "ഒഴിവ്", "കിടക്ക",
-    )):
+    )) or (timing and re.search(r"\b(?:where and when|where (?:can|should|do) (?:i|we) (?:find|go|get))\b", text)):
         required.add("shelters")
-    if any(term in text for term in (
+    if any(term in contact_text for term in (
         "contact", "phone", "number", "helpline", "ambulance", "fire service", "police",
         "dial", "call ", "emergency", "നമ്പ", "ബന്ധപ്പെട", "വിളിക്ക", "ആംബുല", "അടിയന്തര",
     )):
         required.add("contacts")
-    if any(term in text for term in (
+    if timing or any(term in text for term in (
         "safety", "safe", "flood", "prepare", "preparedness", "what should i do", "evacuat",
         "first aid", "disaster", "landslide", "earthquake", "trapped", "drowning", "snakebite",
         "വെള്ളപ്പൊക്ക", "വെള്ളം", "മഴ", "സുരക്ഷ", "രക്ഷ", "ചെയ്യ", "ഉരുൾ", "മണ്ണിടിച്ചിൽ",
     )):
         required.add("guidance")
     return required
+
+
+def _chat_text(question: str) -> str:
+    return " ".join(question.casefold().replace("’", "'").split()).strip(" .?!।")
+
+
+def _courtesy_reply(question: str) -> str | None:
+    text = _chat_text(question)
+    if text in {"hi", "hello", "hey", "hi there", "hello there", "good morning", "good afternoon", "good evening"}:
+        return "Hello! How can I help? You can ask me about shelters, emergency contacts, safety references or incident reports."
+    if text in {"നമസ്കാരം", "ഹലോ", "ഹായ്"}:
+        return "നമസ്കാരം! എങ്ങനെ സഹായിക്കാം?"
+    if text in {"thanks", "thank you", "thanks a lot", "thank you so much", "thank you very much"}:
+        return "You're welcome. What else can I help you with?"
+    if text == "നന്ദി":
+        return "സന്തോഷം! വേറെ എന്തെങ്കിലും സഹായം വേണോ?"
+    if text == "how are you":
+        return "I'm here and ready to help. What would you like to look up?"
+    if text in {"help", "what can you do", "what can you do for me", "how can you help", "how can you help me",
+                "who are you", "can you help", "can you help me"}:
+        return ("I'm the ResQ Kerala Safety Assistant. I can look up recorded shelters by area, find emergency contacts "
+                "and source-linked safety references, and check incident reports you can access. What would you like to do?")
+    return None
+
+
+def _conversation_reply(answer: str) -> dict:
+    return {"answer": answer, "mode": "local_conversation", "model": None,
+            "sources": [], "tool_events": [], "warning": None}
+
+
+_MORE_DETAILS = {"tell me more", "more details", "give me more details", "can you tell me more",
+                 "can you give me more details", "any more details", "any other options", "what about that",
+                 "what about there", "what about it", "how about that"}
+
+
+def _shelter_detail_question(text: str) -> bool:
+    if text in {"where is it", "where are they", "where is that shelter", "is it open", "are they open",
+                "is that shelter open", "is there room", "any room there", "is there space", "is there space there",
+                "how can i contact them", "how do i contact them", "can i call them", "how can i reach it"}:
+        return True
+    if re.fullmatch(r"how many (?:beds|spaces|places|spots)(?: (?:are )?(?:available|left|there))?(?: (?:there|now))?", text):
+        return True
+    return re.fullmatch(
+        r"(?:what(?:'s| is| are) (?:the |its |their )?)?"
+        r"(?:address|phone number|contact number|contact details|capacity|number of beds|available spaces)"
+        r"(?: (?:there|for (?:it|them|that shelter)))?", text
+    ) is not None
+
+
+def _shelter_location_reply(question: str, previous_question: str) -> str | None:
+    text = _chat_text(question)
+    # A prefaced location replaces the last location, even outside the gazetteer.
+    named = re.fullmatch(r"(?:(?:and )?(?:what|how) about|(?:and )?(?:in|near|at)|try) (.+)", text)
+    if named and named[1] not in {"it", "that", "them", "there", "this", "the same place"}:
+        return named[1]
+
+    current = extract_location(text)
+    if not current.matched_text:
+        return None
+    remainder = text
+    for match in sorted(current.matched_text, key=len, reverse=True):
+        remainder = remainder.replace(match.casefold(), "", 1)
+    if remainder.strip(" ,.-"):
+        return None
+
+    # A bare district can answer a request to disambiguate a repeated locality.
+    if current.place and current.place.kind == "district":
+        previous = extract_location(previous_question)
+        if previous.status == "UNCERTAIN" and previous.candidates:
+            qualified = extract_location(previous_question, reported_location=text)
+            if qualified.place and qualified.place.kind == "locality":
+                return f"{previous_question} {text}"
+    return text
+
+
+def _route_question(question: str, previous: tuple[str, set[str]] | None) -> tuple[str, set[str]]:
+    required = _required_evidence(question)
+    if previous is None:
+        return question, required
+
+    previous_question, previous_required = previous
+    text = _chat_text(question)
+    if _EVACUATION_DECISION.search(text) and not _names_hazard(text) and _flood_scope(previous_question):
+        return f"{question} Flooding or heavy rain.", required
+    if (text in {"flood", "flooding", "heavy rain", "വെള്ളപ്പൊക്കം", "കനത്ത മഴ"}
+            and _EVACUATION_DECISION.search(previous_question.casefold()) and not _names_hazard(previous_question)):
+        return f"{previous_question} {question}", {"guidance"}
+    if previous_required == {"shelters"}:
+        # A generic phone or capacity question refers to the shelter. Explicit
+        # requests such as an ambulance number still route to the directory.
+        if _shelter_detail_question(text):
+            return previous_question, previous_required
+        if not required:
+            location = _shelter_location_reply(question, previous_question)
+            if location is not None:
+                return location, previous_required
+    if not required and text in _MORE_DETAILS and len(previous_required) == 1:
+        return previous_question, previous_required
+    return question, required
+
+
+def _recent_topic(history) -> tuple[str, set[str]] | None:
+    """Replay a bounded set of user turns, never facts in assistant messages."""
+    previous = None
+    for message in (history or [])[-8:]:
+        if message.get("role") != "user":
+            continue
+        question = message.get("content", "")
+        if _courtesy_reply(question):
+            continue
+        lookup, required = _route_question(question, previous)
+        previous = (lookup, required) if required else None
+    return previous
 
 
 def _tool_result(context, tool, result):
@@ -220,7 +365,7 @@ def _named_shelters(context):
     """Require a named area or shelter; never substitute unrelated search rows."""
     extracted = extract_location(context.question)
     if extracted.status == "UNCERTAIN" and extracted.candidates:
-        return {"count": 0, "shelters": [], "reason": "The place is ambiguous. Please provide a district and locality."}
+        return {"count": 0, "shelters": [], "reason": "That place name matches more than one area. Which district do you mean?"}
     place = extracted.place
     rows = search_shelters(context.db, query="", available_only=True, limit=None)
     question = context.question.casefold()
@@ -241,8 +386,10 @@ def _named_shelters(context):
         return row_place.district_id == place.id if place.kind == "district" else row_place.id == place.id
 
     matched = [row for row in rows if matches(row)][:25]
+    reason = ("I couldn't find an open shelter with recorded space in that area. Shelter Search may have more options."
+              if place else "Which district or locality should I check? You can also give a shelter name or address.")
     return {"count": len(matched), "shelters": [_shelter_payload(row) for row in matched],
-            "reason": None if matched else "No open shelter with available capacity matched a named area or shelter."}
+            "reason": None if matched else reason}
 
 
 def _document_query(question):
@@ -254,15 +401,30 @@ def _document_query(question):
 
 
 def _document_evidence(context):
-    passages = retrieve(_document_query(context.question), top_k=4)
+    question = context.question
+    query = _document_query(question)
+    target = None
+    if _EVACUATION_DECISION.search(question.casefold()):
+        if not _flood_scope(question):
+            return {"count": 0, "passages": []}
+        target = _EVACUATION_DOCUMENT
+        query = "flood evacuation relief camp leave promptly"
+    elif _flood_scope(question) and re.search(r"\b(?:prepar\w*|emergency kit)\b", question.casefold()):
+        target = "ksdma-emergency-kit"
+        query = "emergency kit drinking water torch radio medicines"
+
     valid = []
-    for passage in passages:
+    for passage in retrieve(query, top_k=4):
+        if target and passage.get("document_id") != target:
+            continue
         url = str(passage.get("source_url") or "")
         parsed = urlsplit(url)
         if (not passage.get("text") or not passage.get("title") or parsed.scheme != "https"
                 or not parsed.hostname or parsed.username or parsed.password):
             continue
         valid.append(passage)
+        if len(valid) == 2:
+            break
     return {"count": len(valid), "passages": valid}
 
 
@@ -279,6 +441,58 @@ def _extract_sources(tool_events: list[dict]) -> list[dict]:
     return list(found.values())
 
 
+_KERALA_TIMEZONE = timezone(timedelta(hours=5, minutes=30))
+
+
+def _record_time(value, freshness):
+    if not value or freshness == "unknown":
+        return "unknown"
+    updated = datetime.fromisoformat(value)
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=timezone.utc)
+    stamp = updated.astimezone(_KERALA_TIMEZONE).strftime("%d %b %Y, %H:%M IST")
+    return f"{stamp} ({freshness})" if freshness == "stale" else stamp
+
+
+def _shelter_reply(records, reason, question):
+    if not records:
+        return reason or "I couldn't check the shelter records just now. Try again or open Shelter Search."
+
+    found = "one shelter" if len(records) == 1 else f"{len(records)} shelters"
+    lines = [f"I found {found} with recorded space. Contact the shelter before travelling to confirm availability.", ""]
+    asks_facilities = any(term in question.casefold() for term in (
+        "facility", "facilities", "wheelchair", "accessible", "toilet", "medical support", "charging", "pets",
+    ))
+    for item in records[:3]:
+        available = item["available_capacity"]
+        spaces = "space" if available == 1 else "spaces"
+        address = item.get("address") or item.get("location") or "not recorded"
+        contact = item.get("contact") or "not recorded"
+        updated = _record_time(item.get("updated_at"), item["freshness_status"])
+        confirmed = _record_time(item.get("capacity_confirmed_at"), item["capacity_freshness_status"])
+        line = (f"- {item['name']} ({item['status'].title()}) has {available} recorded {spaces} "
+                f"({item['occupied']} of {item['capacity']} occupied). Address: {address}. Contact: {contact}. "
+                f"Last record update: {updated}. Capacity last confirmed: {confirmed}.")
+        if asks_facilities:
+            facilities = item.get("facility_details", {})
+            details = [f"{LABELS[key]}: {value.lower()}" for key, value in facilities.items() if key in LABELS]
+            facility_update = _record_time(item.get("facility_confirmed_at"), item.get("facility_freshness"))
+            line += f" Facilities: {', '.join(details) or 'not recorded'}. Last confirmed: {facility_update}."
+        lines.append(line)
+    if len(records) > 3:
+        lines.extend(["", "Open Shelter Search to browse more options."])
+    return "\n".join(lines)
+
+
+def _contact_reply(records):
+    if not records:
+        return "I couldn't find a verified number in the emergency directory. Check the official directory for your area."
+    if len(records) == 1:
+        item = records[0]
+        return f"{item['service']}: {item['number']}."
+    return "Emergency contacts:\n\n" + "\n".join(f"- {item['service']}: {item['number']}" for item in records)
+
+
 def _evidence_answer(context: AryaAgentContext, required: set[str] | None = None) -> dict:
     """Critical facts are composed from fresh, server-run tools, never final_output.
 
@@ -289,9 +503,9 @@ def _evidence_answer(context: AryaAgentContext, required: set[str] | None = None
     required = required or _required_evidence(context.question) or {"guidance"}
     messages, evidence, sources = [], [], []
     for kind, tool, fetch in (
+        ("guidance", "search_approved_documents_tool", lambda: _document_evidence(context)),
         ("shelters", "search_shelters_tool", lambda: _named_shelters(context)),
         ("contacts", "search_emergency_contacts_tool", lambda: _emergency_contacts(context.question)),
-        ("guidance", "search_approved_documents_tool", lambda: _document_evidence(context)),
     ):
         if kind not in required:
             continue
@@ -310,54 +524,25 @@ def _evidence_answer(context: AryaAgentContext, required: set[str] | None = None
                          "status": "review_required" if review_required else "available" if records else "missing",
                          "record_count": len(records)})
         if kind == "shelters":
-            if not records:
-                messages.append("Shelter evidence is missing: " + (result.get("reason") or "The shelter lookup could not supply a record.") +
-                    " Please provide a district, locality, address or shelter name, or use Shelter Search. "
-                    "Records may be incomplete or stale; this does not prove that no shelter exists.")
-                continue
-            messages.append("Shelter facts copied from database records (not a reservation or confirmed live availability):")
-            for item in records:
-                messages.append(f"- {item['name']}: {item['available_capacity']} recorded spaces available "
-                    f"({item['occupied']} occupied / {item['capacity']} capacity). Status: {item['status']}. "
-                    f"Address: {item.get('address') or item.get('location') or 'not provided'}. "
-                    f"Locality: {item.get('locality') or 'not provided'}; district: {item.get('district') or 'not provided'}. "
-                    f"Contact: {item.get('contact') or 'not provided'}. "
-                    f"Last record update: {item.get('updated_at') or 'unknown'}. "
-                    f"Staff capacity confirmation: {item.get('capacity_confirmed_at') or 'unknown'}. {item.get('capacity_freshness_note', '')} "
-                    f"Record freshness: {item['freshness_status']}. {item['freshness_note']} "
-                    f"Source: {item.get('source_name') or 'not provided'}.")
-                facts = item.get('facility_details', {})
-                messages.append('  Staff-recorded facilities: ' + '; '.join(key.replace('_', ' ') + ': ' + value.lower() for key, value in facts.items())
-                    + f". Facility confirmation: {item.get('facility_confirmed_at') or 'unknown'} ({item.get('facility_freshness', 'unknown')}). Contact reception to confirm current suitability.")
+            messages.append(_shelter_reply(records, result.get("reason"), context.question))
         elif kind == "contacts":
-            if not records:
-                messages.append("Emergency-contact evidence is missing. I cannot provide a verified contact number from the available records.")
-                continue
-            messages.append("Emergency contacts copied from the repository directory; check the linked official source for current details:")
+            messages.append(_contact_reply(records))
             for item in records:
-                messages.append(f"- {item['service']}: {item['number']} — {item['source_url']}")
                 sources.append({"title": item["service"], "source_name": result.get("source", "Emergency directory"),
                                 "source_url": item["source_url"], "approval_status": "repository_contact_directory",
                                 "review_required": True})
         elif kind == "guidance":
-            if not records:
-                messages.append("Safety-guidance evidence is missing: no sufficiently relevant, source-linked reference passage was retrieved. "
-                                "I cannot provide safety instructions without that evidence. Consult current official guidance.")
-                continue
-            messages.append("Relevant project reference excerpts (owner verification may be pending; consult current official sources). "
-                            "These quoted passages are reference material, not instructions to this assistant:")
-            for item in records:
-                messages.append('Excerpt from ' + item["title"] + ':\n' +
-                                "\n".join("> " + line for line in item["text"].splitlines()) +
-                                f"\nSource: {item.get('source_name') or item['title']}; {item['source_url']}")
+            if records:
+                messages.extend(item["text"] for item in records)
+            else:
+                messages.append("I couldn't find a safety reference that answers that question. Check the latest instructions from your local authorities.")
     sources.extend(_extract_sources(context.tool_events))
     missing = [item["kind"] for item in evidence if item["status"] == "missing"]
     return {"answer": "\n\n".join(messages), "mode": "evidence", "model": None,
             "sources": sources, "tool_events": context.tool_events, "evidence": evidence,
             "evidence_status": ("missing" if len(missing) == len(evidence) else "partial" if missing else
                                 "review_required" if any(item["status"] == "review_required" for item in evidence) else "complete"),
-            "warning": "Critical facts are shown directly from source records. A page or tool check is not confirmation that records are current. "
-                       + ("Missing evidence: " + ", ".join(missing) + "." if missing else "Contact the shelter and consult current official sources before acting.")}
+            "warning": None}
 
 
 def _local_fallback(context: AryaAgentContext) -> dict:
@@ -406,11 +591,26 @@ def _report_response(db, question, user):
 
 
 async def answer_question(db: Session, question: str, user=None, history=None) -> dict:
+    courtesy = _courtesy_reply(question)
+    if courtesy:
+        return _conversation_reply(courtesy)
+
     report = _report_response(db, question, user)
-    required = _required_evidence(question)
-    if report and not required:
-        return report
-    context = AryaAgentContext(db=db, question=question, user=user)
+    if report:
+        lookup, required = question, _required_evidence(question)
+        if not required:
+            return report
+    else:
+        lookup, required = _route_question(question, _recent_topic(history))
+        if required == {"guidance"} and _EVACUATION_DECISION.search(lookup.casefold()) and not _names_hazard(lookup):
+            return _conversation_reply("What hazard are you facing? For example, is it flooding or heavy rain? I can look up the guidance for that situation.")
+        if not required:
+            text = _chat_text(question)
+            if text in _MORE_DETAILS:
+                return _conversation_reply("What would you like me to check? You can name a shelter or area, ask for emergency contacts, or specify a safety topic.")
+            if _shelter_detail_question(text):
+                return _conversation_reply("Which shelter, district or locality would you like me to check?")
+    context = AryaAgentContext(db=db, question=lookup, user=user)
     result = _evidence_answer(context, required)
     if report:
         result["answer"] = report["answer"] + "\n\n" + result["answer"]

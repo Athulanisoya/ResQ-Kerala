@@ -1,4 +1,33 @@
 {% from 'icons.html' import icon %}
+{% macro reply_text(content) -%}
+  {%- set block = namespace(lines=[], in_list=false) -%}
+  {%- for line in content.splitlines() -%}
+    {%- if line.startswith('- ') -%}
+      {%- if block.lines -%}
+        <p>{{ block.lines|join('\n') }}</p>
+        {%- set block.lines = [] -%}
+      {%- endif -%}
+      {%- if not block.in_list -%}
+        <ul>
+        {%- set block.in_list = true -%}
+      {%- endif -%}
+      <li>{{ line[2:] }}</li>
+    {%- else -%}
+      {%- if block.in_list -%}
+        </ul>
+        {%- set block.in_list = false -%}
+      {%- endif -%}
+      {%- if line|trim -%}
+        {%- set block.lines = block.lines + [line] -%}
+      {%- elif block.lines -%}
+        <p>{{ block.lines|join('\n') }}</p>
+        {%- set block.lines = [] -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- if block.in_list -%}</ul>{%- endif -%}
+  {%- if block.lines -%}<p>{{ block.lines|join('\n') }}</p>{%- endif -%}
+{%- endmacro %}
 <section class="chat-workspace" aria-label="Safety assistant workspace"{% if widget %} data-assistant-widget-response{% endif %}>
   <aside class="chat-history" aria-label="Conversation history">
     <div class="chat-history-heading">{% if widget %}<button type="button" class="widget-history-toggle" data-widget-history-toggle aria-expanded="false" aria-controls="assistant-widget-history">{{ icon('clock') }}Conversations</button>{% else %}<span>Your conversations</span>{% endif %}<a class="chat-new" href="/assistant{{ '?widget=1' if widget else '' }}" hx-get="/assistant{{ '?widget=1' if widget else '' }}" hx-target="{{ '#assistant-widget-content' if widget else '#main-content' }}" hx-push-url="{{ 'false' if widget else 'true' }}">{{ icon('plus') }}New chat</a></div>
@@ -27,18 +56,50 @@
       <article class="chat-message chat-message-{{ 'user' if message.role == 'user' else 'assistant' }}" aria-label="{{ 'Your message' if message.role == 'user' else 'Assistant response' }}">
         <div class="chat-message-avatar" aria-hidden="true">{% if message.role == 'user' %}{{ user.full_name[:1]|upper }}{% else %}{{ icon('shield') }}{% endif %}</div>
         <div class="chat-message-body">
-          <div class="chat-message-author">{{ 'You' if message.role == 'user' else 'Safety assistant' }}{% if message.role == 'assistant' and message.details and message.details.mode %}<span>{{ 'Source records' if message.details.mode == 'evidence' else 'AI response' if message.details.mode == 'agent' else 'Local guidance' }}</span>{% endif %}</div>
-          <div class="chat-message-content">{{ message.content }}</div>
-          {% if message.role == 'assistant' and (not message.details or (not message.details.evidence and message.details.mode not in ['local_status', 'local_summary', 'local_help'])) %}<p class="chat-message-notice" role="status">This saved reply has no recorded evidence checks. Treat it as unverified and ask again for current source records.</p>{% endif %}
-          {% if message.details and message.details.evidence %}<div class="chat-evidence" aria-label="Evidence checks"><strong>Evidence: {{ message.details.evidence_status|default('unknown', true)|replace('_', ' ')|title }}</strong><ul>{% for check in message.details.evidence %}<li>{{ 'Shelter records' if check.kind == 'shelters' else 'Emergency-contact directory' if check.kind == 'contacts' else 'Safety reference passages' }}: {{ check.record_count }} record{{ 's' if check.record_count != 1 }} · {{ check.status|replace('_', ' ')|title }}{% if check.checked_at %} · checked <time datetime="{{ check.checked_at }}">{{ check.checked_at|local_time }}</time>{% endif %}</li>{% endfor %}</ul></div>{% endif %}
-          {% if message.details and message.details.warning %}<p class="chat-message-notice" role="status">{{ message.details.warning }}</p>{% endif %}
-          {% if message.details and message.details.sources %}
-          <details class="chat-sources"><summary>{{ message.details.sources|length }} source{{ 's' if message.details.sources|length != 1 }}</summary>
-            <ul>{% for source in message.details.sources %}<li><strong>{{ source.title }}</strong>{% if source.source_name %}<span>{{ source.source_name }}</span>{% endif %}
-              {% if source.approval_status %}<p>Approval status: {{ source.approval_status|replace('_', ' ') }}</p>{% endif %}
-              {% if source.review_required %}<p class="chat-source-review"><strong>Owner verification required.</strong> Check current official guidance before relying on this summary.</p>{% endif %}
-              {% if source.source_url and source.source_url.startswith('https://') %}<a href="{{ source.source_url }}" target="_blank" rel="noopener noreferrer">Open source document {{ icon('arrow') }}</a>{% endif %}</li>{% endfor %}</ul>
-          </details>
+          <div class="chat-message-author">{{ 'You' if message.role == 'user' else 'Safety assistant' }}</div>
+          {% if message.role == 'user' %}
+            <div class="chat-message-content">{{ message.content }}</div>
+          {% else %}
+            <div class="chat-message-content chat-reply-text">{{ reply_text(message.content) }}</div>
+            {% set details = message.details or {} %}
+            {% set checks = details.evidence or [] %}
+            {% set sources = details.sources or [] %}
+            {% set legacy_reply = not checks and details.mode not in ['local_status', 'local_summary', 'local_help', 'local_conversation'] %}
+            {% if legacy_reply %}
+              <p class="chat-message-notice">Ask again to check this saved reply against current records.</p>
+            {% endif %}
+            {% if checks or sources or details.warning or legacy_reply %}
+            <details class="chat-sources">
+              <summary>Sources and evidence</summary>
+              {% if legacy_reply %}<p class="chat-source-review">This saved reply has no recorded evidence checks. Treat it as unverified and ask again for current source records.</p>{% endif %}
+              {% if checks %}
+              {% set check_labels = {'shelters': 'Shelter records', 'contacts': 'Emergency-contact directory', 'guidance': 'Safety reference passages'} %}
+              <div class="chat-evidence" aria-label="Evidence checks">
+                <strong>Evidence: {{ details.evidence_status|default('unknown', true)|replace('_', ' ')|title }}</strong>
+                <ul>
+                  {% for check in checks %}<li>
+                    {{ check_labels.get(check.kind, 'Source records') }}: {{ check.record_count }} record{{ 's' if check.record_count != 1 }} · {{ check.status|replace('_', ' ')|title }}
+                    {% if check.checked_at %} · checked <time datetime="{{ check.checked_at }}">{{ check.checked_at|local_time }}</time>{% endif %}
+                  </li>{% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+              {% if details.warning %}<p class="chat-source-review">{{ details.warning }}</p>{% endif %}
+              {% if sources %}
+              {% if sources|selectattr('review_required')|list %}
+                <p class="chat-source-review">Sources marked “Review needed” require owner verification. Follow current official guidance.</p>
+              {% endif %}
+              <ul class="chat-source-list">
+                {% for source in sources %}<li>
+                  <strong>{{ source.title }}</strong>{% if source.source_name %}<span>{{ source.source_name }}</span>{% endif %}
+                  {% if source.approval_status %}<p>Approval status: {{ source.approval_status|replace('_', ' ') }}</p>{% endif %}
+                  {% if source.review_required %}<span>Review needed</span>{% endif %}
+                  {% if source.source_url and source.source_url.startswith('https://') %}<a href="{{ source.source_url }}" target="_blank" rel="noopener noreferrer">Open source document {{ icon('arrow') }}</a>{% endif %}
+                </li>{% endfor %}
+              </ul>
+              {% endif %}
+            </details>
+            {% endif %}
           {% endif %}
         </div>
       </article>
@@ -55,7 +116,7 @@
         </div>
       </form>
       <p class="chat-composer-hint">Enter to send · Shift + Enter for a new line</p>
-      <details class="chat-guidance"><summary>Check guidance before acting</summary><p>Follow current official guidance. Repository safety paraphrases require owner verification. Your conversation is saved to your account; model-backed answers may use recent turns. Locally retrieved report details are excluded from later model context. Fallback answers use the latest question. Shelter records may be incomplete or stale. This assistant does not dispatch emergency services.</p></details>
+      <details class="chat-guidance"><summary>Check guidance before acting</summary><p>Follow current official guidance. Repository safety paraphrases require owner verification. Your conversation is saved to your account. Recent questions help the assistant understand follow-ups. It checks source records again for factual answers. Shelter records may be incomplete or stale. Contact emergency services directly if you need urgent help.</p></details>
     </div>
   </div>
 </section>

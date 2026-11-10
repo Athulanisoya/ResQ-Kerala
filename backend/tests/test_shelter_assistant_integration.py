@@ -35,16 +35,16 @@ def test_local_assistant_never_substitutes_unrelated_shelters(services):
         no_match = _local_fallback(AryaAgentContext(db=db, question='Find shelters in Kannur'))
         assert 'Harbour Hall' not in no_match['answer']
         generic = _local_fallback(AryaAgentContext(db=db, question='Show available shelters'))
-        assert 'provide a district' in generic['answer'].lower()
+        assert 'which district or locality' in generic['answer'].lower()
         assert 'Harbour Hall' not in generic['answer']
         match = _local_fallback(AryaAgentContext(db=db, question='Find shelter at Kochi School'))
         assert 'Harbour Hall' in match['answer']
         assert _shelter_payload(db.query(Shelter).first())['location'] == 'Kochi School'
         contacts = _local_fallback(AryaAgentContext(db=db, question='Emergency contact number'))
-        assert '112' in contacts['answer'] and 'https://112.gov.in/' in contacts['answer']
+        assert '112' in contacts['answer'] and contacts['sources'][0]['source_url'] == 'https://112.gov.in/'
         guidance = _local_fallback(AryaAgentContext(db=db, question='Flood preparedness guidance'))
         assert guidance['sources'] and guidance['sources'][0]['review_required'] is True
-        assert 'owner verification' in guidance['answer'].lower()
+        assert 'emergency kit' in guidance['answer'].lower()
         assert 'approval_status' in guidance['sources'][0]
 
 

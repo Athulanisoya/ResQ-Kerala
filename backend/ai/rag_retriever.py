@@ -47,6 +47,7 @@ def load_documents():
             continue
         for number, chunk in enumerate(split_into_chunks(text), start=1):
             records.append({
+                "document_id": str(document.get("document_id") or "").strip(),
                 "title": title,
                 "source_name": source_name or title,
                 "source_url": source_url,

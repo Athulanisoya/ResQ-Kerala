@@ -49,10 +49,13 @@
 .assistant-widget .chat-message-author > span { display: block; font-size: 10px; margin-left: 0; }
 .assistant-widget .chat-message-content { font-size: 13px; line-height: 1.7; }
 .assistant-widget .chat-message-user .chat-message-content { padding: 10px 12px; }
+.assistant-widget .chat-messages-sending .chat-welcome { display: none; }
+.assistant-widget [data-chat-pending-turn] { padding-right: 33px; }
 .assistant-widget .chat-message-notice, .assistant-widget .chat-sources, .assistant-widget .chat-source-review { font-size: 11px; }
 .assistant-widget .chat-composer-area { padding: 0 12px 11px; background: var(--paper); }
 .assistant-widget .chat-composer { background: #fff; border-color: var(--line); padding: 9px; gap: 9px; border-radius: 12px; }
 .assistant-widget .chat-composer textarea { min-height: 48px; max-height: 120px; font-size: 14px; }
+.assistant-widget .chat-composer textarea[readonly] { color: var(--muted); cursor: wait; }
 .assistant-widget .chat-send { width: 36px; height: 36px; min-height: 36px; border-radius: 10px; }
 .assistant-widget .chat-send .icon { width: 18px; height: 18px; }
 .assistant-widget .chat-composer-hint { display: none; }

@@ -46,14 +46,15 @@ async def chat(data: ChatRequest, db: Session = Depends(get_db), user: User = De
     prior = []
     if session:
         rows = db.scalars(select(AssistantMessage).where(AssistantMessage.session_id == session.id).order_by(AssistantMessage.id.desc()).limit(8)).all()
-        # Never send locally retrieved report/status answers to a model on a
-        # later turn. Preserve history for display, but omit those whole pairs
-        # from the model context (including their corresponding user question).
+        # Report turns remain visible in history but end the earlier public
+        # topic. Follow-up routing uses only user text after that boundary.
         ordered = list(reversed(rows))
         for index in range(0, len(ordered) - 1, 2):
             request, answer = ordered[index:index + 2]
-            if (request.role != 'user' or answer.role != 'assistant'
-                    or (answer.details or {}).get('mode') in {'local_status', 'local_summary', 'local_help'}):
+            if request.role != 'user' or answer.role != 'assistant':
+                continue
+            if (answer.details or {}).get('mode') in {'local_status', 'local_summary', 'local_help'}:
+                prior.clear()
                 continue
             prior.extend([{'role': 'user', 'content': request.content[:2000]},
                           {'role': 'assistant', 'content': answer.content[:2000]}])

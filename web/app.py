@@ -784,7 +784,8 @@ async def assistant_view(request: Request, user: dict, session_id: int | None = 
         response.set_cookie(CSRF_COOKIE, token, httponly=True, samesite="strict", secure=request.url.scheme == "https")
         response.headers["HX-Push-Url"] = "false"
         response.headers["HX-Retarget"] = "#assistant-widget-content"
-        response.headers["HX-Reswap"] = "innerHTML"
+        # Bind the replacement composer's HTMX handlers before another turn can be submitted.
+        response.headers["HX-Reswap"] = "innerHTML settle:0ms"
         return response
 
     sessions_response = await api_call(request, "GET", "/api/assistant/sessions")
@@ -792,6 +793,9 @@ async def assistant_view(request: Request, user: dict, session_id: int | None = 
     messages = []
     if sessions_response.status_code != 200 and error is None:
         error = error_message(sessions_response)
+    if (session_id is None and widget and request.method == "GET"
+            and request.query_params.get("resume") == "1" and sessions):
+        session_id = sessions[0]["id"]
     if session_id is not None:
         response = await api_call(request, "GET", f"/api/assistant/sessions/{session_id}")
         if response.status_code != 200:

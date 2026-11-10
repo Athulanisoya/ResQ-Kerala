@@ -21,7 +21,7 @@ def test_chat_empty_state_has_working_prompt_hooks_and_composer(clients):
 
 def test_chat_bubbles_escape_content_and_keep_saved_conversation(clients, monkeypatch):
     async def answer(db, question, user=None, history=None):
-        return {'answer': '<script>unsafe()</script>\nSecond line', 'mode': 'local_help',
+        return {'answer': '<script>unsafe()</script>\nSecond line\n\n- First item\n- <b>Second item</b>\n\nFinal note.', 'mode': 'local_help',
                 'warning': None, 'sources': [], 'tool_events': []}
     monkeypatch.setattr(assistant, 'answer_question', answer)
     citizen, _, _ = clients
@@ -31,6 +31,8 @@ def test_chat_bubbles_escape_content_and_keep_saved_conversation(clients, monkey
     assert 'chat-message-user' in result.text and 'chat-message-assistant' in result.text
     assert '&lt;script&gt;unsafe()&lt;/script&gt;' in result.text
     assert '<script>unsafe()</script>' not in result.text
+    assert '<ul><li>First item</li><li>&lt;b&gt;Second item&lt;/b&gt;</li></ul>' in result.text
+    assert '<p>Final note.</p>' in result.text
     assert 'How can I help you today?' not in result.text
     assert 'aria-current="page"' in result.text
     assert 'name="session_id" value="' in result.text

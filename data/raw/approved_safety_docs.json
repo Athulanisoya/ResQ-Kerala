@@ -28,11 +28,23 @@
       "text": "Flood and heavy-rain safety: Follow current warnings and instructions issued by the competent local authorities. Do not cross rivers or flowing water, and do not bathe, swim, wash, or allow children to play in rivers, storm water, or the sea during dangerous conditions. Avoid visiting flood-affected areas as a tourist. Do not spread rumours; rely on official information. Give additional assistance to children, older people, people who are bedridden, people with illnesses, and people with disabilities who may need help to evacuate. Keep important electrical and electronic equipment raised where possible to reduce flood-water damage. These are general preparedness points; follow the latest official alert for location-specific instructions."
     },
     {
+      "document_id": "ksdma-flood-evacuation",
+      "title": "KSDMA Flood Evacuation and Relief Camps",
+      "source_name": "Kerala State Disaster Management Authority (KSDMA)",
+      "source_url": "https://sdma.kerala.gov.in/public-alert/",
+      "source_type": "official_public_alert_webpage",
+      "language": "en",
+      "approved": true,
+      "approval_status": "official_source_paraphrase_for_project_review",
+      "topic_tags": ["flood", "evacuation", "relief-camp"],
+      "text": "When local officials tell you to evacuate, leave promptly for the relief camp or safe place they recommend. Arrange help early if anyone in your household needs assistance leaving. Avoid crossing rivers or flowing water on the way."
+    },
+    {
       "document_id": "ksdma-emergency-kit",
       "title": "KSDMA Emergency Kit Guidance",
       "source_name": "Kerala State Disaster Management Authority (KSDMA)",
-      "source_url": "https://sdma.kerala.gov.in/brochures/",
-      "source_type": "official_public_brochure_index",
+      "source_url": "https://sdma.kerala.gov.in/public-alert/",
+      "source_type": "official_public_alert_webpage",
       "language": "en",
       "approved": true,
       "approval_status": "official_source_paraphrase_for_project_review",
@@ -44,7 +56,7 @@
         "torch",
         "radio"
       ],
-      "text": "Emergency preparedness: KSDMA provides emergency-kit information through its official brochure collection. The KSDMA public-alert page lists items such as a torch, radio, drinking water, oral rehydration salts (ORS), necessary personal medicines, and basic antiseptic supplies. Prepare items appropriate to the needs of everyone in the household, including children, older adults, and people who need regular medication. Check official guidance and local instructions for the latest recommended kit contents."
+      "text": "Pack an emergency kit with drinking water, a torch, a radio, regular medicines and basic first-aid supplies. Include anything children, older adults or people who need extra support may need. Share local flood alerts with everyone in your household."
     },
     {
       "document_id": "ksdma-monsoon-guidelines-2026",

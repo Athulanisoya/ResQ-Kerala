@@ -25,14 +25,30 @@ def test_assistant_history_htmx_roundtrip_and_privacy(clients, monkeypatch):
 
 def test_assistant_shows_retrieval_provenance_and_review_warning(clients, monkeypatch):
     async def answer(db, question, user=None, history=None):
-        return {'answer':'Source text','mode':'local_fallback','model':None,'tool_events':[],'warning':None,
+        return {'answer':'Source text','mode':'evidence','model':None,'tool_events':[],
+                'warning':'Review this source before relying on it.',
+                'evidence_status':'review_required',
+                'evidence':[{'kind':'guidance','record_count':1,'status':'review_required',
+                             'checked_at':'2026-11-10T05:30:00+00:00'}],
                 'sources':[{'title':'Flood guidance','source_name':'Authority','source_url':'https://example.com',
-                            'approval_status':'official_source_paraphrase_for_project_review','review_required':True}]}
+                            'approval_status':'official_source_paraphrase_for_project_review','review_required':True},
+                           {'title':'Second source','review_required':True}]}
     monkeypatch.setattr(assistant,'answer_question',answer)
     citizen, _, _ = clients
     login(citizen,'citizen')
     result=post(citizen,'/ui/assistant/chat',question='Flood safety guidance')
     assert result.status_code == 200
-    assert 'Owner verification required.' in result.text
-    assert 'official source paraphrase for project review' in result.text
+    answer_markup, evidence_markup = result.text.split('<details class="chat-sources">', 1)
+    evidence_markup = evidence_markup.split('</details>', 1)[0]
+    assert '<p>Source text</p>' in answer_markup
+    assert 'Review needed' not in answer_markup
+    assert 'Review this source before relying on it.' not in answer_markup
+    assert '<summary>Sources and evidence</summary>' in evidence_markup
+    assert 'Safety reference passages: 1 record' in evidence_markup
+    assert '<time datetime="2026-11-10T05:30:00+00:00">' in evidence_markup
+    assert 'Review this source before relying on it.' in evidence_markup
+    assert evidence_markup.count('require owner verification') == 1
+    assert evidence_markup.count('<span>Review needed</span>') == 2
+    assert 'official source paraphrase for project review' in evidence_markup
+    assert 'href="https://example.com"' in evidence_markup
     assert 'Follow current official guidance' in result.text

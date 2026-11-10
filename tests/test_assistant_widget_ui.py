@@ -75,7 +75,7 @@ def test_widget_load_is_a_fragment_with_its_own_target(clients):
     assert elements.find("input", name="widget", value="1")
     assert page.headers["HX-Push-Url"] == "false"
     assert page.headers["HX-Retarget"] == "#assistant-widget-content"
-    assert page.headers["HX-Reswap"] == "innerHTML"
+    assert page.headers["HX-Reswap"] == "innerHTML settle:0ms"
     assert "How can I help you today?" in page.text
 
 
@@ -104,11 +104,17 @@ def test_widget_chat_retains_history_without_changing_workspace_url_and_is_priva
     restored = citizen.get(history_url, headers={"HX-Request": "true"})
     assert restored.status_code == 200
     assert "Widget answer: More details please" in restored.text
+    resumed = citizen.get("/assistant?widget=1&resume=1", headers={"HX-Request": "true"})
+    assert "Widget answer: More details please" in resumed.text
+    assert f'name="session_id" value="{session_id}"' in resumed.text
+    fresh = citizen.get("/assistant?widget=1", headers={"HX-Request": "true"})
+    assert "How can I help you today?" in fresh.text
+    assert "Widget answer: More details please" not in fresh.text
     denied = admin.get(history_url, headers={"HX-Request": "true"})
     assert denied.status_code == 404
     assert denied.headers["HX-Retarget"] == "#assistant-widget-content"
     assert "Widget answer:" not in denied.text
-    own = admin.get("/assistant?widget=1", headers={"HX-Request": "true"})
+    own = admin.get("/assistant?widget=1&resume=1", headers={"HX-Request": "true"})
     assert "Where can I find shelter?" not in own.text
 
 
