@@ -206,6 +206,18 @@ h1 { letter-spacing: -.85px; }
 .management-tab > .icon { width: 17px; height: 17px; }
 .management-tab:hover { background: #e9eee5; color: var(--forest); }
 .management-tab.selected { background: #dce8d8; color: var(--forest-deep); box-shadow: inset 0 -2px 0 var(--forest); font-weight: 500; }
+.report-detail-tabs-admin { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.report-detail-tabs .management-tab[aria-current="location"] { background: #dce8d8; color: var(--forest-deep); box-shadow: inset 0 -2px 0 var(--forest); font-weight: 500; }
+.report-detail-tabs .icon { flex-shrink: 0; }
+.report-detail [data-report-panel][hidden] { display: none; }
+.report-detail [id] { scroll-margin-top: calc(var(--site-header-height, 84px) + 14px); }
+.report-detail > .status-track { margin: 0 0 22px; }
+.report-detail .assignment-card h3 { overflow-wrap: anywhere; }
+.report-action-link { margin-top: 14px; }
+.report-pending-message { padding: 16px 20px; }
+@media (max-width: 900px) {
+  .report-detail-tabs-admin { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 .management-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; background: #f8f5eef2; border-radius: 12px; padding: 21px 25px; margin-bottom: 18px; }
 .management-section-heading h2 { font-size: 22px; }
 .management-section-heading p { font-size: 13px; color: var(--body); margin-top: 6px; }
@@ -228,6 +240,13 @@ h1 { letter-spacing: -.85px; }
 .management-card-note > .icon, .management-inline-note > .icon { width: 17px; height: 17px; margin-top: 2px; }
 .management-card-note .text-link { display: inline; font-size: inherit; }
 .management-inline-note { padding: 16px 19px; margin-bottom: 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+.management-account-search { padding: 16px 23px; margin-bottom: 18px; }
+.management-account-search .field { margin: 0; }
+.management-account-search-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.management-account-search-controls input { flex: 1 1 180px; width: auto; min-width: 0; }
+.management-account-search-controls input::-webkit-search-cancel-button { appearance: none; }
+.management-account-search-controls .button[hidden] { display: none; }
+.management-account-search [role="status"] { margin-top: 8px; }
 .management-password-hint { margin: 0 0 18px; }
 .management-record-list { display: grid; gap: 12px; }
 .management-record > summary { display: flex; align-items: center; gap: 14px; padding: 20px 23px; list-style: none; cursor: pointer; }

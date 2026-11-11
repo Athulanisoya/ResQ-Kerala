@@ -66,6 +66,13 @@
     if (event.target.closest('[data-sign-in-again]')) {
       clearToken(); window.location.assign('/login');
     } else if (event.target.closest('[data-retry-bootstrap]')) bootstrap();
+    const clearSearch = event.target.closest('[data-clear-account-search]');
+    if (clearSearch) {
+      const field = clearSearch.closest('[data-account-search]').querySelector('[data-account-query]');
+      field.value = '';
+      updateAccountSearch(field);
+      field.focus();
+    }
   });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
@@ -98,6 +105,29 @@
   document.addEventListener('change', event => {
     if (event.target?.matches?.('[data-pledge-kind]')) updatePledgeUnit(event.target);
   });
+  function updateAccountSearch(field) {
+    if (!field) return;
+    const search = field.closest('[data-account-search]');
+    const list = document.getElementById('management-account-list');
+    const terms = field.value.normalize().toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const accounts = list.querySelectorAll('[data-account-search-text]');
+    let matches = 0;
+    for (const account of accounts) {
+      const text = account.dataset.accountSearchText.normalize().toLowerCase();
+      account.hidden = !terms.every(term => text.includes(term));
+      if (!account.hidden) matches += 1;
+    }
+    list.querySelector('[data-account-search-empty]').hidden = matches > 0;
+    search.querySelector('[data-clear-account-search]').hidden = !field.value;
+    const status = search.querySelector('[data-account-search-status]');
+    const count = `${accounts.length} ${accounts.length === 1 ? 'account' : 'accounts'}`;
+    const message = terms.length ? `${matches} of ${count}` : count;
+    if (status.textContent !== message) status.textContent = message;
+    search.hidden = false;
+  }
+  document.addEventListener('input', event => {
+    if (event.target?.matches?.('[data-account-query]')) updateAccountSearch(event.target);
+  });
   function refreshPage() {
     const root = document.getElementById('app-root');
     if (root) document.body.className = root.dataset.authenticated === 'true' ? 'workspace' : 'auth-page';
@@ -122,6 +152,7 @@
       else link.removeAttribute('aria-current');
     });
     document.querySelectorAll('[data-pledge-kind]').forEach(updatePledgeUnit);
+    updateAccountSearch(document.getElementById('management-account-query'));
     document.querySelectorAll('[data-character-count]').forEach(counter => {
       const field = document.getElementById(counter.dataset.characterCount);
       if (!field) return;

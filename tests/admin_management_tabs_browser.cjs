@@ -14,7 +14,9 @@ const display = value => value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/
 
 async function main() {
   const root = path.resolve(__dirname, '..');
-  const demo = JSON.parse(fs.readFileSync(path.join(root, '.runtime', 'demo-accounts.json'), 'utf8'));
+  const demoPath = process.env.RESQ_DEMO_ACCOUNTS || path.join(root, '.runtime', 'demo-accounts.json');
+  const demo = JSON.parse(fs.readFileSync(demoPath, 'utf8'));
+  const adminEmail = demo.accounts.find(account => account.role === 'admin').email;
   const base = process.env.RESQ_TEST_URL || 'http://127.0.0.1:8013';
   const browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -29,7 +31,7 @@ async function main() {
   });
   try {
     await page.goto(base + '/login');
-    await page.getByLabel('Email address').fill(demo.accounts.find(account => account.role === 'admin').email);
+    await page.getByLabel('Email address').fill(adminEmail);
     await page.getByLabel('Password', { exact: true }).fill(demo.password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.waitForURL(base + '/dashboard');
@@ -76,12 +78,53 @@ async function main() {
     assert.equal(await createForm().getByLabel('Team type', { exact: true }).inputValue(), 'Investigation');
 
     await select('accounts');
-    const firstAccount = page.locator('#management-panel details.management-record').first();
-    await firstAccount.locator('summary').click();
-    assert.equal(await firstAccount.getByLabel('Role', { exact: true }).isVisible(), true);
-    assert.equal(await firstAccount.getByLabel('Account status', { exact: true }).isVisible(), true);
+    const accounts = page.locator('#management-panel details.management-record');
+    const visibleAccounts = page.locator('#management-panel details.management-record:visible');
+    const adminAccount = accounts.filter({ has: page.getByText(adminEmail, { exact: true }) });
+    const citizenEmail = demo.accounts.find(account => account.role === 'citizen').email;
+    const citizenAccount = accounts.filter({ has: page.getByText(citizenEmail, { exact: true }) });
+    const search = page.getByRole('searchbox', { name: 'Search accounts', exact: true });
+    const searchStatus = page.locator('[data-account-search-status]');
+    const accountCount = await visibleAccounts.count();
+    assert.ok(accountCount > 1);
+    await citizenAccount.waitFor({ state: 'visible' });
+
+    const adminName = await adminAccount.locator('.management-record-identity strong').innerText();
+    const nameQuery = `  ${adminName.slice(0, -1).toUpperCase().replace(/\s+/g, '   ')}  `;
+    await search.fill(nameQuery);
+    assert.equal(await adminAccount.isVisible(), true, 'Partial name must match regardless of case or whitespace');
+    assert.equal(await citizenAccount.isVisible(), false, 'An unrelated name must be filtered out');
+
+    const emailQuery = adminEmail.slice(0, -2).toUpperCase();
+    await search.fill(emailQuery);
+    assert.equal(await adminAccount.isVisible(), true, 'Partial email must match regardless of case');
+    assert.equal(await visibleAccounts.count(), 1);
+    assert.match(await searchStatus.innerText(), /\b1\b/);
+
+    const previousPanel = await page.locator('#management-panel').elementHandle();
+    await select('accounts');
+    await page.waitForFunction(panel => !panel.isConnected && !document.querySelector('#main-content.htmx-settling'), previousPanel);
+    await previousPanel.dispose();
+    assert.equal(await search.inputValue(), emailQuery, 'Refreshing Accounts must preserve the search');
+    assert.equal(await visibleAccounts.count(), 1, 'The preserved search must filter refreshed results');
+
+    await adminAccount.locator('summary').click();
+    assert.equal(await adminAccount.getByLabel('Role', { exact: true }).isVisible(), true);
+    assert.equal(await adminAccount.getByLabel('Team', { exact: true }).isVisible(), true);
+    assert.equal(await adminAccount.getByLabel('Account status', { exact: true }).isVisible(), true);
+    assert.equal(await adminAccount.getByRole('button', { name: 'Save account', exact: true }).isVisible(), true);
     assert.equal(await page.locator('form[action="/ui/management/team-accounts"]').count(), 0);
     // Existing account forms are inspected only; no live account is submitted or changed.
+
+    await search.fill(`no-matching-account-${Date.now()}`);
+    const noMatches = page.getByRole('heading', { name: 'No matching accounts', exact: true });
+    await noMatches.waitFor({ state: 'visible' });
+    assert.equal(await visibleAccounts.count(), 0);
+    assert.match(await searchStatus.innerText(), /\b0\b/);
+    await page.getByRole('button', { name: 'Clear search', exact: true }).click();
+    assert.equal(await search.inputValue(), '');
+    assert.equal(await visibleAccounts.count(), accountCount, 'Clearing must restore the full list');
+    assert.equal(await noMatches.isVisible(), false);
 
     await select('teams');
     let synthetic = page.locator('details.management-record').filter({ hasText: teamName });
@@ -149,7 +192,7 @@ async function main() {
     await page.locator('[data-management-tab="accounts"]').waitFor();
     assert.equal(await nav().locator('[aria-current="page"]').innerText(), 'Account management');
     assert.deepEqual(errors, []);
-    console.log('PASS: four HTMX administration sections, synthetic team create/edit and retained validation, read-only account inspection, live report totals and separate units, assistant draft persistence, direct links and 1440/320px layouts.');
+    console.log('PASS: four HTMX administration sections, live account search and edit controls, synthetic team create/edit and retained validation, live report totals and separate units, assistant draft persistence, direct links and 1440/320px layouts.');
   } finally {
     await browser.close();
   }

@@ -1,10 +1,22 @@
 <div class="management-section-heading"><div><h2>Account management</h2><p>Choose an account to manage its role, team and access.</p></div><a class="button button-secondary" href="/management?tab=create-team#create-team-account" hx-get="/management?tab=create-team" hx-target="#main-content" hx-push-url="/management?tab=create-team#create-team-account">{{ icon('plus') }}Create team account</a></div>
 <div class="management-inline-note">{{ icon('shield') }}<p>Role, team and activation changes revoke the affected account’s current sessions.</p></div>
-<div class="management-record-list">
+{% if accounts %}
+<div class="card management-account-search" role="search" aria-label="Accounts" data-account-search hidden>
+  <div class="field">
+    <label for="management-account-query">Search accounts</label>
+    <div class="management-account-search-controls">
+      <input type="search" id="management-account-query" placeholder="Name or email" autocomplete="off" aria-controls="management-account-list" data-account-query hx-preserve>
+      <button type="button" class="button button-secondary" data-clear-account-search hidden>Clear search</button>
+    </div>
+  </div>
+  <p class="field-hint" role="status" data-account-search-status></p>
+</div>
+{% endif %}
+<div class="management-record-list" id="management-account-list">
   {% for account in accounts %}
   {% set editing = edited_account_id|default(none) == account.id %}
   {% set form_values = account_values|default({}) if editing else {} %}
-  <details class="card management-record" {% if editing %}open{% endif %}>
+  <details class="card management-record" data-account-search-text="{{ account.full_name }} {{ account.email }}" {% if editing %}open{% endif %}>
     <summary><span class="management-record-avatar">{{ account.full_name[:1]|upper }}</span><span class="management-record-identity"><strong>{{ account.full_name }}</strong><span>{{ account.email }}</span></span><span class="management-record-tags"><span class="management-type">{{ account.role|replace('_',' ')|title }}</span><span class="management-status {{ 'management-status-available' if account.active else 'management-status-offline' }}">{{ 'Active' if account.active else 'Inactive' }}</span></span>{{ icon('chevron', 'management-record-chevron') }}</summary>
     <form method="post" action="/ui/management/users/{{ account.id }}" hx-post="/ui/management/users/{{ account.id }}" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form management-form">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">
@@ -18,4 +30,5 @@
     </form>
   </details>
   {% else %}<section class="card"><div class="empty-state"><span class="empty-icon">{{ icon('people') }}</span><h3>No accounts to display</h3><p>Account records will appear here when available.</p></div></section>{% endfor %}
+  {% if accounts %}<section class="card" data-account-search-empty hidden><div class="empty-state"><span class="empty-icon">{{ icon('people') }}</span><h3>No matching accounts</h3><p>Try another name or email.</p></div></section>{% endif %}
 </div>

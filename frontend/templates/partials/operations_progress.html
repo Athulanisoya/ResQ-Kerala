@@ -16,3 +16,18 @@
 {% if user.role == 'admin' and report.status in ['IN_PROGRESS', 'RESCUE_COMPLETED'] and operation_can_handoff %}
 <form action="/ui/operations/incidents/{{ report.id }}/handoff" method="post" hx-post="/ui/operations/incidents/{{ report.id }}/handoff" hx-target="#main-content" hx-indicator="#request-progress" hx-disabled-elt="find button[type='submit']" class="compact-form"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><div class="field"><label for="handoff-team">Hand off rescue work to a relief team</label><select id="handoff-team" name="team_id" required><option value="">Choose an available relief team</option>{% for team in operation_teams %}{% if team.available and team.team_type|trim|lower == 'relief' and team.id != report.assigned_team_id %}<option value="{{ team.id }}" {{ 'selected' if form_values.get('team_id')|string == team.id|string }}>{{ team.name }}</option>{% endif %}{% endfor %}</select></div><div class="field"><label for="handoff-note">Reason for handoff</label><textarea id="handoff-note" name="note" rows="3" minlength="5" maxlength="1000" required>{{ form_values.get('note', '') }}</textarea><p class="field-hint">The previous team keeps a private history snapshot.</p></div><button class="button button-secondary button-full" type="submit"><span class="button-label">Hand off assignment</span><span class="button-loading">Handing off…</span></button></form>{% endif %}
 </section>{% endif %}
+{% if report.status == 'RESOLVED' %}
+<section class="card">
+  <div class="card-heading"><h2>Ready for final review</h2></div>
+  <div class="detail-card-body">
+    <p>The assigned team has marked the response resolved. An administrator reviews the case and closes it after linked relief and required clarifications are complete.</p>
+    {% if user.role == 'admin' %}
+    <form action="/ui/reports/{{ report.id }}/close" method="post" hx-post="/ui/reports/{{ report.id }}/close" hx-target="#main-content" class="compact-form" hx-disabled-elt="find button">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <div class="field"><label for="closure-note">Closure note <span class="optional">Optional</span></label><textarea id="closure-note" name="closure_note" maxlength="1000" rows="3">{{ values.get('closure_note','') }}</textarea></div>
+      <div class="review-form-footer"><button class="button button-primary" type="submit">Close case</button></div>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

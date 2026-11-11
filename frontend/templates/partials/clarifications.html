@@ -55,20 +55,3 @@
     {% endif %}
   </div>
 </section>
-{% if report.status == 'RESOLVED' %}
-<section class="card">
-  <div class="card-heading"><h2>Ready for final review</h2></div>
-  <div class="detail-card-body">
-    <p>The assigned team has marked the response resolved. An administrator reviews the case and closes it after linked relief and required clarifications are complete.</p>
-    {% if user.role == 'admin' %}
-    <form action="/ui/reports/{{ report.id }}/close" method="post" hx-post="/ui/reports/{{ report.id }}/close" hx-target="#main-content" class="compact-form" hx-disabled-elt="find button">
-      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-      <div class="field"><label for="closure-note">Closure note <span class="optional">Optional</span></label><textarea id="closure-note" name="closure_note" maxlength="1000" rows="3">{{ values.get('closure_note','') }}</textarea></div>
-      <div class="review-form-footer"><button class="button button-primary" type="submit">Close case</button></div>
-    </form>
-    {% endif %}
-  </div>
-</section>
-{% elif report.status == 'CLOSED' %}
-<section class="card"><div class="card-heading"><h2>Case closed</h2></div><div class="detail-card-body"><p>An administrator has completed the final review. Your original report, replies, response work and history remain available below.</p></div></section>
-{% endif %}

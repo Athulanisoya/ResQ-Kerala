@@ -225,6 +225,7 @@ async function main() {
     incident = await api(citizen, '/api/incidents/', 'POST', { message: label + ' synthetic flood in Aluva', location: 'Aluva, Ernakulam', people_affected: 2, help_required: 'Synthetic rescue exercise' });
     await api(admin, '/api/incidents/' + incident.id + '/status', 'PATCH', { status: 'VERIFIED', note: label + ' verified fixture' });
     await open(admin, '/reports/' + incident.id, 'Incident details');
+    await admin.getByRole('navigation', { name: 'Report sections', exact: true }).getByText('Response', { exact: true }).click();
     await admin.locator('#team-recommendations').getByRole('heading', { name: 'Suggested response teams', exact: true }).waitFor();
     await admin.getByLabel('Required capability', { exact: false }).selectOption('water_rescue');
     const filtered = admin.waitForResponse(r => new URL(r.url()).pathname === `/ui/reports/${incident.id}/team-recommendations` && r.status() === 200);
@@ -236,7 +237,7 @@ async function main() {
     const assignedNavigation = admin.waitForNavigation({ waitUntil: 'domcontentloaded' });
     await submit(admin, candidate.getByRole('button', { name: 'Assign ' + rescue.name, exact: true }), `/ui/reports/${incident.id}/assign`);
     await assignedNavigation;
-    await admin.getByRole('heading', { name: 'Incident details', exact: true }).waitFor();
+    await admin.locator('#report-section-response').getByText('Awaiting acceptance by the assigned response team.', { exact: true }).waitFor();
     assert.equal((await api(admin, '/api/incidents/' + incident.id)).assigned_team_id, rescue.id);
     assert.equal((await request(citizen, `/api/admin/incidents/${incident.id}/team-recommendations`)).status, 403);
 

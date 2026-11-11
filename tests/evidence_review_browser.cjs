@@ -6,7 +6,7 @@ const path = require('node:path');
 
 async function main() {
   const root = path.resolve(__dirname, '..');
-  const demo = JSON.parse(fs.readFileSync(path.join(root, '.runtime', 'demo-accounts.json'), 'utf8'));
+  const demo = JSON.parse(fs.readFileSync(process.env.RESQ_DEMO_ACCOUNTS || path.join(root, '.runtime', 'demo-accounts.json'), 'utf8'));
   const qa = path.join(root, '.runtime', 'qa');
   fs.mkdirSync(qa, { recursive: true });
   const base = process.env.RESQ_TEST_URL || 'http://127.0.0.1:8013';
@@ -47,6 +47,10 @@ async function main() {
   }
   const unchangedFields = value => ({ message: value.message, location: value.location,
     people_affected: value.people_affected, help_required: value.help_required });
+  const reportSections = page => page.getByRole('navigation', { name: 'Report sections', exact: true });
+  async function openReportSection(page, name) {
+    await reportSections(page).getByText(name, { exact: true }).click();
+  }
   async function waitReview() {
     await admin.locator('#week4-analysis').getByRole('heading', { name: 'Evidence & analysis review', exact: true }).waitFor();
   }
@@ -75,27 +79,45 @@ async function main() {
     assert.deepEqual(unchangedFields(await api(citizen, `/api/incidents/${primaryId}`)), unchangedFields(original));
     assert.equal(await citizen.getByRole('heading', { name: 'Reporter account details', exact: true }).count(), 0);
     assert.equal(await citizen.getByRole('button', { name: 'Run integrated analysis', exact: true }).count(), 0);
+    assert.equal(await reportSections(citizen).getByText('Review', { exact: true }).count(), 0);
+    assert.equal(await reportSections(citizen).getByText('Analysis', { exact: true }).count(), 0);
 
     await login(admin, 'admin');
     await admin.goto(base + `/reports/${primaryId}`);
+    const incidentDetails = admin.getByRole('heading', { name: 'Incident details', exact: true });
+    await incidentDetails.waitFor();
+    await admin.locator('#week4-analysis').waitFor({ state: 'hidden' });
+    await admin.locator('#analysis-review-form').waitFor({ state: 'hidden' });
+    const reportDocument = await admin.evaluate(() => performance.timeOrigin);
+    await openReportSection(admin, 'Analysis');
     await waitReview();
+    await incidentDetails.waitFor({ state: 'hidden' });
+    assert.equal(await admin.evaluate(() => performance.timeOrigin), reportDocument, 'Switching report sections preserves the page');
     await admin.getByRole('heading', { name: 'Reporter account details', exact: true }).waitFor();
     assert.ok((await admin.locator('#week4-analysis').innerText()).includes(demo.accounts.find(account => account.role === 'citizen').email));
     assert.equal((await admin.locator('#review-original-message').innerText()).trim(), originalMessage);
 
     const form = admin.locator('#analysis-review-form');
+    await openReportSection(admin, 'Review');
     await form.getByLabel('Reviewed severity', { exact: true }).selectOption('LOW');
-    await form.getByLabel('Assessment summary', { exact: false }).fill(marker + ' explicit administrator assessment');
+    const assessmentDraft = marker + ' explicit administrator assessment';
+    await form.getByLabel('Assessment summary', { exact: false }).fill(assessmentDraft);
     await form.getByLabel('Investigation needed', { exact: true }).selectOption('no');
+    await openReportSection(admin, 'Analysis');
+    await waitReview();
+    await openReportSection(admin, 'Review');
+    await form.waitFor();
+    assert.equal(await form.getByLabel('Assessment summary', { exact: false }).inputValue(), assessmentDraft);
     const savedAssessment = admin.waitForResponse(response => new URL(response.url()).pathname === `/ui/reports/${primaryId}/analysis` && response.request().method() === 'POST');
     await form.getByRole('button', { name: 'Save assessment', exact: true }).click();
     assert.equal((await savedAssessment).status(), 200);
     await admin.waitForLoadState('networkidle');
-    await waitReview();
+    await form.waitFor();
     const assessmentPath = `/api/admin/incidents/${primaryId}/analysis`;
     const reviewed = await api(admin, assessmentPath);
     assert.equal(reviewed.severity, 'LOW');
 
+    await openReportSection(admin, 'Analysis');
     await admin.locator('#week4-analysis').getByRole('button', { name: 'Run integrated analysis', exact: true }).click();
     await admin.locator('#review-suggestion-summary').waitFor();
     assert.equal(await admin.locator('#week4-analysis pre').count(), 0, 'The review workspace must present evidence fields instead of raw JSON');
@@ -117,6 +139,7 @@ async function main() {
     assert.ok(contextData.revisions[0].reviews.some(entry => entry.decision === 'rejected'));
     assert.deepEqual(await api(admin, assessmentPath), reviewed, 'Analysis review notes must not apply operational assessments');
 
+    await openReportSection(admin, 'Review');
     await admin.getByRole('button', { name: 'Predict severity', exact: true }).click();
     await admin.locator('.severity-suggestion').first().waitFor();
     assert.deepEqual(await api(admin, assessmentPath), reviewed, 'Prediction must preserve the reviewed value and reviewer');
@@ -130,6 +153,11 @@ async function main() {
     const beforeQuestions = await api(admin, questionsPath);
     const beforeNotifications = await api(citizen, '/api/communication/notifications?limit=100');
     const draft = admin.locator('.clarification-draft').filter({ hasText: 'How many people need help' });
+    await openReportSection(admin, 'Messages & files');
+    await draft.getByRole('link', { name: /Supporting report field/ }).click();
+    await admin.locator('#report-people').waitFor();
+    await draft.waitFor({ state: 'hidden' });
+    await openReportSection(admin, 'Messages & files');
     await draft.getByRole('button', { name: 'Use this question', exact: true }).click();
     await admin.getByText('Suggested question inserted.', { exact: false }).waitFor();
     assert.ok((await admin.getByLabel('Ask the citizen', { exact: true }).inputValue()).includes('How many people'));
@@ -149,8 +177,9 @@ async function main() {
       message: marker + ': വീട്ടിൽ വെള്ളം കയറി. ആളുകൾ കുടുങ്ങി. രക്ഷ വേണം.',
       location: 'കൊച്ചി', people_affected: 4, help_required: 'രക്ഷ',
     });
-    await admin.goto(base + `/reports/${english.id}`);
+    await admin.goto(base + `/reports/${english.id}#week4-analysis`);
     await waitReview();
+    await incidentDetails.waitFor({ state: 'hidden' });
     const pair = admin.locator('.duplicate-comparison').filter({ hasText: malayalam.report_reference });
     await pair.getByRole('heading', { name: 'Why this was suggested', exact: true }).waitFor();
     assert.ok((await pair.innerText()).includes('English/Malayalam incident concepts'));
@@ -185,6 +214,7 @@ async function main() {
     for (const width of [1440, 320]) {
       await admin.setViewportSize({ width, height: width === 320 ? 740 : 1000 });
       await admin.goto(base + `/reports/${primaryId}`);
+      await openReportSection(admin, 'Analysis');
       await waitReview();
       assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Review page overflows at ${width}px`);
       await admin.screenshot({ path: path.join(qa, `evidence-review-${width}.png`), fullPage: true });
@@ -203,7 +233,7 @@ async function main() {
     await admin.screenshot({ path: path.join(qa, 'evidence-review-panel.png'), fullPage: false });
     assert.deepEqual(unchangedFields(await api(citizen, `/api/incidents/${primaryId}`)), unchangedFields(original));
     assert.deepEqual(errors, []);
-    console.log('PASS: source-linked analysis accept/edit/reject, reporter privacy, preserved assessment after inference/rejection, editable unsent clarification drafts, human location confirmation, multilingual duplicate confirmation, shelter timestamps and grounded floating chat, desktop/mobile layouts.');
+    console.log('PASS: report sections, legacy evidence links, preserved drafts, source-linked review decisions, reporter privacy, assessment retention, location confirmation, duplicates, shelter timestamps, grounded chat and responsive layout.');
   } catch (error) {
     await admin.screenshot({ path: path.join(qa, 'evidence-review-failure-admin.png'), fullPage: true }).catch(() => {});
     await citizen.screenshot({ path: path.join(qa, 'evidence-review-failure-citizen.png'), fullPage: true }).catch(() => {});

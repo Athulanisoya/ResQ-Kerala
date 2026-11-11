@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
 async function main() {
   const root = path.resolve(__dirname, '..');
   const runtime = path.join(root, '.runtime');
-  const demo = JSON.parse(fs.readFileSync(path.join(runtime, 'demo-accounts.json'), 'utf8'));
+  const demo = JSON.parse(fs.readFileSync(process.env.RESQ_DEMO_ACCOUNTS || path.join(runtime, 'demo-accounts.json'), 'utf8'));
   const qa = path.join(runtime, 'qa');
   fs.mkdirSync(qa, { recursive: true });
   const base = process.env.RESQ_TEST_URL || 'http://127.0.0.1:8013';
@@ -32,6 +32,9 @@ async function main() {
     await page.getByLabel('Password', { exact: true }).fill(demo.password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.waitForURL(base + '/dashboard');
+  }
+  async function openReportSection(page, name) {
+    await page.getByRole('navigation', { name: 'Report sections', exact: true }).getByText(name, { exact: true }).click();
   }
   try {
     const citizen = await page();
@@ -66,22 +69,30 @@ async function main() {
     const admin = await page();
     await login(admin, 'admin');
     await admin.goto(base + reportPath);
+    await openReportSection(admin, 'Review');
     await admin.getByLabel('Next status', { exact: true }).selectOption('UNDER_REVIEW');
     await admin.getByLabel('Review note', { exact: false }).fill('Browser check: report details reviewed.');
     await admin.getByRole('button', { name: 'Update status', exact: true }).click();
-    await admin.waitForLoadState('networkidle');
+    await admin.locator('.detail-heading').getByText('Under Review', { exact: true }).waitFor();
+    assert.equal(new URL(admin.url()).hash, '#report-section-review');
     await admin.getByLabel('Next status', { exact: true }).selectOption('VERIFIED');
     await admin.getByLabel('Review note', { exact: false }).fill('Browser check: location and help request verified.');
     await admin.getByRole('button', { name: 'Update status', exact: true }).click();
+    await admin.locator('.detail-heading').getByText('Verified', { exact: true }).waitFor();
+    assert.equal(new URL(admin.url()).hash, '#report-section-review');
+    await openReportSection(admin, 'Response');
     await admin.getByRole('heading', { name: 'Assign a team', exact: true }).waitFor();
     const teamId = await admin.locator('#team_id option').evaluateAll(options => options.find(o => o.value)?.value);
     assert.ok(teamId, 'A response team must be available');
     await admin.getByLabel('Response team', { exact: true }).selectOption(teamId);
     await admin.getByRole('button', { name: 'Assign team', exact: true }).click();
-    await admin.getByText('ASSIGNED TO THIS INCIDENT', { exact: true }).waitFor();
+    await admin.locator('#report-section-response').getByText('Awaiting acceptance by the assigned response team.', { exact: true }).waitFor();
     await admin.screenshot({ path: path.join(qa, 'admin-assigned-desktop.png'), fullPage: true });
     await citizen.reload();
-    await citizen.getByText('ASSIGNED TO THIS INCIDENT', { exact: true }).waitFor();
+    await openReportSection(citizen, 'Response');
+    await citizen.locator('#report-section-response').getByText('Awaiting acceptance by the assigned response team.', { exact: true }).waitFor();
+    await openReportSection(citizen, 'History');
+    await citizen.getByRole('heading', { name: 'Report history', exact: true }).waitFor();
     const states = await citizen.locator('.timeline-event h3').allTextContents();
     assert.deepEqual(states, ['Submitted', 'Under Review', 'Verified', 'Assigned']);
     await citizen.screenshot({ path: path.join(qa, 'citizen-status-desktop.png'), fullPage: true });
