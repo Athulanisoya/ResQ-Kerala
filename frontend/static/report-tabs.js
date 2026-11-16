@@ -2,6 +2,10 @@
   const detailSelector = '[data-report-detail]';
   const panelSelector = '[data-report-panel]';
   const tabSelector = 'a[data-report-tab]';
+  let observedProgress = null;
+  const progressObserver = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(([entry]) => showCurrentStep(entry.target))
+    : null;
 
   function activatePanel(detail, key) {
     const panels = Array.from(detail.querySelectorAll(panelSelector));
@@ -34,6 +38,24 @@
     }
   }
 
+  function showCurrentStep(progress) {
+    const current = progress.querySelector('[aria-current="step"]');
+    if (current && progress.scrollWidth > progress.clientWidth) {
+      progress.scrollLeft = current.offsetLeft + (current.offsetWidth - progress.clientWidth) / 2;
+    }
+  }
+
+  function observeProgress(detail) {
+    const progress = detail?.querySelector('.report-progress') || null;
+    if (progress === observedProgress) return;
+    progressObserver?.disconnect();
+    observedProgress = progress;
+    if (progress) {
+      showCurrentStep(progress);
+      progressObserver?.observe(progress);
+    }
+  }
+
   function syncFromLocation() {
     const detail = document.querySelector(detailSelector);
     if (detail) revealSection(detail, hashTarget());
@@ -51,18 +73,23 @@
     window.history.replaceState(window.history.state, '', `#${panel.id}`);
   });
 
-  document.addEventListener('DOMContentLoaded', syncFromLocation);
+  document.addEventListener('DOMContentLoaded', () => {
+    syncFromLocation();
+    observeProgress(document.querySelector(detailSelector));
+  });
   window.addEventListener('hashchange', syncFromLocation);
   document.addEventListener('htmx:afterSettle', event => {
     const detail = document.querySelector(detailSelector);
     const target = event.detail?.target;
+    observeProgress(detail);
     if (!detail || !target) return;
 
     // An analysis or attachment fragment can contain a linked ID that did not
     // exist when the report first rendered.
     const anchor = hashTarget();
-    if (target.id === 'app-root' || target.id === 'main-content' ||
-        target.contains(detail) || (anchor && detail.contains(anchor) && target.contains(anchor))) {
+    if (target.id === 'app-root' || target.id === 'main-content' || target.contains(detail)) {
+      revealSection(detail, anchor);
+    } else if (anchor && detail.contains(anchor) && target.contains(anchor)) {
       revealSection(detail, anchor);
     }
   }, true);

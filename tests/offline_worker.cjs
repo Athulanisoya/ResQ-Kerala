@@ -9,8 +9,8 @@ const assert = require('node:assert/strict');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'static', 'offline-worker.js'), 'utf8');
 const origin = 'http://127.0.0.1:8014';
-const cacheName = 'resq-offline-report-v5';
-const core = ['/offline/report-form', '/static/offline-reporting.js', '/static/offline.css', '/static/app.css', '/static/coast-canopy.css'];
+const cacheName = 'resq-offline-report-v6';
+const core = ['/offline/report-form', '/static/offline-reporting.js', '/static/offline.css', '/static/app.css', '/static/coast-canopy.css', '/static/typography.css'];
 
 function harness() {
   const listeners = {}, stores = new Map(), calls = [], deadlines = [];

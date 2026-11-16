@@ -211,7 +211,6 @@ h1 { letter-spacing: -.85px; }
 .report-detail-tabs .icon { flex-shrink: 0; }
 .report-detail [data-report-panel][hidden] { display: none; }
 .report-detail [id] { scroll-margin-top: calc(var(--site-header-height, 84px) + 14px); }
-.report-detail > .status-track { margin: 0 0 22px; }
 .report-detail .assignment-card h3 { overflow-wrap: anywhere; }
 .report-action-link { margin-top: 14px; }
 .report-pending-message { padding: 16px 20px; }
@@ -268,18 +267,18 @@ h1 { letter-spacing: -.85px; }
 .management-record[open] > summary { border-bottom: 1px solid var(--line); }
 .management-record-body { padding: 22px; }
 .management-record-body .management-inline-note { margin: 0; }
-.management-report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.management-report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .management-report-wide { grid-column: 1 / -1; }
-.management-report-card .card-heading { padding: 22px 23px; }
+.management-report-card .card-heading { padding: 16px 20px; }
 .management-report-card .card-heading h2 { font-size: 17px; }
 .management-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-.management-table thead th { background: #edf0e7; color: var(--body); font-size: 11px; font-weight: 500; padding: 12px 23px; }
-.management-table tbody th, .management-table tbody td { padding: 14px 23px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.management-table thead th { background: #edf0e7; color: var(--body); font-size: 11px; font-weight: 500; padding: 10px 20px; }
+.management-table tbody th, .management-table tbody td { padding: 10px 20px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .management-table tbody th { font-weight: 400; }
 .management-table tbody tr:last-child > * { border-bottom: 0; }
 .management-table .management-number { text-align: right; font-variant-numeric: tabular-nums; }
-.management-report-empty { padding: 23px; font-size: 13px; color: var(--body); }
-.management-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 24px; margin: 0; }
+.management-report-empty { padding: 16px 20px; font-size: 13px; color: var(--body); }
+.management-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 20px; margin: 0; }
 .management-stat-grid > div { min-width: 0; }
 .management-stat-grid dt { font-size: 12px; color: var(--body); }
 .management-stat-grid dd { color: var(--coast); margin: 7px 0 0; font-size: 29px; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -307,7 +306,7 @@ h1 { letter-spacing: -.85px; }
   .management-record-chevron { margin-left: auto; }
   .management-report-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .management-report-wide { grid-column: auto; }
-  .management-report-card .card-heading { padding: 20px; }
+  .management-report-card .card-heading, .management-report-empty { padding: 16px 18px; }
   .management-table thead th, .management-table tbody th, .management-table tbody td { padding-left: 18px; padding-right: 18px; }
   .management-stat-grid { gap: 12px; padding: 20px; }
   .management-stat-grid dt { font-size: 11px; }

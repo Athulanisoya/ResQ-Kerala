@@ -1,0 +1,150 @@
+/* Readable type sizes for the Coast & Canopy workspace. */
+:root {
+  --text-small: .8125rem;
+  --text-detail: .875rem;
+  --text-control: .9375rem;
+  --text-body: 1rem;
+  --text-card-title: 1.25rem;
+}
+
+body { font-size: var(--text-body); }
+h1, .page-heading h1 { font-size: clamp(1.875rem, 2.65vw, 2.5rem); }
+h2, .card-heading h2, .review-card .card-heading h2,
+.alert-form-card .card-heading h2, .management-report-card .card-heading h2 {
+  font-size: var(--text-card-title);
+}
+h3 { font-size: 1.125rem; }
+.page-heading p { font-size: var(--text-body); }
+.card-heading p, .empty-state p, .error-page p, .session-startup p { font-size: var(--text-control); }
+.section-kicker, .eyebrow, .form-step > span, .management-form-card .card-heading .section-kicker,
+.review-section .section-kicker, .chat-heading .section-kicker { font-size: var(--text-small); }
+.page-heading > .button, .button, .compact-form .button, .review-form-footer .button,
+.review-toolbar .button, .review-decision-actions .button, .management-form-footer .button {
+  font-size: var(--text-control);
+}
+.text-link, .back-link, .card-heading .text-link { font-size: var(--text-detail); }
+.card-heading .text-link { white-space: normal; }
+.field label, .management-form .field label, .auth-form .field label,
+.checkbox-label, .review-run-form .checkbox-label { font-size: var(--text-control); }
+.field input, .field select, .field textarea, .auth-form .field input,
+.field input::placeholder, .field textarea::placeholder { font-size: var(--text-body); }
+.field-hint, .optional { font-size: var(--text-small); }
+.alert, .alert strong, .canopy-advisory { font-size: var(--text-control); }
+.canopy-advisory a { font-size: var(--text-detail); }
+
+.canopy-shell-header .brand { font-size: 1.5rem; }
+.canopy-utility, .workspace-footer, .account-copy span { font-size: var(--text-small); }
+.canopy-brand-note { font-size: .6875rem; }
+.main-nav > .nav-item, .canopy-more > summary, .canopy-more-menu .nav-item,
+.header-notifications, .account-copy strong, .logout-button {
+  font-size: var(--text-detail);
+}
+.header-notifications .notification-count { font-size: .75rem; }
+
+.canopy-hero h1, .canopy-hero h2 { font-size: clamp(2rem, 3.25vw, 2.875rem); }
+.canopy-hero p, .canopy-service p, .canopy-pledge-copy p { font-size: var(--text-body); }
+.canopy-hero-note, .canopy-resource-row p, .canopy-resource-meta, .canopy-resource-card .field-hint,
+.canopy-pledge-links, .canopy-service a, .stat-label, .process-note, .completion-summary {
+  font-size: var(--text-detail);
+}
+.canopy-service h2, .canopy-service h3, .canopy-resource-row h3 { font-size: 1.125rem; }
+.canopy-resource-heading h2 { font-size: var(--text-card-title); }
+.canopy-capacity span, .stat-note { font-size: var(--text-small); }
+
+.reports-table th, .report-reference, .status, .detail-heading > .status { font-size: var(--text-small); }
+.report-link strong { font-size: var(--text-body); }
+.report-excerpt, .date-cell, .people-count, .team-name, .filter-tab, .result-count {
+  font-size: var(--text-detail);
+}
+.incident-message, .detail-facts dd, .timeline-event-top h3 { font-size: var(--text-body); }
+.detail-label, .detail-facts dt, .assigned-label, .timeline-event-top time, .timeline-event p,
+.form-aside > p, .mini-steps strong, .mini-steps p, .aside-tip p, .assignment-card p {
+  font-size: var(--text-detail);
+}
+.assignment-card h2, .assignment-card h3 { font-size: 1.125rem; }
+.timeline-event-top { flex-wrap: wrap; gap: 4px 14px; }
+.offline-state, .volunteer-facts dt, .preparedness-check a { font-size: var(--text-small); }
+
+.management-tab { font-size: var(--text-control); }
+.management-access, .management-card-note, .management-inline-note,
+.management-record-identity > span, .management-type, .management-stat-grid dt {
+  font-size: var(--text-detail);
+}
+.management-section-heading p, .management-table, .management-report-empty { font-size: var(--text-control); }
+.management-record-identity > strong { font-size: 1.0625rem; }
+.management-table thead th, .management-status { font-size: var(--text-small); }
+.account-facts dt, .account-role, .account-note,
+.permissions-table thead th, .permission-current, .permission-state { font-size: var(--text-detail); }
+.account-facts dd, .permissions-table tbody th, .permission-response,
+.permission-message, .permission-check-error { font-size: var(--text-control); }
+
+.official-alert-message, .analysis-explanation, .analysis-empty, .analysis-facts dd, .matched-alerts p,
+.review-workspace, .review-source-text, .review-proposed-value, .review-facts dd, .review-evidence-item,
+.clarification-item p, .clarification-draft p, .duplicate-comparison p, .review-matched-places li > strong {
+  font-size: var(--text-control);
+}
+.official-alert-facts dt, .official-alert-facts dd, .analysis-facts dt, .analysis-evidence,
+.analysis-warning, .matched-alerts strong, .review-helper, .review-facts dt, .review-meta,
+.review-action-hint, .review-revision-heading p, .review-decision-history ol, .review-revision-history ol,
+.review-section ul, .review-assistance ul, .review-evidence-item .text-link, .clarification-draft .field-hint,
+.duplicate-comparison dl, .duplicate-match-reasons ul, .duplicate-match-reasons .field-hint,
+.severity-suggestion > details > summary { font-size: var(--text-detail); }
+.alert-level, .alert-state, .analysis-mode, .analysis-result-heading > time, .analysis-evidence h3,
+.analysis-evidence pre, .matched-alerts li > span, .review-badge, .duplicate-comparison time,
+.review-matched-places li > span, .update-item time, .clarification-item time, .clarification-item footer {
+  font-size: var(--text-small);
+}
+.review-badge { white-space: normal; }
+.review-section h3, .review-suggestion h3, .review-toolbar-copy h3, .review-toolbar > h3,
+.clarification-item h3, .clarification-drafts > h3, .severity-suggestions > h3,
+.duplicate-comparison-heading h3, .update-item h3 { font-size: 1.125rem; }
+.review-section h4, .severity-suggestion h4, .duplicate-comparison h4,
+.severity-suggestion .analysis-result-heading > strong, .update-item p { font-size: var(--text-body); }
+
+.operations-row h3, .operations-row .report-link strong { font-size: 1.1875rem; }
+.operations-facts dt, .relief-items th, .relief-items td, .operations-supply-choices legend,
+.team-coverage-choice, .team-recommendation-reasons { font-size: var(--text-detail); }
+.operations-facts dd, .operations-deliveries { font-size: var(--text-control); }
+.relief-request > p, .relief-request h4, .team-coverage-localities summary { font-size: var(--text-body); }
+.shelter-filter, .shelter-live-status, .shelter-counts dt, .shelter-record-freshness,
+.shelter-record-freshness strong { font-size: var(--text-detail); }
+.shelter-result-body > p { font-size: var(--text-control); }
+.overview-map-legend, .overview-map-actions .button, .overview-map-location-note,
+.overview-map-details p, .overview-map-details li, .map-status-badge, .map-shelter-item .button,
+.map-district-list button, .map-locality-button, .overview-map-selectors select,
+.overview-map-footer [data-map-status], .map-shelter-popup { font-size: var(--text-detail); }
+.overview-map-zoom-note, .overview-map-footer p, .map-district-list .map-status-badge,
+.map-locality-label { font-size: var(--text-small); }
+.map-alert-item strong, .map-shelter-item strong, .overview-map-details h4 { font-size: var(--text-control); }
+
+.assistant-widget-heading h2 { font-size: 1.1875rem; }
+.assistant-widget-heading p, .assistant-widget .chat-message-author { font-size: var(--text-small); }
+.assistant-widget .chat-message-content, .chat-message-content, .assistant-widget .chat-composer textarea,
+.chat-composer textarea { font-size: var(--text-body); }
+.assistant-widget-loading, .assistant-widget .chat-welcome > p, .assistant-widget .chat-suggestions button,
+.assistant-widget .chat-history-item, .assistant-widget .chat-history-empty, .assistant-widget .chat-thinking,
+.assistant-widget .widget-history-toggle, .assistant-widget .chat-new { font-size: var(--text-detail); }
+.assistant-widget .chat-message-notice, .assistant-widget .chat-sources, .assistant-widget .chat-source-review,
+.assistant-widget .chat-guidance, .assistant-widget .chat-guidance p, .assistant-widget-notice,
+.assistant-widget-notice button, .chat-evidence, .chat-evidence time, .chat-heading-status,
+.chat-guidance, .chat-guidance p, .chat-composer-hint, .chat-history-note { font-size: var(--text-small); }
+.auth-intro, .auth-switch, .auth-form-wrap > p > a { font-size: var(--text-control); }
+.auth-story-copy > p { font-size: var(--text-body); }
+.auth-footnote, .auth-edition, .auth-story-footer, .auth-form-wrap > .section-kicker { font-size: var(--text-small); }
+.auth-form-wrap > h2 { font-size: clamp(2.125rem, 3vw, 2.5rem); }
+
+@media (max-width: 760px) {
+  .main-nav > .nav-item, .canopy-more > summary { font-size: var(--text-small); line-height: 1.35; }
+  .canopy-shell-header .brand { font-size: 1.375rem; }
+  .canopy-utility { font-size: .75rem; }
+  .management-tab { font-size: var(--text-detail); }
+  .detail-heading h1, .detail-heading .section-kicker { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 430px) {
+  .canopy-shell-header .brand { font-size: 1.1875rem; }
+  .canopy-brand-note { font-size: .625rem; }
+  .canopy-utility { font-size: .6875rem; }
+  .main-nav > .nav-item, .canopy-more > summary { white-space: normal; text-align: center; }
+  .management-tab { font-size: var(--text-small); }
+}

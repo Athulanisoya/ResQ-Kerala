@@ -12,8 +12,8 @@
 {% else %}
 <div class="management-report-grid">
   {{ status_report('Incidents by status', 'aggregate-incidents', report.get('incidents_by_status', {}), 'Reports', 'No incidents recorded yet.') }}
-  {{ status_report('Operations relief by status', 'aggregate-relief', report.get('operations_relief_by_status', {}), 'Requests', 'No operations relief requests recorded yet.') }}
   {{ status_report('Teams by availability', 'aggregate-teams', report.get('teams_by_status', {}), 'Teams', 'No response teams recorded yet.') }}
+  {{ status_report('Operations relief by status', 'aggregate-relief', report.get('operations_relief_by_status', {}), 'Requests', 'No operations relief requests recorded yet.') }}
   {{ status_report('Campaigns', 'aggregate-campaigns', report.get('campaigns_by_status', {}), 'Campaigns', 'No campaigns recorded yet.') }}
   <section class="card management-report-card management-report-wide" aria-labelledby="aggregate-shelters">
     <div class="card-heading"><div><h2 id="aggregate-shelters">Shelters</h2><p>Recorded occupancy and total capacity across shelter records.</p></div>{{ icon('house') }}</div>

@@ -29,15 +29,17 @@
   {% set stage_names = ['SUBMITTED','UNDER_REVIEW','VERIFIED','ASSIGNED','TASK_ACCEPTED','EN_ROUTE','IN_PROGRESS','RESOLVED','CLOSED'] %}
   {% set normalized_status = 'TASK_ACCEPTED' if report.status == 'ACCEPTED' else 'IN_PROGRESS' if report.status == 'RESCUE_COMPLETED' else report.status %}
   {% if normalized_status in stage_names %}
-  <section class="status-track" aria-label="Report progress">
+  <section class="report-progress" aria-label="Report progress" tabindex="0">
     {% set current_stage = stage_names.index(normalized_status) %}
-    {% for stage in stage_names %}
-    <div class="track-stage {{ 'complete' if loop.index0 < current_stage else 'current' if loop.index0 == current_stage }}">
-      <span class="track-dot">{% if loop.index0 < current_stage %}{{ icon('check') }}{% else %}{{ '%02d'|format(loop.index) }}{% endif %}</span>
-      <span>{{ stage|replace('_',' ')|title }}</span>
-      {% if loop.index0 == current_stage %}<span class="sr-only">Current status</span>{% endif %}
-    </div>
-    {% endfor %}
+    <ol class="report-steps" role="list">
+      {% for stage in stage_names %}
+      <li class="report-step{% if loop.index0 < current_stage %} report-step-passed{% endif %}"{% if loop.index0 == current_stage %} aria-current="step"{% endif %}>
+        <span class="report-step-marker" aria-hidden="true">{% if loop.index0 < current_stage %}{{ icon('check') }}{% endif %}</span>
+        <span class="report-step-label">{{ stage|replace('_',' ')|title }}</span>
+        {% if loop.index0 < current_stage %}<span class="sr-only">Passed</span>{% elif loop.index0 > current_stage %}<span class="sr-only">Upcoming</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
   </section>
   {% endif %}
 

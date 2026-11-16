@@ -1,7 +1,7 @@
 /* Public assets only: never cache bearer requests, API data, or workspace HTML. */
-const CACHE = 'resq-offline-report-v5';
+const CACHE = 'resq-offline-report-v6';
 const SHELL = '/offline/report-form';
-const CORE = [SHELL, '/static/offline-reporting.js', '/static/offline.css', '/static/app.css', '/static/coast-canopy.css'];
+const CORE = [SHELL, '/static/offline-reporting.js', '/static/offline.css', '/static/app.css', '/static/coast-canopy.css', '/static/typography.css'];
 // Decorative downloads must never prevent offline reporting from becoming ready.
 const ASSETS = [...CORE, '/static/favicon.svg', '/static/images/kerala-coast-canopy.jpg'];
 async function boundedResponse(request, timeout) {
