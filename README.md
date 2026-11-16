@@ -1,153 +1,121 @@
-# ResQ Kerala — integrated workspace with Athul's Weeks 1–4
+# ResQ Kerala
 
-This integration combines `athul-week2`, `Vidya-week2`, `aryaweek2`, and `week2-maanaz` in one PostgreSQL-backed FastAPI/HTMX application. It retains citizen reporting, per-tab login, administrator review and team assignment, and adds Kerala location extraction, scheduled alerts and alert matching, the trained severity classifier, reviewed analysis, and investigation assignment/findings/completion.
+ResQ Kerala brings flood reporting, response coordination, shelter access, alerts, and community support into one workspace. Citizens report incidents and follow their progress. Administrators review reports and coordinate services. Response teams carry out assignments, record field progress, and deliver relief.
 
-Each submitted report receives a sourced Kerala geography check and a saved local summary draft. On the admin report detail page, **Analyze location** checks current alerts, **Predict severity** runs Vidya's bundled classifier, and **Save assessment** records the reviewed severity, location, alert match, summary and investigation decision. Older reports expose **Generate summary**, and **Refresh summary** updates the generated draft without changing a reviewed assessment. Investigators can be assigned and their findings updated or completed. The original citizen report and its status/team workflow are preserved.
+The application uses FastAPI, PostgreSQL, and an HTMX frontend with the Coast & Canopy theme. The web app serves the interface and JSON API together.
 
-## Community and household support
+## Run locally
 
-- [Offline incident drafts and retry-safe submission](docs/OFFLINE-REPORTING.md): **New report → Save draft** (built into incident reporting).
-- [Reviewed volunteer applications and capacity-safe duty shifts](docs/VOLUNTEERS.md): **Community → Open volunteer hub** or **More services → Volunteer hub**.
-- [Private, consent-based family safety circles](docs/FAMILY-SAFETY.md): **More services → Family safety**.
-- [Staff-confirmed shelter accessibility and facility filters](docs/SHELTER-FACILITIES.md): **Shelters → Required facilities / Update facility details**.
-- [Private English/Malayalam household plans and printable checklists](docs/PREPAREDNESS.md): **More services → Household preparedness**.
+### Docker
 
-These features use the existing FastAPI, PostgreSQL and HTMX application. Family
-and household information has no administrator access override. Donations remain
-pledge-only; email delivery remains unconfigured. Run `python -m pytest` for the
-isolated regression suite. New browser workflows are in `tests/*_browser.cjs`;
-PostgreSQL concurrency checks use random disposable schemas.
-
-## Run with Docker
-
-Docker Compose runs the FastAPI/HTMX application, PostgreSQL and local Ollama together. The first start installs the same `gemma4:e4b-it-q4_K_M` model in a persistent Docker volume; no provider API key is needed. Install Docker Desktop with Linux containers, then run from this directory:
+Install Docker with Compose and Python 3.11 or later, then run from the repository root.
 
 ```powershell
 python -m scripts.configure_docker
 docker compose --env-file .env.docker up -d --build
 ```
 
-Open [ResQ Kerala](http://127.0.0.1:8013). Initial model installation downloads about 6.6 GB and can take several minutes. Docker uses a fresh database and separate model storage; it preserves the existing Windows setup. See [Docker setup, demo accounts, optional GPU support and verification](docs/DOCKER.md). Keep the generated `.env.docker` private. If the Windows app already uses port 8013, change `WEB_PORT` in `.env.docker` before starting Docker.
+Open the app at [localhost:8013](http://127.0.0.1:8013). Compose runs the application, PostgreSQL, and Ollama. The first start downloads the default Gemma 4 model (`gemma4:e4b-it-q4_K_M`, about 6.6 GB). Later starts reuse the saved model and database volumes. To run Docker alongside the Windows instance, use `python -m scripts.configure_docker --port 8014` when creating the configuration, or set `WEB_PORT=8014` in the existing private `.env.docker`.
 
-## Run on this computer
+After startup, provision the three demo roles and copy their generated credentials to a local file.
 
-From this project directory in PowerShell:
+```powershell
+docker compose --env-file .env.docker exec app python -m backend.seed
+New-Item -ItemType Directory -Force .runtime | Out-Null
+docker compose --env-file .env.docker cp app:/app/.runtime/demo-accounts.json .runtime/docker-demo-accounts.json
+```
+
+Keep `.env.docker` and the demo credentials private. For GPU setup, model import, troubleshooting, and stopping the stack while retaining data, see the [Docker guide](docs/DOCKER.md).
+
+### Windows
+
+Install Python 3.11 or later and PostgreSQL 18 with binaries at `C:\Program Files\PostgreSQL\18\bin`. Run the setup and start scripts from the repository root.
 
 ```powershell
 .\scripts\setup.ps1 -PythonCommand python
 .\scripts\start.ps1
 ```
 
-Open [the application](http://127.0.0.1:8013) or [API documentation](http://127.0.0.1:8013/docs). Setup creates a fresh `.venv` if needed, installs `requirements.txt`, initializes this workspace's PostgreSQL cluster and provisions the demo accounts. HTMX and CSS are served by the same Python application; Node.js and a separate frontend server are unnecessary.
+Setup installs dependencies in `.venv`, prepares the workspace database on port 5443, and writes demo credentials to `.runtime/demo-accounts.json`. Open [localhost:8013](http://127.0.0.1:8013). Run `.\scripts\stop.ps1` to stop the workspace services. If startup fails, check `.runtime/postgres.log`, `.runtime/web.log`, and `.runtime/web-error.log`.
 
-Requirements: Windows, Python 3.11+, and PostgreSQL 18 binaries at `C:\Program Files\PostgreSQL\18\bin`. Python must be available on PATH, or pass its executable path with `-PythonCommand`. If dependencies are already installed, rerun `.\scripts\setup.ps1 -SkipInstall`.
+### Sign in
 
-The database listens only on `127.0.0.1:5443`, uses database/schema `resq_week1`, and stores its files in `.runtime/postgres`. This isolates it from the other ResQ checkouts. Both ports, **5443** and **8013**, must be available. Setup preserves generated credentials and existing records on subsequent runs.
+Use the demo credential file for your setup to open citizen, administrator, and response team accounts. Public registration creates a citizen account. To try the full workflow in one browser, sign in to each role in a separate tab. Sessions are scoped to the tab. **My account** shows the signed-in role and team, and **Notifications** in the header opens the private inbox. Password recovery requires a configured SMTP service. [Account and recovery setup](docs/CITIZEN-SERVICES.md#password-recovery)
 
-## Demo accounts
+## Follow a report from submission to closure
 
-Setup writes the generated password and three account details to the ignored, local **`.runtime/demo-accounts.json`** file. Open that file locally to sign in as `citizen@resq.example.com`, `admin@resq.example.com`, or `team@resq.example.com`. Public registration creates citizens only. Admin and team roles are provisioned by setup.
+1. **Citizen submits a report.** Open **More services → New report**. Describe the flooding and give the location. Include an estimate of the people affected and the help needed when known. The application saves a draft summary and Kerala location check alongside the original report. Open **My reports** to search and filter submissions. Use **Messages & files** to add photos or audio to an open report after submission. [Attachments](docs/CITIZEN-SERVICES.md#photo-and-voice-attachments)
+2. **Administrator reviews the report.** Open **Report queue** and read the original details in **Overview**. Use **Review** to update the status, record the assessment, and decide whether an investigation is needed. Use **Analysis** to review the draft summary, location and alert match, integrated analysis, and possible duplicates. Confirm related reports as links so each retains its own status and history.
+3. **Citizen and administrator clarify missing facts.** The reporter or an administrator can confirm the location when the app finds several matches or needs more detail. **Messages & files** lets administrators edit a suggested question and send it, and lets citizens reply to open requests. The original report, location confirmation, and replies remain available for review.
+4. **Administrator assigns a verified report.** In **Response**, choose an available team. Suggestions use the incident location, declared operating areas, and required capabilities. The administrator confirms the assignment.
+5. **Response team records field progress.** Open **Assignments**, select the report, and use **Response** to accept the task, mark it **En Route**, start field work, and mark it **Resolved**. Add notes as the work progresses. Citizens can follow progress in their report, and teams can review earlier assignments in **Past tasks**.
+6. **Administrator reviews and closes the case.** Open **Response** after the team resolves the incident. Complete outstanding relief work and investigations and resolve any required clarification requests before closing the report. The progress bar shows the current stage, and **History** shows recorded status changes and notes.
 
-Keep `.env`, `.runtime`, and `.venv` private and outside commits. `.runtime/pgpass.conf` contains the database password; `.env` contains the signing secret and the connection configuration.
+### Report offline
 
-### Sign-in and account
+Open **New report** while connected to prepare it for offline use. **Save draft** stores an unsent draft in the current browser. **Submit report** queues a completed report when the connection is unavailable. The open app retries when connectivity returns with the same citizen account. If the app was closed or the session expired, reopen it and sign in to resume. Retries use the same submission ID, and the queue shows **Submitted** when the server confirms receipt. [Offline reporting workflow](docs/OFFLINE-REPORTING.md)
 
-Each tab keeps its bearer session in `sessionStorage`, so citizens, administrators and response teams can sign in independently in separate tabs of the same browser. Reloads, direct links and history navigation revalidate that tab's session with the server. JavaScript is required. Tabs opened by duplicating an existing tab may initially inherit its session; sign out and sign in independently when demonstrating different accounts. The previous shared authentication cookie is ignored and removed, so existing cookie-based sign-ins require one fresh login after this update.
+### Coordinate relief and investigations
 
-**My account** shows the authenticated name, email, role, user ID and optional team ID. The header stays available while scrolling and exposes **Notifications** with the unread count directly. The workspace-permissions demonstration is no longer shown in navigation or account shortcuts; server role checks still protect every workspace.
+- **Relief & supplies** lets citizens request supply delivery or rescue support for a report they own. Administrators maintain stock and its adjustment history, create linked requests, and assign eligible teams. Assigned teams can record partial deliveries, see remaining demand, and complete rescue support. Supply deliveries validate and deduct stock in the recorded item unit.
+- An administrator can hand an in-progress rescue case to a Relief team from **Response**. The former team retains its assignment snapshot in **Past tasks**.
+- In **Review**, administrators can assign an investigation to an eligible team or record a reviewer and findings. Assigned Investigation teams use **More services → Investigations** to review their cases and record findings and actions. Completed findings remain available for review.
 
-Expired sessions show a sign-in notice. Temporary service failures keep the saved tab session and offer **Try again** or **Sign in again**. Signing out revokes only that server session; if revocation cannot be confirmed, the app clears this tab's sign-in and explains that the previous server session may remain valid until expiry.
+## Use alerts, maps, and shelters
 
-User team memberships reference `response_teams.id` with a database foreign key. Startup adds this constraint to existing valid PostgreSQL tables without changing account data. If existing accounts reference missing teams, startup stops with an explanation and preserves those records for correction.
+- **Official alerts** lets administrators create, edit, schedule, and expire district or locality alerts using Indian Standard Time. All roles can view active alerts and follow districts or localities for private in-app notifications. The **Overview** map shows active red, orange, and yellow alert levels. Green indicates no active alert recorded in the app, and grey indicates unavailable coverage. Zoom in for mapped locality centres and shelter pins. [Map coverage](docs/OVERVIEW-MAP.md#explore-alerts)
+- **Shelters** and map pins show recorded spaces, contacts, and update and staff confirmation times. Use location, availability, or confirmed facility filters to narrow the list. Browser location is optional, and map distances are straight-line estimates. Check with reception about current availability and support. [Shelter facilities](docs/SHELTER-FACILITIES.md)
+- **Register to join** lets a citizen reserve spaces for a group. Citizens can review their registrations and cancel before arrival. When spaces are unavailable, citizens can join a waiting list, receive an expiring offer, and accept it to reserve the held spaces. [Shelter registration](docs/OVERVIEW-MAP.md#find-and-register-for-a-shelter) · [Waiting lists and offers](docs/AUTOMATIONS.md#shelter-waiting-lists)
+- In **Shelters → Add shelter**, administrators can create a shelter and designate a Shelter team. Administrators and the designated team can update and confirm capacity and facilities, manage reservations, and record arrivals and departures. The app refreshes listings while open and can remind staff when a capacity confirmation is overdue. [Capacity confirmation reminders](docs/AUTOMATIONS.md#capacity-confirmation-reminders)
 
-The combined Week 3/4 workflows use an expanded shelter table and separate relief-request tables. On PostgreSQL, startup upgrades recognized older Arya and Vidya shelter and relief layouts transactionally while preserving their records and references. Back up existing data before upgrading. Unknown or incompatible layouts stop startup without committing the upgrade and require a manual migration; legacy SQLite layouts are not migrated automatically.
+## Use community and household services
 
+| Service | Workflow |
+| --- | --- |
+| **Community updates** | Administrators draft, verify, and publish news. Signed-in users can read published updates on **Community**. |
+| **Donation pledges** | From **Community**, pledge money in INR or supplies for general relief or an active campaign. Administrators manage campaigns and manually mark pledges received or rejected. Pledges are records for reconciliation. Payment collection takes place outside the app. |
+| **Volunteer hub** | Citizens submit applications. Administrators review them, publish shifts, and record attendance. Approved volunteers can join eligible shifts with available places and cancel future signups. [Volunteer workflow](docs/VOLUNTEERS.md) |
+| **Family safety** | Create a private circle, invite existing accounts, and share your own check-in with members who accept. Location and shelter details are optional and shared with consent. [Family circles](docs/FAMILY-SAFETY.md) |
+| **Household preparedness** | Save a private English or Malayalam checklist, meeting points, household contacts, and assistance notes. Print the saved plan from the browser. [Preparedness plans](docs/PREPAREDNESS.md) |
 
-## Week 1 demonstration
+## Manage the workspace
 
-1. Register a citizen, sign in and submit a flood report with its location, people affected and help required.
-2. Open **My Reports** and the report detail/status timeline.
-3. Sign out, sign in as the admin, open the report queue and move the report through review and verification.
-4. Assign an available response team. Check that the report shows **Team assigned**.
-5. Sign in as the team to view its assignment, then as the citizen to view the updated timeline.
+Open **More services → Administration** as an administrator.
 
-## Week 2 demonstration
+| Section | What you can do |
+| --- | --- |
+| **Create a team** | Create a Rescue, Relief, Shelter, or Investigation team and provision member logins. |
+| **Account management** | Search by name or email, then update a role, team membership, or account access. Access changes revoke affected sessions. |
+| **Response teams** | Manage team names and availability, and configure operating areas and capabilities for assignment suggestions. |
+| **Aggregate reports** | Review incidents, teams, shelter occupancy, relief, campaigns, and pledges. Each relief ledger and donation unit has its own totals. |
 
-1. Sign in as admin and open **Official alerts**. Create an active demo alert for Alappuzha district, or choose another recognised Kerala place. Alert form times use IST.
-2. In a separate citizen tab, submit a clearly labelled synthetic flood report in Chengannur, Alappuzha. Open it as admin and check the saved **Location & alert check**. The district alert covers Chengannur and produces `MATCH`.
-3. Select **Predict severity** to append a classifier suggestion with its model version and time. The reviewed assessment stays unchanged until an administrator explicitly accepts or edits a suggestion. Suggestions can also be rejected. The model's Moderate label maps to Medium. No external API key is required for severity prediction.
-4. Read the **Report summary** draft. It is generated automatically from report excerpts and submitted location, people and help fields, using local extraction without an API key. Older reports have **Generate summary**. Review or edit the assessment summary, set **Investigation needed** to Yes, and select **Save assessment**. Refreshing the draft preserves reviewed text, severity and investigation findings. Claims remain unverified; always read the original report.
-5. Enter an investigator's name and select **Start investigation**. Save findings while In progress, use **Reassign investigator** if needed, then choose Completed and save again. Completed investigation findings remain available for review and cannot be edited.
-6. Expire the demo alert and select **Analyze location** again to demonstrate `NO_MATCH`. An unknown or ambiguous location produces `UNCERTAIN`. No matching alert does not establish that the report is false or the area is safe.
+Use **Automation settings** to review job status, adjust reminder and offer timing, or run checks immediately. Scheduled jobs deliver followed-area alerts and capacity reminders and manage waiting-list offers while the application is running. [Automation workflows](docs/AUTOMATIONS.md)
 
-Admins can also select **Run Gemma 4 agent** when local Ollama is running and the configured model is installed. The optional agent uses the OpenAI Agents SDK with **Gemma 4 via Ollama** and the existing location extraction and active-alert tools. Report text stays on this computer for model inference; no Gemini or OpenAI API key is required. Deterministic geography and the severity classifier remain available independently. An unavailable model or failed agent run produces a labelled local fallback.
+## Safety assistant and analysis
 
-The merged summary-snapshot endpoint is `GET /api/incidents/{id}/analysis`, available to the report owner, admins and the assigned team. New submissions also save a separate `report_analysis` snapshot with provisional/manual-review flags using the local extractor. This preserves the incoming branch's API without an external model request during submission. The admin's reviewed assessment remains at `/api/admin/incidents/{id}/analysis`. See [the Week 4 branch integration notes](docs/ATHUL-WEEK4-PUBLICATION.md).
+- **Safety assistant.** Open the floating chat button from any signed-in workspace. Ask about shelters, emergency contacts, safety guidance, or reports you can access. Follow-up questions use recent conversation context and check fresh records for critical facts. **Sources and evidence** shows source links and review information. Chats are private to the account, and **Conversations** and **New chat** let you resume or start a conversation.
+- **Location and summary.** The local geography check recognizes catalog aliases, including Malayalam, and records uncertainty. **Analyze location** checks active alert evidence, and **Run Gemma 4 agent** can use the configured local model for the location and alert checks. **Generate summary** and **Refresh summary** produce local drafts for review. The original and reviewed assessment are stored separately.
+- **Severity.** **Predict severity** adds a separate suggestion with the model version and timestamp. An administrator can accept, edit and accept, or reject it. The reviewed severity changes only through an explicit assessment or acceptance action.
+- **Integrated analysis.** In **Analysis**, run the evidence checks and review the versioned results next to the original report. Administrators can inspect allowed reporter account details, review provisional translations and extracted values, and accept, edit, or reject individual suggestions. The optional local model can help with draft translation and summary. An administrator makes the final assessment and assignment decisions. [Analysis workflow](docs/AI-WORKFLOW.md#integrated-analysis-shelters-and-safety-assistant) · [Evidence and review](docs/REVIEW-EVIDENCE.md)
 
-Install [Ollama](https://ollama.com/download), start it, and configure the local model:
+Docker configures the default local model. For optional model features in the Windows setup, start Ollama, install the model, and configure the app before starting it.
 
 ```powershell
 ollama pull gemma4:e4b-it-q4_K_M
 .\.venv\Scripts\python.exe -m scripts.configure_ollama
-.\scripts\start.ps1
 ```
 
-The configuration command checks Ollama and the installed model before saving `OLLAMA_BASE_URL` and `OLLAMA_MODEL` in the private `.env`; it preserves database credentials, custom options and comments. The default server is `http://127.0.0.1:11434` and the default model is `gemma4:e4b-it-q4_K_M`. Use `--model` to select an installed local model or `--base-url` for another loopback Ollama port. Restart the application after changing configuration; if it is already running, use `.\scripts\stop.ps1` followed by `.\scripts\start.ps1`. The admin location card checks actual server/model availability. The former `configure_gemini` command now delegates to this keyless setup. Existing saved Gemini analyses retain their original model label.
+If the app is running, restart it after configuration. See the [local model guide](docs/OLLAMA-MIGRATION.md) for model settings and verification.
 
-The safety assistant builds critical answers directly from local shelter, emergency-directory and source-document tools, with visible evidence checks and explicit missing-evidence states. The integrated analysis can still use local Ollama, or an explicitly configured Gemini provider. See [evidence and human review](docs/REVIEW-EVIDENCE.md) for the review boundaries and source limits.
-
-Gemma 4 must fit the computer's available memory. The setup command verifies an existing installation and does not download models. See [Ollama's Gemma 4 model page](https://ollama.com/library/gemma4) for model variants, and [Athul's location and agent implementation notes](docs/week2-athul.md) for the tools, model transport and API contracts.
-
-## Athul's Week 3 and Week 4
-
-**Week 3:** Assigned teams accept a task, then mark En route, In progress and Resolved. Admins manage audited inventory and assign linked relief requests. Relief teams record partial deliveries with item/unit snapshots, remaining demand, stock validation and retry protection. An admin can hand an in-progress rescue case to a relief team; the former team retains its private task history.
-
-**Week 4:** **My updates** provides private notifications, an unread badge and read controls. Admins request clarification on a report, citizens submit a retained reply, and the case timeline preserves both alongside the original report. Search and status filters cover the complete lifecycle. Only an admin can close a resolved incident, after linked relief and required clarification questions are complete.
-
-See [Athul's scope, demonstrations and validation](docs/ATHUL-WEEKS1-4.md). These features use the existing FastAPI/HTMX application and add the small shared contracts required by Athul's screens. Shelter search, the safety assistant and optional provisional Malayalam translation are available in the integrated workspace. Curated Malayalam place aliases remain available in the geography tool.
-
-## Additional integrated services
-
-**Automation:** follow district/locality alerts in Notifications, receive staff capacity-confirmation reminders, join shelter waiting lists with expiring capacity holds, and review suggested response teams using declared operating areas and capabilities. Administrators control timing in Automation settings; team assignment stays explicit. See [automation workflows and operation](docs/AUTOMATIONS.md).
-
-**Overview** includes an interactive Kerala alert and shelter map for citizens, administrators and teams. Active admin alerts colour districts red/orange/yellow; green means no active app alert. Zoom reveals sourced locality centres. Citizens can open a shelter pin to reserve spaces, while administrators and designated Shelter teams record arrivals and departures. Shelters also link to registration and private history. See [map coverage, shelter registration and verification](docs/OVERVIEW-MAP.md).
-
-Open the **Safety assistant** from the circular chat button at the bottom right of an authenticated page. The floating panel can be minimized without losing its current draft or conversation, including while a reply is pending. It stays open across HTMX page navigation and keeps conversation history private to the signed-in account. **Conversations** opens saved chats, and **New chat** starts a fresh conversation. Old assistant links open the dashboard with the chat panel rather than a full-page assistant. Failed requests keep the message available for retry.
-
-Administrators can use **Shelters → Add shelter** with optional designation to an active Shelter team. **Administration** has four sections: **Create a team** creates response teams and member logins; **Account management** edits account roles, team membership and access; **Response teams** manages team names and availability; and **Aggregate reports** shows activity, shelter and community totals with donation units kept separate. Each section supports direct links and retains its selection after saving or validation errors.
-
-Shelter listings refresh capacity, occupancy and available spaces every three seconds while the page is visible. Cards show the record update time, recent/stale/unknown state and contact information separately from the page check time; the default stale threshold is 30 minutes. Updates are available to administrators and the designated Shelter team; concurrent edits require reloading the latest values. Refreshes leave the separate capacity editor and creation form intact.
-
-The HTMX workspace includes shelter search and management, a safety assistant, investigation team assignments, duplicate-report review, community updates, donation pledges, private report attachments, and administrative user/team controls and reports. Donations are pledges that an administrator can reconcile; the application does not process online payments. Password recovery requires SMTP and sender configuration. See [citizen services](docs/CITIZEN-SERVICES.md) for setup and limits.
-
-Administrators can run and review a revisioned integrated AI analysis. The optional local model can create translation and summary drafts and run the seven-tool workflow. Results require human review; missing or unsupported inputs are not evidence of safety. See [AI workflow](docs/AI-WORKFLOW.md) and [evidence-linked review, location confirmation, clarification drafts and duplicate evaluation](docs/REVIEW-EVIDENCE.md). The experimental severity model can be retrained from a separately supplied labelled CSV using `python -m scripts.train_severity --dataset PATH --output-dir OUTPUT_DIRECTORY`; the command records a held-out evaluation without changing the running model. A model score is not a calibrated probability or evidence of field readiness.
-
-## Stop and verify
-
-```powershell
-.\scripts\stop.ps1
-```
-
-Stop checks the recorded application's PID, creation time and command line before terminating it, and shuts down only `.runtime/postgres` belonging to this workspace. Start reuses this workspace's existing application when it is already running.
+## Verify and explore
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -m scripts.verify_local
-.\.venv\Scripts\python.exe -m scripts.verify_athul_workspaces
-.\.venv\Scripts\python.exe -m scripts.check_location_agent
-# Optional real Gemma 4 run; requires local Ollama and the configured model.
-.\.venv\Scripts\python.exe -m scripts.check_location_agent --live
-# Optional client-state checks; Node is needed only to run this test.
-node tests/session_client.cjs
+node --test tests/session_client.cjs
+node tests/offline_worker.cjs
 ```
 
-The readiness command requires the application to be running and checks PostgreSQL, the home page, API docs and the authentication gate without creating a report. The location-agent check above uses local geography and current database alerts; it makes no provider call. Automated tests isolate their records, and optional PostgreSQL checks use temporary schemas. Browser demonstration is a separate check from automated tests.
+The Windows readiness check requires a running app. For Docker, use `docker compose --env-file .env.docker exec app python -m scripts.verify_docker`. The Python suite uses isolated fixtures, and optional PostgreSQL checks use disposable schemas configured through `RESQ_TEST_POSTGRES_URL`. Browser workflows in `tests/` use Playwright and a local demo instance. The [Docker guide](docs/DOCKER.md#verify-and-inspect) also covers running the isolated test image.
 
-API paths include authentication and `/api/users/me`, `/api/incidents/` and report detail/history/status, team assignment and `/api/teams/assignments`, `/api/alerts`, incident location analysis, `/api/ai/predict-severity`, and `/api/admin/incidents/{id}/analysis` or `/investigation`. Consult the running API docs for exact methods and request bodies. Protected JSON APIs require the bearer token returned by login; assessment, prediction and investigation actions require an admin.
-
-If setup fails, confirm the PostgreSQL binary path and port availability. If startup fails, check `.runtime/postgres.log`, `.runtime/web.log` and `.runtime/web-error.log`. Do not replace the generated database password while retaining an existing cluster. If PowerShell's script policy blocks a command, run it explicitly with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1` and then the corresponding `start.ps1` command.
-
-See [Week 2 merge notes](docs/WEEK2-MERGE.md) for current branch provenance, integration fixes and validation. [Week 1 integration notes](docs/INTEGRATION.md) and [Week 1 validation results](docs/VALIDATION.md) document the earlier baseline. Original React files are preserved in branch history; the active frontend uses HTMX templates and static assets. Older member-specific documents describe their original branches.
-
-See [the 21 October feature audit](docs/WEEK2-AUDIT.md) for branch comparisons, summary implementation and current verification evidence.
+Open [API documentation](http://127.0.0.1:8013/docs) on the running app, using your configured port. The API groups endpoints by reporting, operations, alerts, shelters, community services, and administration. Protected endpoints use the signed-in account's bearer session and role permissions. Keep generated configuration and runtime data out of version control. Back up existing PostgreSQL data before upgrading a deployment.
